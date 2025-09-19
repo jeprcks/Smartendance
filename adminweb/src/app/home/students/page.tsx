@@ -16,9 +16,10 @@ export default function StudentsPage() {
       studentId: 'STU-001', 
       fullName: 'Alice Johnson', 
       profilePicture: null,
-      gradeLevel: 'Grade 10', 
+      gradeLevel: 'Grade 4', 
       section: 'A', 
       gender: 'Female',
+      shift: 'Morning',
       email: 'alice.j@school.edu',
       phoneNumber: '123-456-7890',
       age: '16',
@@ -37,9 +38,10 @@ export default function StudentsPage() {
       studentId: 'STU-002', 
       fullName: 'Brian Chen', 
       profilePicture: null,
-      gradeLevel: 'Grade 10', 
+      gradeLevel: 'Grade 2', 
       section: 'A', 
       gender: 'Male',
+      shift: 'Afternoon',
       email: 'brian.c@school.edu',
       phoneNumber: '123-456-7893',
       age: '16',
@@ -60,14 +62,15 @@ export default function StudentsPage() {
     student.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
     student.gradeLevel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.section.toLowerCase().includes(searchQuery.toLowerCase())
+    student.section.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (student.shift && student.shift.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
   const totalMale = students.filter(student => student.gender === 'Male').length;
   const totalFemale = students.filter(student => student.gender === 'Female').length;
 
   return (
-    <div className="min-h-screen bg-gray-50/50 p-8">
+    <div className="min-h-screen bg-green-50/30 p-8">
       <StatusCounter 
         totalStudents={students.length}
         totalMale={totalMale}
@@ -76,13 +79,10 @@ export default function StudentsPage() {
       <div className="flex justify-between items-center mb-8">
         <div className="flex items-center space-x-4">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Students</h1>
-          <span className="px-4 py-1.5 text-sm font-semibold bg-blue-50 text-blue-600 rounded-full ring-1 ring-blue-100">
-            {students.length} total
-          </span>
         </div>
         <button 
           onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center px-5 py-2.5 bg-blue-600 text-sm font-semibold text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+          className="inline-flex items-center px-5 py-2.5 bg-green-600 text-sm font-semibold text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
         >
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
             <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
@@ -105,14 +105,14 @@ export default function StudentsPage() {
           <div className="mb-6">
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-gray-400 group-focus-within:text-green-500 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                 </svg>
               </div>
               <input
                 type="text"
                 placeholder="Search students..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-300"
+                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
@@ -129,6 +129,7 @@ export default function StudentsPage() {
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Grade Level</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Section</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Gender</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Shift</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
@@ -188,6 +189,11 @@ export default function StudentsPage() {
                           : 'bg-pink-50 text-pink-700 ring-pink-200/50'
                       } transition-colors duration-200`}>
                         {student.gender}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 bg-green-50 text-green-700 ring-green-200/50 transition-colors duration-200">
+                        {student.shift || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

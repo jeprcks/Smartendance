@@ -1,5 +1,3 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
@@ -26,17 +24,27 @@ class _ScanningPageState extends State<ScanningPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF0FFF4),
       appBar: AppBar(
-        title: const Text('Scan QR Code'),
+        backgroundColor: const Color(0xFF98FFB3),
+        elevation: 0,
+        title: const Text(
+          'Scan QR Code',
+          style: TextStyle(
+            color: Colors.black87,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
         actions: [
           IconButton(
             icon: ValueListenableBuilder(
               valueListenable: cameraController.cameraFacingState,
               builder: (context, state, child) {
                 if (state == CameraFacing.front) {
-                  return const Icon(Icons.camera_front);
+                  return const Icon(Icons.camera_front, color: Colors.black87);
                 } else {
-                  return const Icon(Icons.camera_rear);
+                  return const Icon(Icons.camera_rear, color: Colors.black87);
                 }
               },
             ),
@@ -56,9 +64,13 @@ class _ScanningPageState extends State<ScanningPage> {
                   setState(() {
                     scannedCode = code;
                   });
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Barcode found: $code')));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Barcode found: $code'),
+                      backgroundColor: const Color(0xFF2E7D32),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
                 }
               }
               setState(() {
@@ -95,7 +107,7 @@ class BarcodePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = Colors.greenAccent
+      ..color = const Color(0xFF2E7D32)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4.0;
 
@@ -108,15 +120,12 @@ class BarcodePainter extends CustomPainter {
 
     for (final barcode in barcodes) {
       final corners = barcode.corners;
-      if (corners == null || corners.length != 4) continue;
+      if (corners.length != 4) continue;
 
       final points = corners.map((point) {
         final scaleX = outputSize.width / inputSize.width;
         final scaleY = outputSize.height / inputSize.height;
-        return Offset(
-          dx + point.dx * scaleX,
-          dy + point.dy * scaleY,
-        );
+        return Offset(dx + point.dx * scaleX, dy + point.dy * scaleY);
       }).toList();
 
       final path = Path()

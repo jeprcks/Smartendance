@@ -8,16 +8,16 @@ class HomePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color headerBlue = Color(0xFF9BC9FF);
+    const Color headerGreen = Color(0xFF98FFB3);
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: Color(0xFFF0FFF4),
       appBar: AppBar(
-        backgroundColor: headerBlue,
+        backgroundColor: headerGreen,
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'MOM TRADING AND SERVICES',
+          'QR Code Scanner App',
           style: TextStyle(
             color: Colors.black87,
             fontWeight: FontWeight.bold,
