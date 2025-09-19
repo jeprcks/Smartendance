@@ -16,7 +16,8 @@ app.use(
 );
 app.use(express.json());
 
-const dbURI = "";
+const dbURI =
+  "mongodb+srv://jepoy:jepoy1234@personalproject.e5gjlwk.mongodb.net/smartendance?retryWrites=true&w=majority&appName=PersonalProject";
 
 mongoose.connect(dbURI).then(() => {
   console.log("Connected to MongoDB");
