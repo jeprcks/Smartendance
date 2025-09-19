@@ -5,14 +5,14 @@ class QRCodeIconContainer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryBlue = Color(0xFF1A237E);
+    const Color primaryGreen = Color(0xFF2E7D32);
 
     return Center(
       child: Container(
         width: 120,
         height: 120,
         decoration: BoxDecoration(
-          color: primaryBlue,
+          color: primaryGreen,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
             BoxShadow(

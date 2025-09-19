@@ -21,6 +21,7 @@ interface StudentFormData {
   section: string;
   gender: string;
   photo?: string; // Base64 encoded image
+  shift: string;
   address?: string;
   city?: string;
   province?: string;
@@ -44,6 +45,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     gradeLevel: '',
     section: '',
     gender: '',
+    shift: '',
     address: '',
     city: '',
     province: '',
@@ -59,7 +61,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
   const [showQR, setShowQR] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
 
-  const gradeLevels = ['Grade 7', 'Grade 8', 'Grade 9', 'Grade 10', 'Grade 11', 'Grade 12'];
+  const gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
   const sections = ['A', 'B', 'C', 'D'];
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -304,9 +306,26 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   onChange={handleChange}
                 >
                   <option value="">Select Gender</option>
-                  <option value="male">Male</option>
-                  <option value="female">Female</option>
-                  <option value="other">Other</option>
+                  <option value="Male">Male</option>
+                  <option value="Female">Female</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Shift*
+                </label>
+                <select
+                  name="shift"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  value={formData.shift}
+                  onChange={handleChange}
+                >
+                  <option value="">Select Shift</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
                 </select>
               </div>
 

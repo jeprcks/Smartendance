@@ -11,7 +11,7 @@ class TitleSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.center,
       children: const [
         Text(
-          'Tayud National High School',
+          'Umapad Elementary School',
           textAlign: TextAlign.center,
           style: TextStyle(
             color: primaryBlue,

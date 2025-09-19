@@ -6,7 +6,7 @@ class CameraScannerButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const Color primaryBlue = Color(0xFF1A237E);
+    const Color primaryGreen = Color(0xFF2E7D32);
 
     return SizedBox(
       width: double.infinity,
@@ -22,7 +22,7 @@ class CameraScannerButton extends StatelessWidget {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryBlue,
+          backgroundColor: primaryGreen,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),

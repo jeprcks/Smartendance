@@ -12,6 +12,7 @@ export default function Navbar() {
     { href: '/home/students', label: 'Students', icon: '👨‍🎓' },
     { href: '/home/history', label: 'History', icon: '📅' },
     { href: '/home/teachers', label: 'Teachers', icon: '👨‍🏫' },
+    { href: '/home/schedules', label: 'Schedules', icon: '🗓️' },
     // { href: '/settings', label: 'Settings', icon: '⚙️' },
   ];
 
