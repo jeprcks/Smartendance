@@ -13,6 +13,15 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
 
+  // Get the 'from' parameter from the URL if it exists
+  const getRedirectPath = () => {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      return params.get('from') || '/home';
+    }
+    return '/home';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -31,16 +40,19 @@ export default function LoginPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Login failed');
+        throw new Error(data.error || data.message || 'Login failed');
       }
 
-      // Store the token in localStorage or handle it according to your auth strategy
+      // Store the token in localStorage and handle it according to your auth strategy
       if (data.token) {
         localStorage.setItem('token', data.token);
+        // Also set it in a cookie for the middleware
+        document.cookie = `token=${data.token};path=/;max-age=86400`; // 24 hours
       }
 
-      // Redirect to dashboard/home page
-      router.push('/home');
+      // Redirect to the originally requested page or home
+      const redirectPath = getRedirectPath();
+      router.push(redirectPath);
     } catch (err: any) {
       setError(err.message || 'An error occurred during login');
     } finally {

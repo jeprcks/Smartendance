@@ -11,4 +11,4 @@ export default function HomeLayout({
       <main>{children}</main>
     </div>
   );
-}
+} 

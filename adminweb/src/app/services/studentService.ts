@@ -204,4 +204,30 @@ export const studentService = {
       throw error;
     }
   },
+
+  async updateStudent(studentId: string, updateData: Partial<Student>): Promise<Student> {
+    try {
+      console.log('Updating student:', studentId, 'with data:', updateData);
+      const response = await fetch(`${API_BASE_URL}/api/students/${studentId}`, {
+        method: 'PATCH', // Changed to PATCH to match server implementation
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(updateData),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Update failed:', data);
+        throw new Error(data.error || 'Failed to update student');
+      }
+
+      console.log('Student updated successfully:', data);
+      return data;
+    } catch (error) {
+      console.error('Error updating student:', error);
+      throw error instanceof Error ? error : new Error('Failed to update student');
+    }
+  },
 };

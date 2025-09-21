@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import AddStudentModal from './components/AddStudentModal';
 import ViewStudentModal from './components/ViewStudentModal';
 import PrintQRCodeModal from './components/PrintQRCodeModal';
+import EditStudentModal from './components/EditStudentModal';
 import StatusCounter from './components/StatusCounter';
 import PDFExportButton from './components/PDFExportButton';
 import { studentService, Student } from '@/app/services/studentService';
@@ -14,6 +15,7 @@ export default function StudentsPage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -60,6 +62,22 @@ export default function StudentsPage() {
       console.log('Error message:', errorMessage);
       // Let the modal component handle the error display
       throw new Error(errorMessage);
+    }
+  };
+
+  const handleUpdateStudent = async (studentId: string, updatedData: Partial<Student>) => {
+    try {
+      await studentService.updateStudent(studentId, updatedData);
+      setStudents(prevStudents => 
+        prevStudents.map(student => 
+          student.studentId === studentId 
+            ? { ...student, ...updatedData }
+            : student
+        )
+      );
+    } catch (error) {
+      console.error('Error updating student:', error);
+      throw error;
     }
   };
 
@@ -278,6 +296,19 @@ export default function StudentsPage() {
                           View
                         </button>
                         <button 
+                          className="inline-flex items-center px-3 py-2 bg-yellow-50 text-yellow-600 text-sm font-medium rounded-lg hover:bg-yellow-100 hover:text-yellow-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setIsEditModalOpen(true);
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M17.414 2.586a2 2 0 00-2.828 0L7 10.172V13h2.828l7.586-7.586a2 2 0 000-2.828z" />
+                            <path fillRule="evenodd" d="M2 6a2 2 0 012-2h4a1 1 0 010 2H4v10h10v-4a1 1 0 112 0v4a2 2 0 01-2 2H4a2 2 0 01-2-2V6z" clipRule="evenodd" />
+                          </svg>
+                          Edit
+                        </button>
+                        <button 
                           className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
                           onClick={() => {
                             setSelectedStudent(student);
@@ -317,6 +348,16 @@ export default function StudentsPage() {
           setIsPrintModalOpen(false);
           setSelectedStudent(null);
         }}
+        student={selectedStudent}
+      />
+
+      <EditStudentModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedStudent(null);
+        }}
+        onUpdate={handleUpdateStudent}
         student={selectedStudent}
       />
     </div>

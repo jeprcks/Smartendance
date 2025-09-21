@@ -13,6 +13,7 @@ export default function Navbar() {
     { href: '/home/history', label: 'History', icon: '📅' },
     { href: '/home/teachers', label: 'Teachers', icon: '👨‍🏫' },
     { href: '/home/schedules', label: 'Schedules', icon: '🗓️' },
+
     // { href: '/settings', label: 'Settings', icon: '⚙️' },
   ];
 
@@ -49,10 +50,22 @@ export default function Navbar() {
             </div>
           </div>
 
-          <div className="md:hidden">
-            <button className="text-gray-600 hover:text-gray-900">
-              <span className="text-xl">☰</span>
-            </button>
+          <div className="flex items-center space-x-4">
+            <div className="hidden md:block">
+              <Link
+                href="/logout"
+                className="px-4 py-2 rounded-md text-sm font-medium text-white bg-red-600 hover:bg-red-700 transition-colors duration-200"
+              >
+                <span className="mr-2">🚪</span>
+                Logout
+              </Link>
+            </div>
+
+            <div className="md:hidden">
+              <button className="text-gray-600 hover:text-gray-900">
+                <span className="text-xl">☰</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
