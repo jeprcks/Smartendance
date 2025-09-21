@@ -1,77 +1,88 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import ViewTeacherModal from '../teachers/components/ViewTeacherModal';
 import AddTeacherModal from '../teachers/components/AddTeacherModal';
+import EditTeacherModal from '../teachers/components/EditTeacherModal';
+import { teacherService, Teacher } from '../../services/teacherService';
+
+
 
 export default function TeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  // Removed unused selectedStudent state to fix the error
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
+  // State for API data
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalTeachers: 0,
+    hasNext: false,
+    hasPrev: false
+  });
 
-  const teachers = [
-    {
-      teacherId: 'TCH-001',
-      username: 'sthompson',
-      name: 'Dr. Sarah Thompson',
-      role: 'Teacher',
-      subject: 'Mathematics',
-      email: 'sarah.thompson@school.edu',
-      phoneNumber: '123-456-7890',
-      dateJoined: '2020-08-15',
-      status: 'Active'
-    },
-    {
-      teacherId: 'TCH-002',
-      name: 'Prof. James Wilson',
-      role: 'Teacher',
-      subject: 'Physics',
-      email: 'james.wilson@school.edu',
-      phoneNumber: '123-456-7891',
-      dateJoined: '2018-06-20',
-      status: 'Active'
-    },
-    {
-      teacherId: 'TCH-003',
-      name: 'Ms. Emily Rodriguez',
-      role: 'Teacher',
-      subject: 'English Literature',
-      email: 'emily.rodriguez@school.edu',
-      phoneNumber: '123-456-7892',
-      dateJoined: '2021-09-01',
-      status: 'Active'
-    },
-    {
-      teacherId: 'TCH-004',
-      name: 'Mr. Michael Chen',
-      role: 'Teacher',
-      subject: 'Computer Science',
-      email: 'michael.chen@school.edu',
-      phoneNumber: '123-456-7893',
-      dateJoined: '2019-07-10',
-      status: 'Active'
-    },
-    {
-      teacherId: 'TCH-005',
-      name: 'Mrs. Lisa Anderson',
-      role: 'Teacher',
-      subject: 'History',
-      email: 'lisa.anderson@school.edu',
-      phoneNumber: '123-456-7894',
-      dateJoined: '2017-08-25',
-      status: 'Active'
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+
+  // Fetch teachers from API
+  const fetchTeachers = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await teacherService.getAllTeachers({
+        search: searchQuery || undefined,
+        page: 1,
+        limit: 50
+      });
+
+      setTeachers(response.teachers);
+      setPagination(response.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch teachers');
+      console.error('Error fetching teachers:', err);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
-  const filteredTeachers = teachers.filter(teacher =>
-    teacher.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    teacher.teacherId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    teacher.role.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    teacher.subject.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Load teachers on component mount and when search changes
+  useEffect(() => {
+    fetchTeachers();
+  }, [searchQuery]);
 
-  const [selectedTeacher, setSelectedTeacher] = useState<typeof teachers[0] | null>(null);
+  // Handle adding new teacher
+  const handleAddTeacher = async (teacherData: any) => {
+    try {
+      await teacherService.createTeacher(teacherData);
+      await fetchTeachers(); // Refresh the list
+      setIsAddModalOpen(false);
+    } catch (err) {
+      console.error('Error adding teacher:', err);
+      // Re-throw the error so the modal can handle it
+      throw err;
+    }
+  };
+
+  // Handle editing teacher
+  const handleEditTeacher = async (teacherData: any) => {
+    try {
+      if (selectedTeacher) {
+        await teacherService.updateTeacher(selectedTeacher._id, teacherData);
+        await fetchTeachers(); // Refresh the list
+        setIsEditModalOpen(false);
+        setSelectedTeacher(null);
+      }
+    } catch (err) {
+      console.error('Error editing teacher:', err);
+      // Re-throw the error so the modal can handle it
+      throw err;
+    }
+  };
 
   return (
     <div className="p-8">
@@ -84,6 +95,32 @@ export default function TeachersPage() {
           + Add Teacher
         </button>
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error loading teachers</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={fetchTeachers}
+                  className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200 transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-lg shadow">
         <div className="p-4">
@@ -101,6 +138,7 @@ export default function TeachersPage() {
             <table className="min-w-full">
               <thead className="bg-gray-50">
                 <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher ID</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
@@ -111,35 +149,82 @@ export default function TeachersPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {filteredTeachers.map((teacher) => (
-                  <tr key={teacher.teacherId} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.teacherId}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.subject}</td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        teacher.status === 'Active' 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {teacher.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button 
-                        className="bg-gray-900 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors"
-                        onClick={() => {
-                          setSelectedTeacher(teacher);
-                          setIsViewModalOpen(true);
-                        }}
-                      >
-                        View
-                      </button>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                        Loading teachers...
+                      </div>
                     </td>
                   </tr>
-                ))}
+                ) : teachers.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      No teachers found
+                    </td>
+                  </tr>
+                ) : (
+                  teachers.map((teacher) => (
+                    <tr key={teacher._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center justify-center">
+                          {teacher.profilePicture ? (
+                            <img
+                              src={teacher.profilePicture}
+                              alt={`${teacher.name}'s profile`}
+                              className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
+                              <span className="text-sm font-bold text-gray-600">
+                                {teacher.name.split(' ').map((name: string) => name[0]).join('')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.teacherId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.subject}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          teacher.status === 'Active' 
+                            ? 'bg-green-100 text-green-800' 
+                            : teacher.status === 'Inactive'
+                            ? 'bg-yellow-100 text-yellow-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}>
+                          {teacher.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex space-x-2">
+                          <button 
+                            className="bg-gray-900 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              setSelectedTeacher(teacher);
+                              setIsViewModalOpen(true);
+                            }}
+                          >
+                            View
+                          </button>
+                          <button 
+                            className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors"
+                            onClick={() => {
+                              setSelectedTeacher(teacher);
+                              setIsEditModalOpen(true);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -158,11 +243,17 @@ export default function TeachersPage() {
       <AddTeacherModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
-        onAdd={(teacherData) => {
-          console.log('New teacher data:', teacherData);
-          // Here you would typically make an API call to add the teacher
-          setIsAddModalOpen(false);
+        onAdd={handleAddTeacher}
+      />
+
+      <EditTeacherModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTeacher(null);
         }}
+        onEdit={handleEditTeacher}
+        teacher={selectedTeacher}
       />
     </div>
   );

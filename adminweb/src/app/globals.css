@@ -349,3 +349,21 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+/* Student Photo Styles */
+.student-photo {
+  width: 48px !important;
+  height: 48px !important;
+  border-radius: 50% !important;
+  object-fit: cover !important;
+  display: block !important;
+  border: 1px solid rgba(156, 163, 175, 0.5) !important;
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.student-photo:hover {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  transform: scale(1.05) !important;
+}

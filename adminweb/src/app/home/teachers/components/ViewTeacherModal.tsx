@@ -12,6 +12,14 @@ interface ViewTeacherModalProps {
     phoneNumber: string;
     dateJoined: string;
     status: string;
+    profilePicture?: string;
+    gender?: string;
+    address?: {
+      street?: string;
+      city?: string;
+      province?: string;
+      zipCode?: string;
+    };
   } | null;
 }
 
@@ -33,6 +41,33 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
         </div>
 
         <div className="space-y-8">
+          {/* Profile Photo Section */}
+          <div className="flex justify-center">
+            <div className="relative">
+              {teacher.profilePicture ? (
+                <img
+                  src={teacher.profilePicture}
+                  alt={`${teacher.name}'s profile`}
+                  className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                />
+              ) : (
+                <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-gray-300 flex items-center justify-center">
+                  <svg
+                    className="w-16 h-16 text-gray-400"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Basic Information */}
           <div>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
@@ -52,6 +87,10 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
               <div>
                 <p className="text-sm text-gray-500">Subject</p>
                 <p className="text-base text-gray-900">{teacher.subject}</p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Gender</p>
+                <p className="text-base text-gray-900">{teacher.gender || 'Not specified'}</p>
               </div>
 
               <div>
@@ -79,6 +118,43 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
                 <p className="text-sm text-gray-500">Phone Number</p>
                 <p className="text-base text-gray-900">{teacher.phoneNumber}</p>
               </div>
+            </div>
+          </div>
+
+          {/* Address Information */}
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {teacher.address?.street && (
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Street Address</p>
+                  <p className="text-base text-gray-900">{teacher.address.street}</p>
+                </div>
+              )}
+              {teacher.address?.city && (
+                <div>
+                  <p className="text-sm text-gray-500">City/Municipality</p>
+                  <p className="text-base text-gray-900">{teacher.address.city}</p>
+                </div>
+              )}
+              {teacher.address?.province && (
+                <div>
+                  <p className="text-sm text-gray-500">Province</p>
+                  <p className="text-base text-gray-900">{teacher.address.province}</p>
+                </div>
+              )}
+              {teacher.address?.zipCode && (
+                <div>
+                  <p className="text-sm text-gray-500">ZIP Code</p>
+                  <p className="text-base text-gray-900">{teacher.address.zipCode}</p>
+                </div>
+              )}
+              {!teacher.address?.street && !teacher.address?.city && !teacher.address?.province && !teacher.address?.zipCode && (
+                <div className="col-span-2">
+                  <p className="text-sm text-gray-500">Address</p>
+                  <p className="text-base text-gray-500 italic">No address information provided</p>
+                </div>
+              )}
             </div>
           </div>
 

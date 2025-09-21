@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import '../fetch/fetchstudents.dart';
+import 'components/studentsinformation.dart';
 
 class ScanningPage extends StatefulWidget {
   const ScanningPage({super.key});
@@ -14,11 +16,58 @@ class _ScanningPageState extends State<ScanningPage> {
 
   List<Barcode> detectedBarcodes = [];
   Size? imageSize;
+  
+  // Student information state
+  Map<String, dynamic>? studentInfo;
+  bool isLoading = false;
+  String? errorMessage;
+  
+  // Student service instance
+  final StudentService _studentService = StudentService();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeService();
+  }
 
   @override
   void dispose() {
     cameraController.dispose();
     super.dispose();
+  }
+
+  // Initialize the student service
+  Future<void> _initializeService() async {
+    final url = await _studentService.findWorkingUrl();
+    if (url == null) {
+      setState(() {
+        errorMessage = 'Cannot connect to server. Please check:\n1. Server is running\n2. Device and computer are on same network\n3. Try different network configuration';
+      });
+    }
+  }
+
+  // Function to fetch student information from API
+  Future<void> fetchStudentInfo(String qrData) async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+      studentInfo = null;
+    });
+
+    // QR code scans are always "General" subject - teachers will update for specific subjects
+    final result = await _studentService.fetchStudentInfo(qrData, subject: 'General', notes: 'QR Code scanned - Teacher can update status for specific subjects');
+    
+    setState(() {
+      if (result['success'] == true) {
+        studentInfo = result['student'];
+        errorMessage = null;
+      } else {
+        studentInfo = null;
+        errorMessage = result['error'];
+      }
+      isLoading = false;
+    });
   }
 
   @override
@@ -37,6 +86,23 @@ class _ScanningPageState extends State<ScanningPage> {
           ),
         ),
         actions: [
+          // Connection status indicator
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: Icon(
+              _studentService.workingUrl != null ? Icons.wifi : Icons.wifi_off,
+              color: _studentService.workingUrl != null ? Colors.green : Colors.red,
+              size: 20,
+            ),
+          ),
+          // Retry connection button
+          IconButton(
+            icon: const Icon(Icons.refresh, color: Colors.black87),
+            onPressed: () {
+              _initializeService();
+            },
+          ),
+          // Camera switch
           IconButton(
             icon: ValueListenableBuilder(
               valueListenable: cameraController.cameraFacingState,
@@ -64,9 +130,13 @@ class _ScanningPageState extends State<ScanningPage> {
                   setState(() {
                     scannedCode = code;
                   });
+                  
+                  // Fetch student information when QR code is scanned
+                  fetchStudentInfo(code);
+                  
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                      content: Text('Barcode found: $code'),
+                      content: Text('QR Code scanned successfully!'),
                       backgroundColor: const Color(0xFF2E7D32),
                       behavior: SnackBarBehavior.floating,
                     ),
@@ -87,10 +157,46 @@ class _ScanningPageState extends State<ScanningPage> {
                 boxFit: BoxFit.cover,
               ),
             ),
+          
+          // Loading indicator
+          if (isLoading)
+            const LoadingDisplay(),
+          
+          // Student information display
+          if (studentInfo != null && !isLoading)
+            StudentInformationDisplay(
+              studentInfo: studentInfo!,
+              studentService: _studentService,
+              onScanAnother: () {
+                setState(() {
+                  studentInfo = null;
+                  scannedCode = null;
+                });
+              },
+              onClose: () {
+                setState(() {
+                  studentInfo = null;
+                  scannedCode = null;
+                });
+              },
+            ),
+          
+          // Error message display
+          if (errorMessage != null && !isLoading)
+            ErrorDisplay(
+              errorMessage: errorMessage!,
+              onRetry: () {
+                setState(() {
+                  errorMessage = null;
+                  scannedCode = null;
+                });
+              },
+            ),
         ],
       ),
     );
   }
+
 }
 
 class BarcodePainter extends CustomPainter {

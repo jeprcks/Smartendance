@@ -1,70 +1,108 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import AddStudentModal from './components/AddStudentModal';
 import ViewStudentModal from './components/ViewStudentModal';
+import PrintQRCodeModal from './components/PrintQRCodeModal';
 import StatusCounter from './components/StatusCounter';
+import PDFExportButton from './components/PDFExportButton';
+import { studentService, Student } from '@/app/services/studentService';
+import toast from 'react-hot-toast';
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
+  const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
 
-  const students = [
-    { 
-      studentId: 'STU-001', 
-      fullName: 'Alice Johnson', 
-      profilePicture: null,
-      gradeLevel: 'Grade 4', 
-      section: 'A', 
-      gender: 'Female',
-      shift: 'Morning',
-      email: 'alice.j@school.edu',
-      phoneNumber: '123-456-7890',
-      age: '16',
-      birthDate: '2009-05-15',
-      address: '123 Main St',
-      city: 'Springfield',
-      province: 'State',
-      zipCode: '12345',
-      parentName: 'Mary Johnson',
-      parentContact: '123-456-7891',
-      emergencyContactName: 'John Johnson',
-      emergencyContact: '123-456-7892',
-      relationship: 'Father'
-    },
-    { 
-      studentId: 'STU-002', 
-      fullName: 'Brian Chen', 
-      profilePicture: null,
-      gradeLevel: 'Grade 2', 
-      section: 'A', 
-      gender: 'Male',
-      shift: 'Afternoon',
-      email: 'brian.c@school.edu',
-      phoneNumber: '123-456-7893',
-      age: '16',
-      birthDate: '2009-03-20',
-      address: '456 Oak St',
-      city: 'Springfield',
-      province: 'State',
-      zipCode: '12345',
-      parentName: 'Wei Chen',
-      parentContact: '123-456-7894',
-      emergencyContactName: 'Li Chen',
-      emergencyContact: '123-456-7895',
-      relationship: 'Mother'
-    },
-  ];
+  const fetchStudents = async () => {
+    try {
+      setLoading(true);
+      const data = await studentService.getAllStudents();
+      console.log('Fetched students:', data.length);
+      data.forEach(student => {
+        if (student.photo) {
+          console.log(`Student ${student.studentId} photo:`, {
+            hasPhoto: !!student.photo,
+            startsWithData: student.photo.startsWith('data:image/'),
+            length: student.photo.length,
+            preview: student.photo.substring(0, 50) + '...'
+          });
+        }
+      });
+      setStudents(data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast.error('Failed to fetch students');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredStudents = students.filter(student =>
-    student.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.gradeLevel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    student.section.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (student.shift && student.shift.toLowerCase().includes(searchQuery.toLowerCase()))
+  useEffect(() => {
+    fetchStudents();
+  }, []);
+
+  const handleAddStudent = async (studentData: Partial<Student>) => {
+    try {
+      console.log('Attempting to add student with ID:', studentData.studentId);
+      const newStudent = await studentService.addStudent(studentData);
+      console.log('Student added successfully:', newStudent);
+      setStudents(prevStudents => [...prevStudents, newStudent]);
+      return newStudent; // Return the new student data
+    } catch (error: any) {
+      console.error('Error adding student:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add student';
+      console.log('Error message:', errorMessage);
+      // Let the modal component handle the error display
+      throw new Error(errorMessage);
+    }
+  };
+
+  // Loading skeleton UI
+  const LoadingSkeleton = () => (
+    <tr className="animate-pulse">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-10 w-10 bg-gray-200 rounded-full"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-20"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-32"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-24"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-16"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-20"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 bg-gray-200 rounded w-20"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-8 bg-gray-200 rounded w-24"/>
+      </td>
+    </tr>
   );
+
+  const filteredStudents = students.filter(student => {
+    const query = searchQuery.toLowerCase();
+    return (
+      student.fullName.toLowerCase().includes(query) ||
+      student.studentId.toLowerCase().includes(query) ||
+      student.gradeLevel.toLowerCase().includes(query) ||
+      student.section.toLowerCase().includes(query) ||
+      (student.shift?.toLowerCase() || '').includes(query)
+    );
+  });
 
   const totalMale = students.filter(student => student.gender === 'Male').length;
   const totalFemale = students.filter(student => student.gender === 'Female').length;
@@ -80,28 +118,29 @@ export default function StudentsPage() {
         <div className="flex items-center space-x-4">
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Students</h1>
         </div>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center px-5 py-2.5 bg-green-600 text-sm font-semibold text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add Student
-        </button>
+        <div className="flex items-center space-x-3">
+          <PDFExportButton students={students} disabled={loading} />
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="inline-flex items-center px-5 py-2.5 bg-green-600 text-sm font-semibold text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add Student
+          </button>
+        </div>
         
         <AddStudentModal 
           isOpen={isAddModalOpen}
           onClose={() => setIsAddModalOpen(false)}
-          onAdd={(studentData) => {
-            console.log('New student data:', studentData);
-            // Here you would typically make an API call to add the student
-          }}
+          onAdd={handleAddStudent}
         />
       </div>
 
       <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">
         <div className="p-6">
+          
           <div className="mb-6">
             <div className="relative group">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -134,18 +173,45 @@ export default function StudentsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200/80">
-                {filteredStudents.map((student) => (
+                {loading ? (
+                  // Show loading skeletons
+                  [...Array(5)].map((_, index) => <LoadingSkeleton key={index} />)
+                ) : filteredStudents.length === 0 ? (
+                  // Show empty state
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        <p>No students found</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  // Show student data
+                  filteredStudents.map((student) => {
+                    return (
                   <tr key={student.studentId} className="hover:bg-gray-50/50 transition-colors duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center">
-                        {student.profilePicture ? (
+                        {student.photo && student.photo.startsWith('data:image/') && !imageErrors.has(student.studentId) ? (
                           <div className="relative group">
                             <img
-                              src={student.profilePicture}
+                              src={student.photo}
                               alt={`${student.fullName}'s profile`}
-                              className="h-10 w-10 rounded-full object-cover border border-gray-200/50 group-hover:border-blue-500/50 shadow-sm group-hover:shadow-md transition-all duration-200 transform group-hover:scale-105"
+                              className="student-photo"
+                              onError={(e) => {
+                                console.error('Image failed to load for student:', student.studentId);
+                                console.error('Error event:', e);
+                                console.error('Image src length:', student.photo?.length);
+                                setImageErrors(prev => new Set(prev).add(student.studentId));
+                              }}
+                              onLoad={(e) => {
+                                console.log('Image loaded successfully for student:', student.studentId);
+                                console.log('Image dimensions:', e.currentTarget.naturalWidth, 'x', e.currentTarget.naturalHeight);
+                              }}
                             />
-                            <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200" />
                           </div>
                         ) : (
                           <div className="relative group">
@@ -162,7 +228,7 @@ export default function StudentsPage() {
                                   : 'text-pink-600 group-hover:text-pink-700'
                                 }`}
                               >
-                                {student.fullName.split(' ').map(n => n[0]).join('')}
+                                {student.fullName.split(' ').map((name: string) => name[0]).join('')}
                               </span>
                             </div>
                             <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200" />
@@ -197,22 +263,39 @@ export default function StudentsPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <button 
-                        className="inline-flex items-center px-4 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
-                        onClick={() => {
-                          setSelectedStudent(student);
-                          setIsViewModalOpen(true);
-                        }}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                          <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                          <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                        </svg>
-                        View
-                      </button>
+                      <div className="flex items-center space-x-2">
+                        <button 
+                          className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setIsViewModalOpen(true);
+                          }}
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                          </svg>
+                          View
+                        </button>
+                        <button 
+                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setIsPrintModalOpen(true);
+                          }}
+                          title="Print QR Code"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M5 4v3H4a2 2 0 00-2 2v3a2 2 0 002 2h1v2a2 2 0 002 2h6a2 2 0 002-2v-2h1a2 2 0 002-2V9a2 2 0 00-2-2h-1V4a2 2 0 00-2-2H7a2 2 0 00-2 2zm8 0H7v3h6V4zm0 8H7v4h6v-4z" clipRule="evenodd" />
+                          </svg>
+                          Print
+                        </button>
+                      </div>
                     </td>
                   </tr>
-                ))}
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -223,6 +306,15 @@ export default function StudentsPage() {
         isOpen={isViewModalOpen}
         onClose={() => {
           setIsViewModalOpen(false);
+          setSelectedStudent(null);
+        }}
+        student={selectedStudent}
+      />
+
+      <PrintQRCodeModal 
+        isOpen={isPrintModalOpen}
+        onClose={() => {
+          setIsPrintModalOpen(false);
           setSelectedStudent(null);
         }}
         student={selectedStudent}

@@ -1,23 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
+import { historyService, AttendanceRecord, AttendanceStats } from '../../services/historyService';
 
-interface AttendanceRecord {
-  id: string;
-  studentId: string;
-  studentName: string;
-  subject: string;
-  scanTime: string;
-  status: 'Present' | 'Late' | 'Absent' | 'Cutting';
-}
-
-interface StudentStats {
-  present: number;
-  absent: number;
-  late: number;
-  cutting: number;
-}
+// Remove duplicate interface - using the one from historyService
 
 interface StudentDetailsModalProps {
   isOpen: boolean;
@@ -25,7 +12,7 @@ interface StudentDetailsModalProps {
   student: {
     id: string;
     name: string;
-    stats: StudentStats;
+    stats: AttendanceStats;
     recentAttendance: AttendanceRecord[];
   } | null;
 }
@@ -101,7 +88,7 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
               </thead>
               <tbody className="bg-white divide-y divide-gray-200/80">
                 {student.recentAttendance.map((record) => (
-                  <tr key={record.id} className="hover:bg-gray-50/80 group transition-all duration-200">
+                  <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
                         {format(new Date(record.scanTime), 'MMM dd, yyyy')}
@@ -109,7 +96,7 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
-                        {format(new Date(record.scanTime), 'hh:mm a')}
+                        {format(new Date(record.scanTime), 'HH:mm')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -138,7 +125,7 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
   );
 }
 
-import AttendanceStats from './components/AttendanceStats';
+import AttendanceStatsComponent from './components/AttendanceStats';
 import ExportData from './components/ExportData';
 
 export default function HistoryPage() {
@@ -146,83 +133,133 @@ export default function HistoryPage() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<AttendanceRecord['status'] | ''>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   type SelectedStudent = {
     id: string;
     name: string;
-    stats: StudentStats;
+    stats: AttendanceStats;
     recentAttendance: AttendanceRecord[];
   };
   const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
 
-  // Mock data for demonstration
-  const attendanceRecords: (AttendanceRecord & { stats: StudentStats; recentAttendance: AttendanceRecord[] })[] = [
-    {
-      id: '1',
-      studentId: 'STU-001',
-      studentName: 'John Doe',
-      subject: 'Mathematics',
-      scanTime: '2025-09-18T08:15:00',
-      status: 'Present' as const,
-      stats: {
-        present: 15,
-        absent: 1,
-        late: 2,
-        cutting: 2
-      },
-      recentAttendance: [
-        { id: 'a1', studentId: 'STU-001', studentName: 'John Doe', subject: 'Mathematics', scanTime: '2025-09-18T08:15:00', status: 'Present' as const },
-        { id: 'a2', studentId: 'STU-001', studentName: 'John Doe', subject: 'English', scanTime: '2025-09-17T09:30:00', status: 'Late' as const },
-        { id: 'a3', studentId: 'STU-001', studentName: 'John Doe', subject: 'Science', scanTime: '2025-09-16T10:00:00', status: 'Cutting' as const }
-      ]
-    },
-    {
-      id: '2',
-      studentId: 'STU-002',
-      studentName: 'Jane Smith',
-      subject: 'English',
-      scanTime: '2025-09-18T09:00:00',
-      status: 'Late' as const,
-      stats: {
-        present: 12,
-        absent: 2,
-        late: 3,
-        cutting: 1
-      },
-      recentAttendance: [
-        { id: 'b1', studentId: 'STU-002', studentName: 'Jane Smith', subject: 'English', scanTime: '2025-09-18T09:00:00', status: 'Late' as const },
-        { id: 'b2', studentId: 'STU-002', studentName: 'Jane Smith', subject: 'Mathematics', scanTime: '2025-09-17T08:00:00', status: 'Present' as const },
-        { id: 'b3', studentId: 'STU-002', studentName: 'Jane Smith', subject: 'Science', scanTime: '2025-09-16T10:15:00', status: 'Absent' as const }
-      ]
-    }
-  ];
-
-  const filteredRecords = attendanceRecords.filter(record => {
-    const matchesSearch = 
-      record.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      record.subject.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesDate = !selectedDate || format(new Date(record.scanTime), 'yyyy-MM-dd') === selectedDate;
-    const matchesStatus = !selectedStatus || record.status === selectedStatus;
-
-    return matchesSearch && matchesDate && matchesStatus;
+  // State for API data
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [stats, setStats] = useState<AttendanceStats>({
+    present: 0,
+    absent: 0,
+    late: 0,
+    cutting: 0,
+    total: 0
   });
+  const [pagination, setPagination] = useState({
+    currentPage: 1,
+    totalPages: 1,
+    totalRecords: 0,
+    hasNext: false,
+    hasPrev: false
+  });
+
+  // Fetch data from API
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await historyService.getHistoryPageData({
+        search: searchQuery || undefined,
+        status: selectedStatus || undefined,
+        startDate: selectedDate || undefined,
+        endDate: selectedDate || undefined,
+        page: 1,
+        limit: 50
+      });
+
+      setAttendanceRecords(response.records);
+      setStats(response.stats);
+      setPagination(response.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      console.error('Error fetching history data:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Fetch student details for modal
+  const fetchStudentDetails = async (studentId: string) => {
+    try {
+      const response = await historyService.getStudentHistory(studentId, { limit: 10 });
+      
+      setSelectedStudent({
+        id: response.student.id,
+        name: response.student.name,
+        stats: response.stats,
+        recentAttendance: response.records
+      });
+      setIsModalOpen(true);
+    } catch (err) {
+      console.error('Error fetching student details:', err);
+      setError('Failed to fetch student details');
+    }
+  };
+
+  // Note: Teacher functionality removed - this is for admin view only
+
+  // Load data on component mount and when filters change
+  useEffect(() => {
+    fetchData();
+  }, [searchQuery, selectedDate, selectedStatus]);
+
+  const filteredRecords = attendanceRecords;
 
   return (
     <div className="p-8">
       <div className="mb-6">
-        <AttendanceStats 
-          totalRecords={attendanceRecords.filter(record => 
-            record.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            record.studentId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            record.subject.toLowerCase().includes(searchQuery.toLowerCase())
-          ).filter(record => !selectedDate || format(new Date(record.scanTime), 'yyyy-MM-dd') === selectedDate).length}
-          present={filteredRecords.filter(r => r.status === 'Present').length}
-          absent={filteredRecords.filter(r => r.status === 'Absent').length}
-          late={filteredRecords.filter(r => r.status === 'Late').length}
-          cutting={filteredRecords.filter(r => r.status === 'Cutting').length}
+        <AttendanceStatsComponent 
+          totalRecords={stats.total}
+          present={stats.present}
+          absent={stats.absent}
+          late={stats.late}
+          cutting={stats.cutting}
         />
       </div>
+
+      {error && (
+        <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Error loading data</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={fetchData}
+                  className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200 transition-colors"
+                >
+                  Try again
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isLoading && (
+        <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600 mr-3"></div>
+            <span className="text-blue-800">Loading attendance records...</span>
+          </div>
+        </div>
+      )}
 
       <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">
         <div className="p-6">
@@ -268,7 +305,31 @@ export default function HistoryPage() {
                 </select>
               </div>
               <div className="flex items-center">
-                <ExportData filteredRecords={filteredRecords} />
+                <ExportData 
+                  records={filteredRecords}
+                  onExport={async (format) => {
+                    try {
+                      const data = await historyService.exportData({
+                        startDate: selectedDate || undefined,
+                        endDate: selectedDate || undefined,
+                        format: format as 'csv'
+                      });
+                      
+                      const blob = data as Blob;
+                      const url = window.URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = `attendance_records_${new Date().toISOString().split('T')[0]}.csv`;
+                      document.body.appendChild(a);
+                      a.click();
+                      window.URL.revokeObjectURL(url);
+                      document.body.removeChild(a);
+                    } catch (err) {
+                      console.error('Export error:', err);
+                      setError('Failed to export data');
+                    }
+                  }}
+                />
               </div>
             </div>
           </div>
@@ -286,19 +347,27 @@ export default function HistoryPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200/80">
-                {filteredRecords.map((record) => (
-                  <tr 
-                    key={record.id} 
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                      <div className="flex items-center justify-center">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                        Loading records...
+                      </div>
+                    </td>
+                  </tr>
+                ) : filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                      No attendance records found
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRecords.map((record) => (
+                    <tr 
+                      key={record._id} 
                     className="hover:bg-gray-50/50 transition-colors duration-200 cursor-pointer"
-                    onClick={() => {
-                      setSelectedStudent({
-                        id: record.studentId,
-                        name: record.studentName,
-                        stats: record.stats,
-                        recentAttendance: record.recentAttendance
-                      });
-                      setIsModalOpen(true);
-                    }}
+                      onClick={() => fetchStudentDetails(record.studentId)}
                   >
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-800">{record.studentId}</span>
@@ -313,20 +382,21 @@ export default function HistoryPage() {
                       <span className="text-sm text-gray-700">{format(new Date(record.scanTime), 'MMM dd, yyyy')}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{format(new Date(record.scanTime), 'hh:mm a')}</span>
+                      <span className="text-sm text-gray-700">{format(new Date(record.scanTime), 'HH:mm')}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
-                        record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :
-                        record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50' :
-                        record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50' :
-                        'bg-orange-50 text-orange-700 ring-orange-200/50'
-                      } transition-colors duration-200`}>
-                        {record.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
+                          record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :
+                          record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50' :
+                          record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50' :
+                          'bg-orange-50 text-orange-700 ring-orange-200/50'
+                        } transition-colors duration-200`}>
+                          {record.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

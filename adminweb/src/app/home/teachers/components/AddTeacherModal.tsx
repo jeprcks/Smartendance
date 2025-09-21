@@ -10,7 +10,6 @@ interface AddTeacherModalProps {
 }
 
 interface TeacherFormData {
-  teacherId: string;
   username: string;
   password: string;
   name: string;
@@ -26,9 +25,24 @@ interface TeacherFormData {
   zipCode?: string;
 }
 
+interface ValidationErrors {
+  username?: string;
+  password?: string;
+  name?: string;
+  subject?: string;
+  email?: string;
+  phoneNumber?: string;
+  gender?: string;
+  birthDate?: string;
+  photo?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  zipCode?: string;
+}
+
 export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherModalProps) {
   const [formData, setFormData] = useState<TeacherFormData>({
-    teacherId: '',
     username: '',
     password: '',
     name: '',
@@ -44,24 +58,156 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
     zipCode: ''
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [errors, setErrors] = useState<ValidationErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string>('');
+
+  // Validation functions
+  const validateEmail = (email: string): boolean => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+  };
+
+  const validatePhoneNumber = (phone: string): boolean => {
+    const phoneRegex = /^[\d\s\-\(\)\+]+$/;
+    return phoneRegex.test(phone) && phone.replace(/\D/g, '').length >= 10;
+  };
+
+  const validatePassword = (password: string): boolean => {
+    return password.length >= 6;
+  };
+
+  const validateUsername = (username: string): boolean => {
+    const usernameRegex = /^[a-zA-Z0-9_]+$/;
+    return usernameRegex.test(username) && username.length >= 3;
+  };
+
+  const validateForm = (): boolean => {
+    const newErrors: ValidationErrors = {};
+
+    // Required field validations
+    if (!formData.username.trim()) {
+      newErrors.username = 'Username is required';
+    } else if (!validateUsername(formData.username)) {
+      newErrors.username = 'Username must be at least 3 characters and contain only letters, numbers, and underscores';
+    }
+
+    if (!formData.password.trim()) {
+      newErrors.password = 'Password is required';
+    } else if (!validatePassword(formData.password)) {
+      newErrors.password = 'Password must be at least 6 characters long';
+    }
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Full name is required';
+    } else if (formData.name.trim().length < 2) {
+      newErrors.name = 'Full name must be at least 2 characters long';
+    }
+
+    if (!formData.subject.trim()) {
+      newErrors.subject = 'Subject is required';
+    }
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email address is required';
+    } else if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = 'Phone number is required';
+    } else if (!validatePhoneNumber(formData.phoneNumber)) {
+      newErrors.phoneNumber = 'Please enter a valid phone number (at least 10 digits)';
+    }
+
+    if (!formData.gender) {
+      newErrors.gender = 'Gender is required';
+    }
+
+    // Optional field validations
+    if (formData.zipCode && !/^\d{4,6}$/.test(formData.zipCode)) {
+      newErrors.zipCode = 'ZIP code must be 4-6 digits';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd({ 
-      ...formData, 
-      role: 'Teacher', // Adding fixed role
-      dateJoined: new Date().toISOString(), 
-      status: 'Active' 
-    });
-    onClose();
+    
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setSubmitError(''); // Clear any previous submit errors
+    
+    try {
+      const { address, city, province, zipCode, ...restFormData } = formData;
+      await onAdd({ 
+        ...restFormData, 
+        profilePicture: formData.photo, // Map photo to profilePicture for API
+        address: {
+          street: address,
+          city: city,
+          province: province,
+          zipCode: zipCode
+        },
+        role: 'Teacher', // Adding fixed role
+        dateJoined: new Date().toISOString(), 
+        status: 'Active' 
+      });
+      onClose();
+    } catch (error) {
+      console.error('Error adding teacher:', error);
+      setSubmitError(error instanceof Error ? error.message : 'Failed to add teacher');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>
   ) => {
+    const { name, value } = e.target;
     setFormData({
       ...formData,
-      [e.target.name]: e.target.value
+      [name]: value
     });
+    
+    // Clear error for this field when user starts typing
+    if (errors[name as keyof ValidationErrors]) {
+      setErrors({
+        ...errors,
+        [name]: undefined
+      });
+    }
+    
+    // Clear submit error when user makes any changes
+    if (submitError) {
+      setSubmitError('');
+    }
+  };
+
+  // Helper component for displaying field errors
+  const FieldError = ({ error }: { error?: string }) => {
+    if (!error) return null;
+    return (
+      <p className="mt-1 text-sm text-red-600 flex items-center">
+        <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+        </svg>
+        {error}
+      </p>
+    );
+  };
+
+  // Clear all errors when modal is closed
+  const handleClose = () => {
+    setErrors({});
+    setSubmitError('');
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -73,7 +219,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold text-gray-900">Add New Teacher</h2>
           <button 
-            onClick={onClose}
+            onClick={handleClose}
             className="text-gray-500 hover:text-gray-700"
           >
             ✕
@@ -152,10 +298,13 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="username"
                   required
                   placeholder="Enter username"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.username}
                   onChange={handleChange}
                 />
+                <FieldError error={errors.username} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -166,10 +315,13 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="password"
                   required
                   placeholder="Enter password"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.password}
                   onChange={handleChange}
                 />
+                <FieldError error={errors.password} />
               </div>
             </div>
           </div>
@@ -180,20 +332,6 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Teacher ID*
-                </label>
-                <input
-                  type="text"
-                  name="teacherId"
-                  required
-                  placeholder="Enter teacher ID"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  value={formData.teacherId}
-                  onChange={handleChange}
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Full Name*
                 </label>
                 <input
@@ -201,10 +339,13 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="name"
                   required
                   placeholder="Enter full name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.name}
                   onChange={handleChange}
                 />
+                <FieldError error={errors.name} />
               </div>
 
               <div>
@@ -216,10 +357,13 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="subject"
                   required
                   placeholder="Enter subject"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.subject ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.subject}
                   onChange={handleChange}
                 />
+                <FieldError error={errors.subject} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -228,7 +372,9 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                 <select
                   name="gender"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.gender ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.gender}
                   onChange={handleChange}
                 >
@@ -237,6 +383,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
                 </select>
+                <FieldError error={errors.gender} />
               </div>
             </div>
           </div>
@@ -254,10 +401,13 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="email"
                   required
                   placeholder="Enter email address"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.email}
                   onChange={handleChange}
                 />
+                <FieldError error={errors.email} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -268,10 +418,13 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="phoneNumber"
                   required
                   placeholder="Enter phone number"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.phoneNumber ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.phoneNumber}
                   onChange={handleChange}
                 />
+                <FieldError error={errors.phoneNumber} />
               </div>
             </div>
           </div>
@@ -326,28 +479,65 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                 <input
                   type="text"
                   name="zipCode"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.zipCode ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
                   value={formData.zipCode}
                   onChange={handleChange}
                   placeholder="Enter ZIP code"
                 />
+                <FieldError error={errors.zipCode} />
               </div>
             </div>
           </div>
 
+          {/* Submit Error Display */}
+          {submitError && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <h3 className="text-sm font-medium text-red-800">Error adding teacher</h3>
+                  <div className="mt-2 text-sm text-red-700">
+                    <p>{submitError}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
           <div className="flex justify-end space-x-4 mt-8">
             <button
               type="button"
-              onClick={onClose}
+              onClick={handleClose}
               className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              disabled={isSubmitting}
+              className={`px-6 py-2 rounded-md transition-colors flex items-center ${
+                isSubmitting
+                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
+              }`}
             >
-              Add Teacher
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Adding...
+                </>
+              ) : (
+                'Add Teacher'
+              )}
             </button>
           </div>
         </form>
