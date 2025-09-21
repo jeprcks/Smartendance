@@ -214,42 +214,20 @@ export default function StudentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center">
                         {student.photo && student.photo.startsWith('data:image/') && !imageErrors.has(student.studentId) ? (
-                          <div className="relative group">
-                            <img
-                              src={student.photo}
-                              alt={`${student.fullName}'s profile`}
-                              className="student-photo"
-                              onError={(e) => {
-                                console.error('Image failed to load for student:', student.studentId);
-                                console.error('Error event:', e);
-                                console.error('Image src length:', student.photo?.length);
-                                setImageErrors(prev => new Set(prev).add(student.studentId));
-                              }}
-                              onLoad={(e) => {
-                                console.log('Image loaded successfully for student:', student.studentId);
-                                console.log('Image dimensions:', e.currentTarget.naturalWidth, 'x', e.currentTarget.naturalHeight);
-                              }}
-                            />
-                          </div>
+                          <img
+                            src={student.photo}
+                            alt={`${student.fullName}'s profile`}
+                            className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                            onError={(e) => {
+                              console.error('Image failed to load for student:', student.studentId);
+                              setImageErrors(prev => new Set(prev).add(student.studentId));
+                            }}
+                          />
                         ) : (
-                          <div className="relative group">
-                            <div className={`h-10 w-10 rounded-full flex items-center justify-center border-2 shadow-sm
-                              ${student.gender === 'Male' 
-                                ? 'border-blue-200 bg-gradient-to-br from-blue-50 to-blue-100 group-hover:from-blue-100 group-hover:to-blue-200' 
-                                : 'border-pink-200 bg-gradient-to-br from-pink-50 to-pink-100 group-hover:from-pink-100 group-hover:to-pink-200'
-                              } 
-                              transform transition-all duration-200 ease-in-out group-hover:scale-105 group-hover:shadow-md`}
-                            >
-                              <span className={`text-sm font-bold 
-                                ${student.gender === 'Male' 
-                                  ? 'text-blue-600 group-hover:text-blue-700' 
-                                  : 'text-pink-600 group-hover:text-pink-700'
-                                }`}
-                              >
-                                {student.fullName.split(' ').map((name: string) => name[0]).join('')}
-                              </span>
-                            </div>
-                            <div className="absolute inset-0 rounded-full bg-black bg-opacity-0 group-hover:bg-opacity-5 transition-opacity duration-200" />
+                          <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
+                            <span className="text-sm font-bold text-gray-600">
+                              {student.fullName.split(' ').map((name: string) => name[0]).join('')}
+                            </span>
                           </div>
                         )}
                       </div>
