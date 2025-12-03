@@ -3,10 +3,16 @@ import 'package:http/http.dart' as http;
 
 class StudentService {
   // Network configuration
+  // static const List<String> possibleUrls = [
+  //   'http://10.0.2.2:4000',  // Android Emulator
+  //   'http://localhost:4000',  // iOS Simulator
+  //   'http://192.168.1.52:4000',  // Physical device (replace with your IP)
+  //   'http://192.168.0.100:4000',  // Alternative IP range
+  // ];
   static const List<String> possibleUrls = [
     'http://10.0.2.2:4000',  // Android Emulator
     'http://localhost:4000',  // iOS Simulator
-    'http://192.168.1.52:4000',  // Physical device (replace with your IP)
+    'http://192.168.1.10:4000',  // Physical device (replace with your IP)
     'http://192.168.0.100:4000',  // Alternative IP range
   ];
   

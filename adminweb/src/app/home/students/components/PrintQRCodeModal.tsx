@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Student, studentService } from '@/app/services/studentService';
 
 interface PrintQRCodeModalProps {
@@ -14,6 +15,7 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
   const [qrCodeData, setQrCodeData] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   // Fetch QR code when modal opens
   useEffect(() => {
@@ -21,6 +23,11 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
       fetchQRCode();
     }
   }, [isOpen, student]);
+
+  // Ensure we're mounted before using portals / window
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const fetchQRCode = async () => {
     if (!student) return;
@@ -46,17 +53,121 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
     }
   };
 
+  const handlePrint = () => {
+    if (!student) return;
+
+    const initials = student.fullName
+      .split(' ')
+      .map((n: string) => n[0])
+      .join('')
+      .slice(0, 2)
+      .toUpperCase();
+
+    const photoHtml = student.photo && student.photo.startsWith('data:image/')
+      ? `<img src="${student.photo}" alt="${student.fullName}" style="width:100%;height:100%;object-fit:cover;" />`
+      : `<div style="display:flex;align-items:center;justify-content:center;width:100%;height:100%;background:#f0fdf4;color:#16a34a;font-weight:700;font-size:20px;">${initials}</div>`;
+
+    const qrHtml = qrCodeData
+      ? `<img src="${qrCodeData}" alt="Student QR Code" style="width:192px;height:192px;display:block;" />`
+      : `<div style="width:192px;height:192px;display:flex;align-items:center;justify-content:center;background:#f3f4f6;border:2px solid #d1d5db;border-radius:8px;">No QR Code Available</div>`;
+
+    const docHtml = `<!doctype html>
+    <html>
+      <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title></title>
+        <style>
+          @page { size: A4; margin: 1in; }
+          html, body { background: #ffffff; padding: 0; margin: 0; height: 100%; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji"; color:#111827; }
+          /* Center within the viewport so it works for A4 and Letter */
+          .page { min-height: calc(100vh - 2in); display: flex; align-items: center; justify-content: center; }
+          .container { max-width: 7.5in; margin: 0 auto; padding: 0; text-align: center; }
+          h1 { margin: 0 0 6px; font-size: 24px; font-weight: 700; }
+          .sub { margin: 0 0 20px; color: #4b5563; }
+          .photo { width: 80px; height: 80px; border-radius: 9999px; overflow: hidden; border: 2px solid #d1d5db; margin: 0 auto 12px; }
+          .name { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+          .id { font-size: 16px; margin: 0 0 2px; }
+          .muted { color: #4b5563; margin: 0; }
+          .qr { display: inline-block; padding: 12px; border: 2px solid #d1d5db; border-radius: 10px; margin: 18px 0; }
+          .footer { font-size: 12px; color: #4b5563; margin-top: 8px; }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+        <div class="container">
+          <div>
+            <h1>Smartendance System</h1>
+            <div class="sub">Student QR Code</div>
+          </div>
+          <div class="photo">${photoHtml}</div>
+          <div class="name">${student.fullName}</div>
+          <div class="id">Student ID: ${student.studentId}</div>
+          <p class="muted">${student.gradeLevel} - Section ${student.section}</p>
+          <p class="muted">${student.shift} Shift</p>
+          <div class="qr">${qrHtml}</div>
+          <div class="footer">Scan this QR code with the mobile app to view student information</div>
+        </div>
+        </div>
+      </body>
+    </html>`;
+
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const iw = iframe.contentWindow as Window;
+    const idoc = iw.document;
+    idoc.open();
+    idoc.write(docHtml);
+    idoc.close();
+
+    const removeIframe = () => {
+      try { document.body.removeChild(iframe); } catch {}
+    };
+
+    // Close/remove the hidden iframe after the print dialog closes
+    iw.onafterprint = removeIframe;
+    try {
+      const mql = iw.matchMedia && iw.matchMedia('print');
+      if (mql) {
+        if (mql.addEventListener) {
+          mql.addEventListener('change', (e: MediaQueryListEvent) => { if (!e.matches) removeIframe(); });
+        } else if ((mql as any).addListener) {
+          (mql as any).addListener((e: MediaQueryListEvent) => { if (!e.matches) removeIframe(); });
+        }
+      }
+    } catch {}
+
+    // Trigger print
+    try {
+      iw.focus();
+      iw.print();
+    } catch {
+      removeIframe();
+    }
+
+    // Hard fallback in case events don't fire
+    setTimeout(removeIframe, 20000);
+  };
+
   if (!isOpen || !student) return null;
 
-  return (
+  const content = (
     <>
       {/* Modal Overlay */}
-      <div className="fixed inset-0 flex items-center justify-center z-50">
-        <div className="fixed inset-0 bg-black opacity-50"></div>
+      <div id="print-root" className="fixed inset-0 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black opacity-50 print:hidden"></div>
         <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-2xl w-full mx-4 relative z-10">
           <div className="space-y-6">
             {/* Header */}
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between print:hidden">
               <h2 className="text-2xl font-bold text-gray-900">Print QR Code</h2>
               <button
                 onClick={onClose}
@@ -147,7 +258,7 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
             </div>
 
             {/* Action Buttons */}
-            <div className="flex justify-end space-x-3">
+            <div className="flex justify-end space-x-3 print:hidden">
               <button
                 onClick={onClose}
                 className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -155,7 +266,7 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
                 Cancel
               </button>
               <button
-                onClick={() => window.print()}
+                onClick={handlePrint}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
               >
                 Print QR Code
@@ -172,56 +283,72 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
             margin: 1in;
             size: A4;
           }
-          
-          body * {
-            visibility: hidden;
+
+          html, body {
+            margin: 0 !important;
+            padding: 0 !important;
+            background: white !important;
           }
-          
-          .print-content,
-          .print-content * {
-            visibility: visible;
+
+          /* Hide everything in the document except our print root to avoid extra pages */
+          body > *:not(#print-root) {
+            display: none !important;
           }
-          
-          .print-content {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            width: 100%;
-            max-width: 8.5in;
-            background: white;
+
+          /* Reset the modal overlay for print so it doesn't repeat on each page */
+          #print-root {
+            position: static !important;
+            inset: auto !important;
+            box-shadow: none !important;
+            background: transparent !important;
+            display: block !important;
           }
-          
-          .print-content .bg-white {
+
+          /* Ensure the printable content is centered and uses the page width */
+          #print-root .print-content {
+            position: static !important;
+            transform: none !important;
+            width: 100% !important;
+            max-width: 8.27in; /* A4 width */
+            margin: 0 auto !important;
+            background: white !important;
+            page-break-inside: avoid !important;
+          }
+
+          #print-root .bg-white {
             background: white !important;
             -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
             color-adjust: exact;
           }
-          
-          .print-content .text-gray-900,
-          .print-content .text-gray-800,
-          .print-content .text-gray-700,
-          .print-content .text-gray-600 {
+
+          #print-root .text-gray-900,
+          #print-root .text-gray-800,
+          #print-root .text-gray-700,
+          #print-root .text-gray-600 {
             color: black !important;
           }
-          
-          .print-content .border-gray-300 {
+
+          #print-root .border-gray-300 {
             border-color: #d1d5db !important;
           }
-          
-          .print-content .border-green-200 {
+
+          #print-root .border-green-200 {
             border-color: #bbf7d0 !important;
           }
-          
-          .print-content .bg-gradient-to-br {
+
+          #print-root .bg-gradient-to-br {
             background: #f0fdf4 !important;
           }
-          
-          .print-content .text-green-600 {
+
+          #print-root .text-green-600 {
             color: #16a34a !important;
           }
         }
       `}</style>
     </>
   );
+
+  // Render using a portal so #print-root is a direct child of <body>
+  return mounted ? createPortal(content, document.body) : null;
 }
