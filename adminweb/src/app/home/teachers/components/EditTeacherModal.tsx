@@ -18,6 +18,8 @@ interface EditTeacherModalProps {
     phoneNumber: string;
     gender?: string;
     birthDate?: string;
+    password?: string;
+    plainPassword?: string;
     profilePicture?: string;
     address?: {
       street?: string;
@@ -41,6 +43,8 @@ interface TeacherFormData {
   city?: string;
   province?: string;
   zipCode?: string;
+  password: string;
+  plainPassword: string;
 }
 
 interface ValidationErrors {
@@ -56,6 +60,7 @@ interface ValidationErrors {
   city?: string;
   province?: string;
   zipCode?: string;
+  password?: string;
 }
 
 export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: EditTeacherModalProps) {
@@ -71,7 +76,9 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
     address: '',
     city: '',
     province: '',
-    zipCode: ''
+    zipCode: '',
+    password: '',
+    plainPassword: ''
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -93,7 +100,9 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
         address: teacher.address?.street || '',
         city: teacher.address?.city || '',
         province: teacher.address?.province || '',
-        zipCode: teacher.address?.zipCode || ''
+        zipCode: teacher.address?.zipCode || '',
+        password: '',
+        plainPassword: teacher.plainPassword || 'N/A'
       });
     }
   }, [teacher]);
@@ -146,10 +155,8 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
       newErrors.phoneNumber = 'Please enter a valid phone number (at least 10 digits)';
     }
 
-    if (!formData.gender) {
-      newErrors.gender = 'Gender is required';
-    }
-
+    // Gender is optional
+    
     // Optional field validations
     if (formData.zipCode && !/^\d{4,6}$/.test(formData.zipCode)) {
       newErrors.zipCode = 'ZIP code must be 4-6 digits';
@@ -170,16 +177,34 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
     setSubmitError(''); // Clear any previous submit errors
     
     try {
-      await onEdit({ 
-        ...formData, 
-        profilePicture: formData.photo, // Map photo to profilePicture for API
+      // Build clean payload with only the fields to update
+      const dataToSubmit: any = {
+        username: formData.username,
+        name: formData.name,
+        subject: formData.subject,
+        email: formData.email,
+        phoneNumber: formData.phoneNumber,
+        gender: formData.gender,
+        birthDate: formData.birthDate,
         address: {
           street: formData.address,
           city: formData.city,
           province: formData.province,
           zipCode: formData.zipCode
         }
-      });
+      };
+
+      // Only include photo if it was changed (starts with data: for base64)
+      if (formData.photo && formData.photo.startsWith('data:')) {
+        dataToSubmit.profilePicture = formData.photo;
+      }
+
+      // Only include password if it's provided (not blank)
+      if (formData.password && formData.password.trim() !== '') {
+        dataToSubmit.password = formData.password;
+      }
+
+      await onEdit(dataToSubmit);
       onClose();
     } catch (error) {
       console.error('Error editing teacher:', error);
@@ -341,6 +366,47 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 />
                 <p className="mt-1 text-xs text-gray-500">Teacher ID cannot be changed</p>
               </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address*
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  required
+                  placeholder="Enter email address"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
+                  value={formData.email}
+                  onChange={handleChange}
+                />
+                <FieldError error={errors.email} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  placeholder="Leave blank to keep current password"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  }`}
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                <FieldError error={errors.password} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Current Password
+                </label>
+                <p className="text-base text-gray-900 font-mono bg-white px-4 py-2 rounded-md border border-gray-300">
+                  {formData.plainPassword || 'N/A'}
+                </p>
+              </div>
             </div>
           </div>
 
@@ -385,11 +451,10 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender*
+                  Gender
                 </label>
                 <select
                   name="gender"
-                  required
                   className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.gender ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
@@ -410,23 +475,6 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
           <div className="bg-gray-50 p-6 rounded-lg">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address*
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="Enter email address"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
-                  }`}
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-                <FieldError error={errors.email} />
-              </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number*

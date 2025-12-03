@@ -67,12 +67,18 @@ export default function StudentsPage() {
 
   const handleUpdateStudent = async (studentId: string, updatedData: Partial<Student>) => {
     try {
-      await studentService.updateStudent(studentId, updatedData);
+      // Find the student to get their MongoDB _id
+      const student = students.find(s => s.studentId === studentId);
+      if (!student || !student._id) {
+        throw new Error('Student not found');
+      }
+      
+      await studentService.updateStudent(student._id, updatedData);
       setStudents(prevStudents => 
-        prevStudents.map(student => 
-          student.studentId === studentId 
-            ? { ...student, ...updatedData }
-            : student
+        prevStudents.map(s => 
+          s.studentId === studentId 
+            ? { ...s, ...updatedData }
+            : s
         )
       );
     } catch (error) {

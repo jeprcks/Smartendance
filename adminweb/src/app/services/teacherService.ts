@@ -10,6 +10,7 @@ export interface Teacher {
   email: string;
   phoneNumber: string;
   password?: string; // Only included when creating/updating
+  plainPassword?: string; // Plain text password for display
   dateJoined: string;
   status: 'Active' | 'Inactive' | 'Suspended';
   department?: string;

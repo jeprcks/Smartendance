@@ -120,9 +120,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
       newErrors.phoneNumber = 'Please enter a valid phone number (at least 10 digits)';
     }
 
-    if (!formData.gender) {
-      newErrors.gender = 'Gender is required';
-    }
+    // Gender is optional
 
     // Optional field validations
     if (formData.zipCode && !/^\d{4,6}$/.test(formData.zipCode)) {
@@ -367,11 +365,10 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Gender*
+                  Gender
                 </label>
                 <select
                   name="gender"
-                  required
                   className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
                     errors.gender ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}

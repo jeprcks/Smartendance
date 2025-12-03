@@ -57,6 +57,7 @@ const createTeacher = async (req, res) => {
                 email,
                 phoneNumber,
                 password: hashedPassword,
+                plainPassword: password,
                 department,
                 qualifications,
                 address,
@@ -126,6 +127,14 @@ const getAllTeachers = async (req, res) => {
             .skip(skip)
             .limit(parseInt(limit));
 
+        // Backfill plainPassword for existing teachers that don't have it
+        for (const teacher of teachers) {
+            if (!teacher.plainPassword) {
+                teacher.plainPassword = 'N/A'; // Fallback for older records
+                await teacher.save();
+            }
+        }
+
         res.status(200).json({
             success: true,
             teachers,
@@ -189,8 +198,12 @@ const updateTeacher = async (req, res) => {
         const { id } = req.params;
         const updates = req.body;
 
-        // Remove password from updates if present (use separate endpoint for password change)
-        delete updates.password;
+        // Handle password update if provided
+        if (updates.password) {
+            const saltRounds = 10;
+            updates.password = await bcrypt.hash(updates.password, saltRounds);
+            updates.plainPassword = req.body.password; // Store original plain text password
+        }
 
         // If updating email or username, check for duplicates
         if (updates.email) {

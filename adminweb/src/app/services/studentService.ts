@@ -5,6 +5,8 @@ export interface Student {
   studentId: string;
   fullName: string;
   email: string;
+  password?: string;
+  plainPassword?: string;
   phoneNumber: string;
   age: number;
   birthDate: string; // ISO string format
@@ -68,7 +70,7 @@ export const studentService = {
       }
 
       // Validate required fields
-      const requiredFields = ['studentId', 'fullName', 'email', 'phoneNumber', 'age', 'birthDate', 'gradeLevel', 'section', 'gender'];
+      const requiredFields = ['studentId', 'fullName', 'email', 'password', 'phoneNumber', 'age', 'birthDate', 'gradeLevel', 'section', 'gender'];
       const missingFields = requiredFields.filter(field => 
         transformedData[field as keyof typeof transformedData] === undefined || 
         transformedData[field as keyof typeof transformedData] === ''
@@ -219,7 +221,6 @@ export const studentService = {
       const data = await response.json();
       
       if (!response.ok) {
-        console.error('Update failed:', data);
         throw new Error(data.error || 'Failed to update student');
       }
 

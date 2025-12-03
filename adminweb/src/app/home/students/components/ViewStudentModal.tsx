@@ -221,6 +221,10 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 <p className="text-base text-gray-900">{student.email}</p>
               </div>
               <div>
+                <p className="text-sm text-gray-500">Password</p>
+                <p className="text-base text-gray-900 font-mono">{student.plainPassword || 'N/A'}</p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-500">Phone Number</p>
                 <p className="text-base text-gray-900">{student.phoneNumber}</p>
               </div>

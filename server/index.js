@@ -79,11 +79,15 @@ const userRoutes = require("./routes/userRoutes");
 const studentRoutes = require("./routes/studentsRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
+const parentsRoutes = require("./routes/parentsRoutes");
+const authRoutes = require("./routes/authRoutes");
 
 app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/teachers", teacherRoutes);
+app.use("/api/parents", parentsRoutes);
+app.use("/api/auth", authRoutes);
 
 // Start server
 const PORT = process.env.PORT || 4000;

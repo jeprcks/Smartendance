@@ -13,6 +13,7 @@ const createStudent = async (req, res) => {
             studentId,
             fullName,
             email,
+            password,
             phoneNumber,
             age,
             birthDate,
@@ -136,6 +137,8 @@ const createStudent = async (req, res) => {
                 studentId,
                 fullName,
                 email,
+                password,
+                plainPassword: password, // Store plain text for admin viewing
                 phoneNumber,
                 age,
                 birthDate,
@@ -181,6 +184,15 @@ const createStudent = async (req, res) => {
 const getAllStudents = async (req, res) => {
     try {
         const students = await Student.find({}).sort({ createdAt: -1 });
+        
+        // Backfill plainPassword for students that don't have it
+        for (let student of students) {
+            if (!student.plainPassword && student.password) {
+                student.plainPassword = student.password;
+                await student.save();
+            }
+        }
+        
         res.status(200).json(students);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -218,7 +230,7 @@ const getStudentsByClass = async (req, res) => {
 const updateStudent = async (req, res) => {
     try {
         const { id } = req.params;
-        const updates = req.body;
+        let updates = req.body;
 
         // If updating email or studentId, check for duplicates
         if (updates.email) {
@@ -239,6 +251,15 @@ const updateStudent = async (req, res) => {
             if (existingStudent) {
                 return res.status(400).json({ error: "Student ID already exists" });
             }
+        }
+
+        // If password is being updated, update both password and plainPassword
+        if (updates.password && updates.plainPassword) {
+            // Keep plainPassword in sync with password
+            updates.plainPassword = updates.password;
+        } else if (updates.password && !updates.plainPassword) {
+            // If only password provided, set plainPassword to match
+            updates.plainPassword = updates.password;
         }
 
         const student = await Student.findByIdAndUpdate(

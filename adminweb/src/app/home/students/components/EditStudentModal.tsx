@@ -14,6 +14,8 @@ interface EditStudentFormData {
   studentId: string;
   fullName: string;
   email: string;
+  password: string;
+  plainPassword: string;
   phoneNumber: string;
   age: number;
   birthDate: string;
@@ -57,6 +59,8 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
         studentId: student.studentId,
         fullName: student.fullName,
         email: student.email,
+        password: student.password || '',
+        plainPassword: student.plainPassword || student.password || '',
         phoneNumber: student.phoneNumber,
         age: student.age,
         birthDate: student.birthDate,
@@ -305,6 +309,32 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                         className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
                         required
                       />
+                    </div>
+
+                    {/* Password */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+                        Password
+                      </label>
+                      <input
+                        type="password"
+                        id="password"
+                        name="password"
+                        value={formData.password || ''}
+                        onChange={handleChange}
+                        placeholder="Leave blank to keep current password"
+                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                      />
+                    </div>
+
+                    {/* Plain Password Display */}
+                    <div className="space-y-1.5">
+                      <label className="block text-sm font-medium text-gray-700">
+                        Current Password
+                      </label>
+                      <div className="block w-full rounded-lg border border-gray-200 bg-gray-100/50 py-2 px-3 text-gray-700 shadow-sm sm:text-sm">
+                        <p className="font-mono text-sm break-all">{formData.plainPassword || 'N/A'}</p>
+                      </div>
                     </div>
 
                     {/* Phone Number */}

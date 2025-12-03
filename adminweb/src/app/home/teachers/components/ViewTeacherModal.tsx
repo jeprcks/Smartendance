@@ -14,6 +14,8 @@ interface ViewTeacherModalProps {
     status: string;
     profilePicture?: string;
     gender?: string;
+    password?: string;
+    plainPassword?: string;
     address?: {
       street?: string;
       city?: string;
@@ -29,9 +31,8 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-black opacity-50"></div>
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Teacher Information</h2>
+      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
+        <div className="flex justify-end mb-4">
           <button 
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
@@ -69,8 +70,8 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Basic Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-500">Teacher ID</p>
@@ -92,7 +93,6 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
                 <p className="text-sm text-gray-500">Gender</p>
                 <p className="text-base text-gray-900">{teacher.gender || 'Not specified'}</p>
               </div>
-
               <div>
                 <p className="text-sm text-gray-500">Status</p>
                 <p className={`text-base ${
@@ -103,17 +103,21 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
                   {teacher.status}
                 </p>
               </div>
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-500">Email Address</p>
                 <p className="text-base text-gray-900">{teacher.email}</p>
               </div>
+              <div>
+                <p className="text-sm text-gray-500">Password</p>
+                <p className="text-base text-gray-900 font-mono">{(teacher as any).plainPassword || 'N/A'}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Contact Information */}
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-500">Phone Number</p>
                 <p className="text-base text-gray-900">{teacher.phoneNumber}</p>
@@ -122,8 +126,8 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Address Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {teacher.address?.street && (
                 <div className="col-span-2">
@@ -159,8 +163,8 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Employment Information */}
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Employment Information</h3>
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Employment Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <p className="text-sm text-gray-500">Date Joined</p>

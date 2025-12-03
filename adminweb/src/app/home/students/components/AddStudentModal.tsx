@@ -78,6 +78,7 @@ interface StudentFormData {
   studentId: string;
   fullName: string;
   email: string;
+  password: string;
   phoneNumber: string;
   age: string;
   birthDate: string;
@@ -108,6 +109,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     studentId: '',
     fullName: '',
     email: '',
+    password: '',
     phoneNumber: '',
     age: '',
     birthDate: '',
@@ -138,6 +140,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
       studentId: 'Student ID',
       fullName: 'Full Name',
       email: 'Email',
+      password: 'Password',
       phoneNumber: 'Phone Number',
       age: 'Age',
       birthDate: 'Birth Date',
@@ -162,6 +165,14 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
       errors.push({
         field: 'email',
         message: 'Please enter a valid email address'
+      });
+    }
+
+    // Password validation
+    if (formData.password && formData.password.length < 6) {
+      errors.push({
+        field: 'password',
+        message: 'Password must be at least 6 characters long'
       });
     }
 
@@ -236,6 +247,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         studentId: formData.studentId,
         fullName: formData.fullName,
         email: formData.email,
+        password: formData.password,
         phoneNumber: formData.phoneNumber,
         age: parseInt(formData.age), // Convert age to number
         birthDate: new Date(formData.birthDate).toISOString(), // Ensure proper date format
@@ -277,6 +289,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         studentId: '',
         fullName: '',
         email: '',
+        password: '',
         phoneNumber: '',
         age: '',
         birthDate: '',
@@ -500,6 +513,30 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                 {validationErrors.some(err => err.field === 'email') && (
                   <p className="mt-1 text-sm text-red-600">
                     {validationErrors.find(err => err.field === 'email')?.message}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password*
+                </label>
+                <input
+                  type="password"
+                  name="password"
+                  required
+                  placeholder="Enter password (min 6 characters)"
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                    validationErrors.some(err => err.field === 'password') 
+                      ? 'border-red-300 bg-red-50' 
+                      : 'border-gray-300'
+                  }`}
+                  value={formData.password}
+                  onChange={handleChange}
+                />
+                {validationErrors.some(err => err.field === 'password') && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {validationErrors.find(err => err.field === 'password')?.message}
                   </p>
                 )}
               </div>
