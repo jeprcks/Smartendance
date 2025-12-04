@@ -25,15 +25,15 @@ class Notification {
 
   factory Notification.fromJson(Map<String, dynamic> json) {
     return Notification(
-      studentId: json['studentId'] ?? 'N/A',
-      studentName: json['studentName'] ?? 'Unknown',
-      subject: json['subject'] ?? 'General',
+      studentId: (json['studentId'] ?? 'N/A').toString(),
+      studentName: (json['studentName'] ?? 'Unknown').toString(),
+      subject: (json['subject'] ?? 'General').toString(),
       scanTime: DateTime.parse(
-        json['scanTime'] ?? DateTime.now().toIso8601String(),
+        (json['scanTime'] ?? DateTime.now().toIso8601String()).toString(),
       ),
-      status: json['status'] ?? 'Present',
-      gradeLevel: json['gradeLevel'] ?? 'N/A',
-      section: json['section'] ?? 'N/A',
+      status: (json['status'] ?? 'Present').toString(),
+      gradeLevel: (json['gradeLevel'] ?? 'N/A').toString(),
+      section: (json['section'] ?? 'N/A').toString(),
     );
   }
 }
@@ -81,7 +81,9 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
     // Set up polling for new notifications every 5 seconds
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      _loadNotifications();
+      if (mounted) {
+        _loadNotifications();
+      }
     });
   }
 
@@ -92,11 +94,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
   }
 
   Future<void> _loadNotifications() async {
+    if (!mounted) return;
+    
     try {
       List<Notification> allNotifications = [];
 
       // Fetch notifications for each student child
       for (String studentId in studentIds) {
+        if (studentId.isEmpty) {
+          print('Skipping empty student ID');
+          continue;
+        }
+
         try {
           final response = await http
               .get(
@@ -118,9 +127,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
             if (data is List) {
               for (var record in data) {
-                allNotifications.add(Notification.fromJson(record));
+                try {
+                  allNotifications.add(Notification.fromJson(record));
+                } catch (parseError) {
+                  print('Error parsing notification record: $parseError');
+                  print('Record data: $record');
+                }
               }
             }
+          } else if (response.statusCode == 404) {
+            print('No history found for student $studentId');
           } else {
             print(
               'Error fetching notifications for student $studentId: ${response.statusCode}',

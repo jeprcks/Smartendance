@@ -128,6 +128,9 @@ studentSchema.pre('save', async function (next) {
     }
 });
 
+// Add sparse index for optional email to prevent duplicate null errors
+studentSchema.index({ 'parentInfo.email': 1 }, { sparse: true });
+
 // Ensure virtuals are included when converting document to JSON
 studentSchema.set('toJSON', { virtuals: true });
 studentSchema.set('toObject', { virtuals: true });

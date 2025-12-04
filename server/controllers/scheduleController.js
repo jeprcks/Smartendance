@@ -55,12 +55,13 @@ exports.createSchedule = async (req, res) => {
 
 exports.getAllSchedules = async (req, res) => {
   try {
-    const { gradeLevel, section, day, isActive } = req.query;
+    const { gradeLevel, section, day, teacher, isActive } = req.query;
     
     const filter = {};
     if (gradeLevel) filter.gradeLevel = gradeLevel;
     if (section) filter.section = section;
     if (day) filter.day = day;
+    if (teacher) filter.teacher = teacher; // Filter by teacher name
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
     const schedules = await Schedule.find(filter).sort({ day: 1, timeSlot: 1 });

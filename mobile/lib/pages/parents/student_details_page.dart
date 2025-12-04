@@ -30,7 +30,7 @@ class QRCodeData {
 
     if (qrCode != null && qrCode['data'] != null) {
       try {
-        final dataString = qrCode['data'] as String;
+        final dataString = qrCode['data'].toString();
         print('Attempting to parse QR data: $dataString');
         data = jsonDecode(dataString) as Map<String, dynamic>;
         print('Parsed QR data: $data');
@@ -40,9 +40,9 @@ class QRCodeData {
     }
 
     final result = QRCodeData(
-      studentId: json['studentId'] ?? '',
-      fullName: json['fullName'] ?? '',
-      qrCodeImage: qrCode?['image'] as String?,
+      studentId: (json['studentId'] ?? '').toString(),
+      fullName: (json['fullName'] ?? '').toString(),
+      qrCodeImage: qrCode?['image']?.toString(),
       qrCodeDetails: data,
     );
 
@@ -99,7 +99,8 @@ class _StudentDetailsPageState extends State<StudentDetailsPage> {
         return null;
       }
 
-      const String baseUrl = 'http://192.168.1.100:4000';
+      const String baseUrl = 'http://localhost:4000';
+      // For Android emulator, use: 'http://10.0.2.2:4000'
       final url = '$baseUrl/api/students/$studentId/qr-code';
 
       print('Fetching from URL: $url');
@@ -150,35 +151,35 @@ class _StudentDetailsPageState extends State<StudentDetailsPage> {
   }
 
   String _getFullName() {
-    return studentData['fullName'] ?? studentData['name'] ?? 'Unknown Student';
+    return (studentData['fullName'] ?? studentData['name'] ?? 'Unknown Student').toString();
   }
 
   String _getStudentId() {
-    return studentData['studentId'] ?? 'N/A';
+    return (studentData['studentId'] ?? 'N/A').toString();
   }
 
   String _getEmail() {
-    return studentData['email'] ?? 'N/A';
+    return (studentData['email'] ?? 'N/A').toString();
   }
 
   String _getPhoneNumber() {
-    return studentData['phoneNumber'] ?? studentData['phone'] ?? 'N/A';
+    return (studentData['phoneNumber'] ?? studentData['phone'] ?? 'N/A').toString();
   }
 
   String _getGradeLevel() {
-    return studentData['gradeLevel'] ?? 'N/A';
+    return (studentData['gradeLevel'] ?? 'N/A').toString();
   }
 
   String _getSection() {
-    return studentData['section'] ?? 'N/A';
+    return (studentData['section'] ?? 'N/A').toString();
   }
 
   String _getGender() {
-    return studentData['gender'] ?? 'N/A';
+    return (studentData['gender'] ?? 'N/A').toString();
   }
 
   String _getShift() {
-    return studentData['shift'] ?? 'N/A';
+    return (studentData['shift'] ?? 'N/A').toString();
   }
 
   String _getAge() {
@@ -219,14 +220,14 @@ class _StudentDetailsPageState extends State<StudentDetailsPage> {
       Map<String, dynamic> address = studentData['address'];
       List<String> parts = [];
 
-      if (address['street'] != null) parts.add(address['street']);
-      if (address['city'] != null) parts.add(address['city']);
-      if (address['province'] != null) parts.add(address['province']);
-      if (address['zipCode'] != null) parts.add(address['zipCode']);
+      if (address['street'] != null) parts.add(address['street'].toString());
+      if (address['city'] != null) parts.add(address['city'].toString());
+      if (address['province'] != null) parts.add(address['province'].toString());
+      if (address['zipCode'] != null) parts.add(address['zipCode'].toString());
 
       return parts.isNotEmpty ? parts.join(', ') : 'N/A';
     }
-    return studentData['fullAddress'] ?? 'N/A';
+    return (studentData['fullAddress'] ?? 'N/A').toString();
   }
 
   Map<String, dynamic> _getEmergencyContact() {

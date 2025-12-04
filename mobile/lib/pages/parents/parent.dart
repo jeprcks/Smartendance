@@ -9,6 +9,7 @@ class ParentDashboard extends StatefulWidget {
   final String parentName;
   final String email;
   final List<dynamic> children; // List of linked student children
+  final VoidCallback? onLogout; // Callback when user logs out
 
   const ParentDashboard({
     super.key,
@@ -17,6 +18,7 @@ class ParentDashboard extends StatefulWidget {
     required this.parentName,
     required this.email,
     required this.children,
+    this.onLogout,
   });
 
   @override
@@ -55,14 +57,23 @@ class _ParentDashboardState extends State<ParentDashboard> {
           ),
           TextButton(
             onPressed: () async {
-              await _storage.delete(key: 'parent_token');
-              await _storage.delete(key: 'parent_email');
-              await _storage.delete(key: 'parent_data');
+              // Pop the dialog first
+              Navigator.pop(context);
 
-              if (mounted) {
-                Navigator.of(
-                  context,
-                ).pushNamedAndRemoveUntil('/login', (route) => false);
+              // If onLogout callback is provided, use it (from AuthWrapper)
+              if (widget.onLogout != null) {
+                widget.onLogout!();
+              } else {
+                // Fallback: clear storage and navigate (for standalone usage)
+                await _storage.delete(key: 'parent_token');
+                await _storage.delete(key: 'parent_email');
+                await _storage.delete(key: 'parent_data');
+
+                if (mounted) {
+                  Navigator.of(
+                    context,
+                  ).pushNamedAndRemoveUntil('/login', (route) => false);
+                }
               }
             },
             child: const Text('Logout', style: TextStyle(color: Colors.red)),
@@ -414,10 +425,10 @@ class _ParentDashboardState extends State<ParentDashboard> {
   }
 
   Widget _buildChildCard(dynamic child) {
-    String childName = child['fullName'] ?? child['name'] ?? 'Unknown';
-    String studentId = child['studentId'] ?? 'N/A';
-    String gradeLevel = child['gradeLevel'] ?? 'N/A';
-    String section = child['section'] ?? 'N/A';
+    String childName = (child['fullName'] ?? child['name'] ?? 'Unknown').toString();
+    String studentId = (child['studentId'] ?? 'N/A').toString();
+    String gradeLevel = (child['gradeLevel'] ?? 'N/A').toString();
+    String section = (child['section'] ?? 'N/A').toString();
 
     return GestureDetector(
       onTap: () {
