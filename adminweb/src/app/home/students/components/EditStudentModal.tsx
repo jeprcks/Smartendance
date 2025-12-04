@@ -13,14 +13,11 @@ interface ValidationError {
 interface EditStudentFormData {
   studentId: string;
   fullName: string;
-  email: string;
-  password: string;
-  plainPassword: string;
   phoneNumber: string;
   age: number;
   birthDate: string;
   gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6';
-  section: 'A' | 'B' | 'C' | 'D';
+  section: string;
   gender: 'Male' | 'Female' | 'Other';
   photo?: string;
   shift: 'Morning' | 'Afternoon';
@@ -31,6 +28,8 @@ interface EditStudentFormData {
     zipCode?: string;
   };
   parentName?: string;
+  parentEmail?: string;
+  parentPassword?: string;
   parentContact?: string;
   emergencyContact?: {
     name?: string;
@@ -47,7 +46,6 @@ interface EditStudentModalProps {
 }
 
 const gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
-const sections = ['A', 'B', 'C', 'D'];
 
 export default function EditStudentModal({ isOpen, onClose, onUpdate, student }: EditStudentModalProps) {
   const [formData, setFormData] = useState<EditStudentFormData>({} as EditStudentFormData);
@@ -58,9 +56,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
       setFormData({
         studentId: student.studentId,
         fullName: student.fullName,
-        email: student.email,
-        password: student.password || '',
-        plainPassword: student.plainPassword || student.password || '',
         phoneNumber: student.phoneNumber,
         age: student.age,
         birthDate: student.birthDate,
@@ -70,8 +65,10 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
         photo: student.photo,
         shift: student.shift,
         address: typeof student.address === 'object' ? student.address : { street: student.address || '' },
-        parentName: student.parentName,
-        parentContact: student.parentContact,
+        parentName: student.parentInfo?.name || student.parentName || '',
+        parentEmail: student.parentInfo?.email || '',
+        parentPassword: student.parentInfo?.password || '',
+        parentContact: student.parentInfo?.contactNumber || student.parentContact || '',
         emergencyContact: {
           name: student.emergencyContact?.name || '',
           contactNumber: student.emergencyContact?.contactNumber || '',
@@ -87,7 +84,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
     const requiredFields: { [key: string]: string } = {
       studentId: 'Student ID',
       fullName: 'Full Name',
-      email: 'Email',
       phoneNumber: 'Phone Number',
       age: 'Age',
       birthDate: 'Birth Date',
@@ -106,14 +102,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
         });
       }
     });
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (formData.email && !emailRegex.test(formData.email)) {
-      errors.push({
-        field: 'email',
-        message: 'Please enter a valid email address'
-      });
-    }
 
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
     if (formData.phoneNumber && !phoneRegex.test(formData.phoneNumber)) {
@@ -148,7 +136,25 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
 
     try {
       setIsSubmitting(true);
-      await onUpdate(student.studentId, formData);
+      
+      // Transform data to match backend schema
+      const transformedData = {
+        ...formData,
+        parentInfo: {
+          name: formData.parentName || '',
+          email: formData.parentEmail || '',
+          password: formData.parentPassword || '',
+          contactNumber: formData.parentContact || ''
+        }
+      };
+      
+      // Remove the flat parent fields since we're using the nested object
+      delete transformedData.parentName;
+      delete transformedData.parentEmail;
+      delete transformedData.parentPassword;
+      delete transformedData.parentContact;
+      
+      await onUpdate(student.studentId, transformedData);
       toast.success('Student updated successfully');
       onClose();
     } catch (error) {
@@ -182,6 +188,16 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
           ...(prev.emergencyContact || {}),
           [emergencyField]: value
         }
+      }));
+      return;
+    }
+
+    // If password is being changed, also update plainPassword
+    if (name === 'password') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        plainPassword: value
       }));
       return;
     }
@@ -295,48 +311,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       />
                     </div>
 
-                    {/* Email */}
-                    <div className="space-y-1.5">
-                      <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        id="email"
-                        name="email"
-                        value={formData.email || ''}
-                        onChange={handleChange}
-                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        required
-                      />
-                    </div>
-
-                    {/* Password */}
-                    <div className="space-y-1.5">
-                      <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                        Password
-                      </label>
-                      <input
-                        type="password"
-                        id="password"
-                        name="password"
-                        value={formData.password || ''}
-                        onChange={handleChange}
-                        placeholder="Leave blank to keep current password"
-                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                      />
-                    </div>
-
-                    {/* Plain Password Display */}
-                    <div className="space-y-1.5">
-                      <label className="block text-sm font-medium text-gray-700">
-                        Current Password
-                      </label>
-                      <div className="block w-full rounded-lg border border-gray-200 bg-gray-100/50 py-2 px-3 text-gray-700 shadow-sm sm:text-sm">
-                        <p className="font-mono text-sm break-all">{formData.plainPassword || 'N/A'}</p>
-                      </div>
-                    </div>
-
                     {/* Phone Number */}
                     <div className="space-y-1.5">
                       <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
@@ -390,19 +364,15 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="section" className="block text-sm font-medium text-gray-700">
                         Section
                       </label>
-                      <select
+                      <input
+                        type="text"
                         id="section"
                         name="section"
                         value={formData.section || ''}
                         onChange={handleChange}
                         className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
                         required
-                      >
-                        <option value="">Select Section</option>
-                        {sections.map(section => (
-                          <option key={section} value={section}>{section}</option>
-                        ))}
-                      </select>
+                      />
                     </div>
 
                     {/* Age */}
@@ -572,6 +542,36 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                         id="parentName"
                         name="parentName"
                         value={formData.parentName || ''}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                      />
+                    </div>
+
+                    {/* Parent/Guardian Email */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="parentEmail" className="block text-sm font-medium text-gray-700">
+                        Parent/Guardian Email
+                      </label>
+                      <input
+                        type="email"
+                        id="parentEmail"
+                        name="parentEmail"
+                        value={formData.parentEmail || ''}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                      />
+                    </div>
+
+                    {/* Parent/Guardian Password */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="parentPassword" className="block text-sm font-medium text-gray-700">
+                        Parent/Guardian Password
+                      </label>
+                      <input
+                        type="password"
+                        id="parentPassword"
+                        name="parentPassword"
+                        value={formData.parentPassword || ''}
                         onChange={handleChange}
                         className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
                       />

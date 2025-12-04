@@ -12,8 +12,6 @@ const createStudent = async (req, res) => {
         const {
             studentId,
             fullName,
-            email,
-            password,
             phoneNumber,
             age,
             birthDate,
@@ -29,13 +27,12 @@ const createStudent = async (req, res) => {
 
         // Generate unique request ID for tracking
         const requestId = Math.random().toString(36).substr(2, 9);
-        const requestKey = `${studentId}-${email}`;
+        const requestKey = `${studentId}`;
         
         console.log('=== NEW REQUEST RECEIVED ===');
         console.log('Request ID:', requestId);
         console.log('Request key:', requestKey);
         console.log('Student ID:', studentId);
-        console.log('Email:', email);
         
         // Check if this exact request is already being processed
         if (pendingRequests.has(requestKey)) {
@@ -90,16 +87,6 @@ const createStudent = async (req, res) => {
         
         console.log('Student ID is unique, proceeding with creation');
 
-        // Check if email already exists
-        const existingEmail = await Student.findOne({ email });
-        if (existingEmail) {
-            console.log('Email already exists, returning error');
-            console.log('Request ID:', requestId);
-            // Clean up pending request before returning error
-            pendingRequests.delete(requestKey);
-            return res.status(400).json({ error: "Email already exists" });
-        }
-
         let student;
         await session.withTransaction(async () => {
             // Generate QR code data
@@ -109,9 +96,10 @@ const createStudent = async (req, res) => {
                 grade: gradeLevel,
                 section: section,
                 shift: shift,
-                email: email,
                 contact: phoneNumber,
                 emergencyContact: emergencyContact?.contactNumber || '',
+                parentEmail: parentInfo?.email || '',
+                parentPassword: parentInfo?.password || '',
                 timestamp: new Date().toISOString()
             };
 
@@ -136,9 +124,6 @@ const createStudent = async (req, res) => {
             const result = await Student.create([{
                 studentId,
                 fullName,
-                email,
-                password,
-                plainPassword: password, // Store plain text for admin viewing
                 phoneNumber,
                 age,
                 birthDate,
@@ -169,7 +154,7 @@ const createStudent = async (req, res) => {
         res.status(400).json({ error: error.message || "Failed to create student" });
     } finally {
         // Clean up pending request
-        const requestKey = `${req.body.studentId}-${req.body.email}`;
+        const requestKey = `${req.body.studentId}`;
         pendingRequests.delete(requestKey);
         console.log('=== REQUEST CLEANED UP ===');
         console.log('Request key removed:', requestKey);
@@ -184,15 +169,6 @@ const createStudent = async (req, res) => {
 const getAllStudents = async (req, res) => {
     try {
         const students = await Student.find({}).sort({ createdAt: -1 });
-        
-        // Backfill plainPassword for students that don't have it
-        for (let student of students) {
-            if (!student.plainPassword && student.password) {
-                student.plainPassword = student.password;
-                await student.save();
-            }
-        }
-        
         res.status(200).json(students);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -232,16 +208,10 @@ const updateStudent = async (req, res) => {
         const { id } = req.params;
         let updates = req.body;
 
-        // If updating email or studentId, check for duplicates
-        if (updates.email) {
-            const existingEmail = await Student.findOne({
-                email: updates.email,
-                _id: { $ne: id }
-            });
-            if (existingEmail) {
-                return res.status(400).json({ error: "Email already exists" });
-            }
-        }
+        // Remove email and password from updates if they exist
+        delete updates.email;
+        delete updates.password;
+        delete updates.plainPassword;
 
         if (updates.studentId) {
             const existingStudent = await Student.findOne({
@@ -251,15 +221,6 @@ const updateStudent = async (req, res) => {
             if (existingStudent) {
                 return res.status(400).json({ error: "Student ID already exists" });
             }
-        }
-
-        // If password is being updated, update both password and plainPassword
-        if (updates.password && updates.plainPassword) {
-            // Keep plainPassword in sync with password
-            updates.plainPassword = updates.password;
-        } else if (updates.password && !updates.plainPassword) {
-            // If only password provided, set plainPassword to match
-            updates.plainPassword = updates.password;
         }
 
         const student = await Student.findByIdAndUpdate(
@@ -301,8 +262,7 @@ const searchStudents = async (req, res) => {
         const students = await Student.find({
             $or: [
                 { fullName: { $regex: query, $options: 'i' } },
-                { studentId: { $regex: query, $options: 'i' } },
-                { email: { $regex: query, $options: 'i' } }
+                { studentId: { $regex: query, $options: 'i' } }
             ]
         }).sort({ fullName: 1 });
 
@@ -329,9 +289,10 @@ const generateQRCode = async (req, res) => {
             grade: student.gradeLevel,
             section: student.section,
             shift: student.shift,
-            email: student.email,
             contact: student.phoneNumber,
             emergencyContact: student.emergencyContact?.contactNumber || '',
+            parentEmail: student.parentInfo?.email || '',
+            parentPassword: student.parentInfo?.password || '',
             timestamp: new Date().toISOString()
         };
 
@@ -382,23 +343,103 @@ const generateQRCode = async (req, res) => {
 const getQRCode = async (req, res) => {
     try {
         const { id } = req.params;
-        const student = await Student.findById(id).select('qrCode studentId fullName');
+        console.log('=== GET QR CODE REQUEST ===');
+        console.log('Student ID parameter:', id);
+        
+        let student;
+
+        // Try to find by MongoDB _id first
+        try {
+            student = await Student.findById(id).select('qrCode studentId fullName parentInfo');
+            console.log('Search by MongoDB _id - Found:', !!student);
+        } catch (err) {
+            // If not a valid MongoDB ObjectId, search by studentId instead
+            console.log('MongoDB _id search failed (expected for non-ObjectId):', err.message);
+            student = null;
+        }
+
+        // If not found by _id, try searching by studentId
+        if (!student) {
+            console.log('Searching by studentId instead...');
+            student = await Student.findOne({ studentId: id }).select('qrCode studentId fullName parentInfo');
+            console.log('Search by studentId - Found:', !!student);
+            if (student) {
+                console.log('Student details - ID:', student.studentId, 'Name:', student.fullName);
+                console.log('QR Code present:', !!student.qrCode);
+                if (student.qrCode) {
+                    console.log('QR Code active:', student.qrCode.isActive);
+                    console.log('QR Code data length:', student.qrCode.data?.length);
+                    console.log('QR Code image length:', student.qrCode.image?.length);
+                }
+            }
+        }
 
         if (!student) {
+            console.log('Student not found with ID:', id);
             return res.status(404).json({ error: "Student not found" });
         }
 
         if (!student.qrCode || !student.qrCode.isActive) {
-            return res.status(404).json({ error: "QR code not found or inactive" });
+            console.log('QR code missing or inactive');
+            console.log('QR Code exists:', !!student.qrCode);
+            console.log('QR Code active:', student.qrCode?.isActive);
+            
+            // Generate QR code if it doesn't exist
+            console.log('Generating new QR code for student:', student.studentId);
+            const qrCodeData = {
+                id: student.studentId,
+                name: student.fullName,
+                parentEmail: student.parentInfo?.email || '',
+                parentPassword: student.parentInfo?.password || '',
+                timestamp: new Date().toISOString()
+            };
+
+            const QRCodeLib = require('qrcode');
+            let qrCodeImage = '';
+            try {
+                qrCodeImage = await QRCodeLib.toDataURL(JSON.stringify(qrCodeData), {
+                    errorCorrectionLevel: 'H',
+                    type: 'image/png',
+                    quality: 0.92,
+                    margin: 1,
+                    color: {
+                        dark: '#000000',
+                        light: '#FFFFFF'
+                    }
+                });
+                console.log('QR Code generated successfully');
+            } catch (qrError) {
+                console.error('Error generating QR code:', qrError);
+                return res.status(500).json({ error: "Failed to generate QR code" });
+            }
+
+            // Update student with new QR code
+            student = await Student.findByIdAndUpdate(
+                student._id,
+                {
+                    qrCode: {
+                        data: JSON.stringify(qrCodeData),
+                        image: qrCodeImage,
+                        generatedAt: new Date(),
+                        isActive: true
+                    }
+                },
+                { new: true }
+            );
+            console.log('Student updated with new QR code');
         }
 
+        console.log('=== SENDING QR CODE RESPONSE ===');
         res.status(200).json({
             studentId: student.studentId,
             fullName: student.fullName,
             qrCode: student.qrCode
         });
     } catch (error) {
-        console.error('Error fetching QR code:', error);
+        console.error('=== ERROR FETCHING QR CODE ===');
+        console.error('Error type:', error.constructor.name);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
         res.status(400).json({ error: error.message });
     }
 };
@@ -418,9 +459,10 @@ const regenerateAllQRCodes = async (req, res) => {
                     grade: student.gradeLevel,
                     section: student.section,
                     shift: student.shift,
-                    email: student.email,
                     contact: student.phoneNumber,
                     emergencyContact: student.emergencyContact?.contactNumber || '',
+                    parentEmail: student.parentInfo?.email || '',
+                    parentPassword: student.parentInfo?.password || '',
                     timestamp: new Date().toISOString()
                 };
 

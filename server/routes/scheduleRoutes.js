@@ -1,0 +1,23 @@
+const express = require('express');
+const router = express.Router();
+const scheduleController = require('../controllers/scheduleController');
+
+// Create a new schedule
+router.post('/', scheduleController.createSchedule);
+
+// Get all schedules (with optional filters)
+router.get('/', scheduleController.getAllSchedules);
+
+// Get schedule by ID
+router.get('/:id', scheduleController.getScheduleById);
+
+// Get schedules by grade level and section
+router.get('/grade/:gradeLevel/section/:section', scheduleController.getSchedulesByGradeAndSection);
+
+// Update a schedule
+router.patch('/:id', scheduleController.updateSchedule);
+
+// Delete a schedule
+router.delete('/:id', scheduleController.deleteSchedule);
+
+module.exports = router;

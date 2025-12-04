@@ -11,7 +11,6 @@ export default function Navbar() {
     { href: '/home/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/home/students', label: 'Students', icon: '👨‍🎓' },
     { href: '/home/teachers', label: 'Teachers', icon: '�‍🏫' },
-    { href: '/home/parents', label: 'Parents', icon: '👥' },
     { href: '/home/history', label: 'History', icon: '�' },
     { href: '/home/schedules', label: 'Schedules', icon: '🗓️' },
 
@@ -25,7 +24,7 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/dashboard" className="flex items-center">
               <span className="text-2xl mr-2">🏫</span>
-              <span className="text-xl font-bold text-gray-900">Tayud National High School </span>
+              <span className="text-xl font-bold text-gray-900">Umapad Elementary School </span>
             </Link>
           </div>
           

@@ -13,20 +13,6 @@ const studentSchema = new Schema(
             type: String,
             required: true
         },
-        email: {
-            type: String,
-            required: true,
-            unique: true
-        },
-        password: {
-            type: String,
-            required: true,
-            minlength: 6
-        },
-        plainPassword: {
-            type: String,
-            required: true // Store the plain text password for admin viewing
-        },
         phoneNumber: {
             type: String,
             required: true
@@ -49,7 +35,6 @@ const studentSchema = new Schema(
         section: {
             type: String,
             required: true,
-            enum: ['A', 'B', 'C', 'D']
         },
         gender: {
             type: String,
@@ -75,6 +60,8 @@ const studentSchema = new Schema(
         // Parent/Guardian Information
         parentInfo: {
             name: { type: String },
+            email: { type: String },
+            password: { type: String },
             contactNumber: { type: String }
         },
         // Emergency Contact Information

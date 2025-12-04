@@ -4,14 +4,11 @@ export interface Student {
   _id: string;
   studentId: string;
   fullName: string;
-  email: string;
-  password?: string;
-  plainPassword?: string;
   phoneNumber: string;
   age: number;
   birthDate: string; // ISO string format
   gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6';
-  section: 'A' | 'B' | 'C' | 'D';
+  section: string;
   gender: 'Male' | 'Female' | 'Other';
   shift: 'Morning' | 'Afternoon';
   photo?: string;
@@ -27,6 +24,8 @@ export interface Student {
   parentContact?: string;
   parentInfo?: {
     name?: string;
+    email?: string;
+    password?: string;
     contactNumber?: string;
   };
   // Emergency contact information
@@ -70,7 +69,7 @@ export const studentService = {
       }
 
       // Validate required fields
-      const requiredFields = ['studentId', 'fullName', 'email', 'password', 'phoneNumber', 'age', 'birthDate', 'gradeLevel', 'section', 'gender'];
+      const requiredFields = ['studentId', 'fullName', 'phoneNumber', 'age', 'birthDate', 'gradeLevel', 'section', 'gender'];
       const missingFields = requiredFields.filter(field => 
         transformedData[field as keyof typeof transformedData] === undefined || 
         transformedData[field as keyof typeof transformedData] === ''
@@ -78,11 +77,6 @@ export const studentService = {
       
       if (missingFields.length > 0) {
         throw new Error(`Missing required fields: ${missingFields.join(', ')}`);
-      }
-
-      // Validate email format
-      if (transformedData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(transformedData.email)) {
-        throw new Error('Invalid email format');
       }
 
       // Validate phone number format

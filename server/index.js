@@ -20,12 +20,15 @@ app.use(
   cors({
     origin: [
       "http://localhost:3000",     // Admin web panel
+      "http://localhost:5000",     // Flutter web (common port)
+      "http://localhost:5001",     // Flutter web (alternate)
+      /^http:\/\/localhost:\d+$/,  // Allow any localhost port (for Flutter web dynamic ports)
       "http://10.0.2.2:4000",     // Android emulator
       "http://localhost:4000",     // iOS simulator
-      /^http:\/\/192\.168\.\d+\.\d+:4000$/,  // Physical devices on local network
-      /^http:\/\/10\.\d+\.\d+\.\d+:4000$/,   // Alternative network ranges
+      /^http:\/\/192\.168\.\d+\.\d+:\d+$/,  // Physical devices on local network
+      /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,   // Alternative network ranges
     ],
-    methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   })
@@ -79,15 +82,15 @@ const userRoutes = require("./routes/userRoutes");
 const studentRoutes = require("./routes/studentsRoutes");
 const historyRoutes = require("./routes/historyRoutes");
 const teacherRoutes = require("./routes/teacherRoutes");
-const parentsRoutes = require("./routes/parentsRoutes");
 const authRoutes = require("./routes/authRoutes");
+const scheduleRoutes = require("./routes/scheduleRoutes");
 
 app.use("/api/users", userRoutes);
 app.use("/api/students", studentRoutes);
 app.use("/api/history", historyRoutes);
 app.use("/api/teachers", teacherRoutes);
-app.use("/api/parents", parentsRoutes);
 app.use("/api/auth", authRoutes);
+app.use("/api/schedules", scheduleRoutes);
 
 // Start server
 const PORT = process.env.PORT || 4000;

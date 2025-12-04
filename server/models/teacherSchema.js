@@ -32,6 +32,15 @@ const teacherSchema = new Schema(
             required: true,
             trim: true
         },
+        gender: {
+            type: String,
+            enum: ['Male', 'Female', 'Other'],
+            required: false
+        },
+        birthDate: {
+            type: String,
+            required: false
+        },
         email: {
             type: String,
             required: true,

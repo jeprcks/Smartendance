@@ -77,13 +77,11 @@ import { Student } from '@/app/services/studentService';
 interface StudentFormData {
   studentId: string;
   fullName: string;
-  email: string;
-  password: string;
   phoneNumber: string;
   age: string;
   birthDate: string;
   gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6';
-  section: 'A' | 'B' | 'C' | 'D';
+  section: string;
   gender: 'Male' | 'Female' | 'Other';
   photo?: string; // Base64 encoded image
   shift: string;
@@ -92,6 +90,8 @@ interface StudentFormData {
   province?: string;
   zipCode?: string;
   parentName?: string;
+  parentEmail?: string;
+  parentPassword?: string;
   parentContact?: string;
   emergencyContact?: string;
   emergencyContactName?: string;
@@ -108,8 +108,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
   const [formData, setFormData] = useState<StudentFormData>({
     studentId: '',
     fullName: '',
-    email: '',
-    password: '',
     phoneNumber: '',
     age: '',
     birthDate: '',
@@ -122,6 +120,8 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     province: '',
     zipCode: '',
     parentName: '',
+    parentEmail: '',
+    parentPassword: '',
     parentContact: '',
     emergencyContact: '',
     emergencyContactName: '',
@@ -130,7 +130,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
   const qrRef = useRef<HTMLDivElement>(null);
 
   const gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
-  const sections = ['A', 'B', 'C', 'D'];
 
   const validateForm = (): ValidationError[] => {
     const errors: ValidationError[] = [];
@@ -139,8 +138,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     const requiredFields: { [key: string]: string } = {
       studentId: 'Student ID',
       fullName: 'Full Name',
-      email: 'Email',
-      password: 'Password',
       phoneNumber: 'Phone Number',
       age: 'Age',
       birthDate: 'Birth Date',
@@ -158,23 +155,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         });
       }
     });
-
-    // Email validation
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (formData.email && !emailRegex.test(formData.email)) {
-      errors.push({
-        field: 'email',
-        message: 'Please enter a valid email address'
-      });
-    }
-
-    // Password validation
-    if (formData.password && formData.password.length < 6) {
-      errors.push({
-        field: 'password',
-        message: 'Password must be at least 6 characters long'
-      });
-    }
 
     // Phone number validation
     const phoneRegex = /^\+?[\d\s-]{10,}$/;
@@ -246,13 +226,11 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
       const transformedData = {
         studentId: formData.studentId,
         fullName: formData.fullName,
-        email: formData.email,
-        password: formData.password,
         phoneNumber: formData.phoneNumber,
         age: parseInt(formData.age), // Convert age to number
         birthDate: new Date(formData.birthDate).toISOString(), // Ensure proper date format
         gradeLevel: formData.gradeLevel as 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6',
-        section: formData.section as 'A' | 'B' | 'C' | 'D',
+        section: formData.section,
         gender: formData.gender as 'Male' | 'Female' | 'Other',
         photo: formData.photo,
         shift: formData.shift as 'Morning' | 'Afternoon',
@@ -266,6 +244,8 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         // Transform flat parent fields to nested object
         parentInfo: {
           name: formData.parentName || '',
+          email: formData.parentEmail || '',
+          password: formData.parentPassword || '',
           contactNumber: formData.parentContact || ''
         },
         // Transform flat emergency contact fields to nested object
@@ -288,8 +268,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
       setFormData({
         studentId: '',
         fullName: '',
-        email: '',
-        password: '',
         phoneNumber: '',
         age: '',
         birthDate: '',
@@ -303,6 +281,8 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         province: '',
         zipCode: '',
         parentName: '',
+        parentEmail: '',
+        parentPassword: '',
         parentContact: '',
         emergencyContact: '',
         emergencyContactName: '',
@@ -495,54 +475,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email Address*
-                </label>
-                <input
-                  type="email"
-                  name="email"
-                  required
-                  placeholder="Enter email address"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    validationErrors.some(err => err.field === 'email') 
-                      ? 'border-red-300 bg-red-50' 
-                      : 'border-gray-300'
-                  }`}
-                  value={formData.email}
-                  onChange={handleChange}
-                />
-                {validationErrors.some(err => err.field === 'email') && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {validationErrors.find(err => err.field === 'email')?.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Password*
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  placeholder="Enter password (min 6 characters)"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
-                    validationErrors.some(err => err.field === 'password') 
-                      ? 'border-red-300 bg-red-50' 
-                      : 'border-gray-300'
-                  }`}
-                  value={formData.password}
-                  onChange={handleChange}
-                />
-                {validationErrors.some(err => err.field === 'password') && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {validationErrors.find(err => err.field === 'password')?.message}
-                  </p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Phone Number*
                 </label>
                 <input
@@ -615,21 +547,15 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Section*
                 </label>
-                <select
+                <input
+                  type="text"
                   name="section"
                   required
                   className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={formData.section}
                   onChange={handleChange}
-                >
-                  <option value="">Select Section</option>
-                  <option value="">Select Section</option>
-                  {sections.map((section) => (
-                    <option key={section} value={section}>
-                      Section {section}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Enter section (e.g., A, B, C)"
+                />
               </div>
 
               <div>
@@ -754,6 +680,32 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Parent/Guardian Email Address
+                  </label>
+                  <input
+                    type="email"
+                    name="parentEmail"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.parentEmail}
+                    onChange={handleChange}
+                    placeholder="Enter email address"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Parent/Guardian Password
+                  </label>
+                  <input
+                    type="password"
+                    name="parentPassword"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={formData.parentPassword}
+                    onChange={handleChange}
+                    placeholder="Enter password"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Parent/Guardian Contact
                   </label>
                   <input
@@ -830,10 +782,8 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                         name: formData.fullName,
                         grade: formData.gradeLevel,
                         section: formData.section,
-                        email: formData.email,
                         contact: formData.phoneNumber,
                         emergencyContact: formData.emergencyContact,
-
                         timestamp: new Date().toISOString()
                       })}
                       size={192}

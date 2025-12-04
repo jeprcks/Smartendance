@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { teacherService, type Teacher } from '@/app/services/teacherService';
+import { scheduleService } from '@/app/services/scheduleService';
 
 interface AddScheduleModalProps {
   isOpen: boolean;
@@ -16,6 +18,7 @@ interface ScheduleFormData {
   timeSlot: string;
   room: string;
   day: string;
+  shift: string;
 }
 
 export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddScheduleModalProps) {
@@ -27,10 +30,40 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
     timeSlot: '',
     room: '',
     day: '',
+    shift: '',
   });
 
+  const [teachers, setTeachers] = useState<Teacher[]>([]);
+  const [loadingTeachers, setLoadingTeachers] = useState(false);
+  const [teacherError, setTeacherError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Fetch teachers when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchTeachers();
+    }
+  }, [isOpen]);
+
+  const fetchTeachers = async () => {
+    try {
+      setLoadingTeachers(true);
+      setTeacherError(null);
+      const response = await teacherService.getAllTeachers({ 
+        status: 'Active',
+        limit: 100 
+      });
+      setTeachers(response.teachers);
+    } catch (error) {
+      setTeacherError(error instanceof Error ? error.message : 'Failed to load teachers');
+      console.error('Error fetching teachers:', error);
+    } finally {
+      setLoadingTeachers(false);
+    }
+  };
+
   const gradeLevels = ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6'];
-  const sections = ['A', 'B', 'C', 'D'];
   const subjects = ['Mathematics', 'English', 'Science', 'Filipino', 'Social Studies', 'Physical Education', 'Values Education'];
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
   const timeSlots = [
@@ -46,8 +79,55 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onAdd(formData);
-    onClose();
+    submitSchedule();
+  };
+
+  const submitSchedule = async () => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError(null);
+
+      // Validate all fields are filled
+      if (!formData.gradeLevel || !formData.section || !formData.subject || !formData.teacher || !formData.timeSlot || !formData.room || !formData.day || !formData.shift) {
+        setSubmitError('Please fill in all fields');
+        return;
+      }
+
+      // Call the schedule service to create the schedule
+      const newSchedule = await scheduleService.createSchedule({
+        gradeLevel: formData.gradeLevel as 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6',
+        section: formData.section,
+        subject: formData.subject,
+        teacher: formData.teacher,
+        timeSlot: formData.timeSlot,
+        room: formData.room,
+        day: formData.day as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday',
+        shift: formData.shift as 'Morning' | 'Afternoon',
+      });
+
+      // Call the parent onAdd callback
+      onAdd(formData);
+
+      // Reset form and close modal
+      setFormData({
+        gradeLevel: '',
+        section: '',
+        subject: '',
+        teacher: '',
+        timeSlot: '',
+        room: '',
+        day: '',
+        shift: '',
+      });
+
+      onClose();
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to add schedule';
+      setSubmitError(errorMessage);
+      console.error('Error submitting schedule:', error);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -74,6 +154,11 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          {submitError && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+              <p className="text-sm text-red-700">{submitError}</p>
+            </div>
+          )}
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -97,18 +182,15 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Section
               </label>
-              <select
+              <input
+                type="text"
                 name="section"
                 value={formData.section}
                 onChange={handleChange}
+                placeholder="Enter section (e.g., A, B, C)"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 required
-              >
-                <option value="">Select Section</option>
-                {sections.map((section) => (
-                  <option key={section} value={section}>Section {section}</option>
-                ))}
-              </select>
+              />
             </div>
           </div>
 
@@ -134,15 +216,29 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Teacher
             </label>
-            <input
-              type="text"
+            <select
               name="teacher"
               value={formData.teacher}
               onChange={handleChange}
-              placeholder="Enter teacher's name"
               className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               required
-            />
+              disabled={loadingTeachers}
+            >
+              <option value="">
+                {loadingTeachers ? 'Loading teachers...' : 'Select Teacher'}
+              </option>
+              {teacherError && (
+                <option disabled>{`Error: ${teacherError}`}</option>
+              )}
+              {teachers.map((teacher) => (
+                <option key={teacher._id} value={teacher.name}>
+                  {teacher.name}
+                </option>
+              ))}
+            </select>
+            {teachers.length === 0 && !loadingTeachers && !teacherError && (
+              <p className="text-xs text-gray-500 mt-1">No active teachers available</p>
+            )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -198,19 +294,38 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
             />
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Shift
+            </label>
+            <select
+              name="shift"
+              value={formData.shift}
+              onChange={handleChange}
+              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              required
+            >
+              <option value="">Select Shift</option>
+              <option value="Morning">Morning</option>
+              <option value="Afternoon">Afternoon</option>
+            </select>
+          </div>
+
           <div className="flex justify-end space-x-4 mt-8">
             <button
               type="button"
               onClick={onClose}
               className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200"
+              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isSubmitting}
             >
-              Add Schedule
+              {isSubmitting ? 'Adding...' : 'Add Schedule'}
             </button>
           </div>
         </form>

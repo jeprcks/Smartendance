@@ -217,20 +217,12 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 <p className="text-base text-gray-900">{student.fullName}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Email Address</p>
-                <p className="text-base text-gray-900">{student.email}</p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Password</p>
-                <p className="text-base text-gray-900 font-mono">{student.plainPassword || 'N/A'}</p>
-              </div>
-              <div>
                 <p className="text-sm text-gray-500">Phone Number</p>
                 <p className="text-base text-gray-900">{student.phoneNumber}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Birth Date</p>
-                <p className="text-base text-gray-900">{typeof student.birthDate === 'object' && student.birthDate !== null && 'toLocaleDateString' in student.birthDate ? (student.birthDate as Date).toLocaleDateString() : student.birthDate}</p>
+                <p className="text-base text-gray-900">{typeof student.birthDate === 'string' ? student.birthDate.split('T')[0] : typeof student.birthDate === 'object' && student.birthDate !== null && 'toLocaleDateString' in student.birthDate ? (student.birthDate as Date).toLocaleDateString() : student.birthDate}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Age</p>
@@ -310,6 +302,18 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 </p>
               </div>
               <div>
+                <p className="text-sm text-gray-500">Parent/Guardian Email Address</p>
+                <p className="text-base text-gray-900">
+                  {student.parentInfo?.email || 'N/A'}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Parent/Guardian Password</p>
+                <p className="text-base text-gray-900 font-mono">
+                  {student.parentInfo?.password ? '••••••••' : 'N/A'}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm text-gray-500">Parent/Guardian Contact</p>
                 <p className="text-base text-gray-900">
                   {student.parentInfo?.contactNumber || student.parentContact || 'N/A'}
@@ -365,7 +369,6 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                     grade: student.gradeLevel,
                     section: student.section,
                     shift: student.shift,
-                    email: student.email,
                     contact: student.phoneNumber,
                     emergencyContact: student.emergencyContact,
                     timestamp: new Date().toISOString()

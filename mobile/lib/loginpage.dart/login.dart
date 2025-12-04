@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/services/authService.dart';
-import 'dart:convert';
+import 'package:mobile/pages/parents/parent.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -46,12 +46,7 @@ class _LoginPageState extends State<LoginPage> {
       Map<String, dynamic> response;
 
       // Call appropriate login method based on user type
-      if (userType == 'student') {
-        response = await AuthService.studentLogin(
-          _emailController.text,
-          _passwordController.text,
-        );
-      } else if (userType == 'parent') {
+      if (userType == 'parent') {
         response = await AuthService.parentLogin(
           _emailController.text,
           _passwordController.text,
@@ -70,27 +65,50 @@ class _LoginPageState extends State<LoginPage> {
 
         // Get user data from response
         final userData =
-            response['$userType'] ??
+            response[userType] ??
             response['student'] ??
             response['parent'] ??
             response['teacher'];
         final token = response['token'];
 
+        // Get children data (backend returns children array at root level)
+        final childrenData =
+            response['children'] ?? userData?['children'] ?? [];
+
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Welcome ${userData['fullName'] ?? userData['name'] ?? 'User'}!',
+              'Welcome ${userData['fullName'] ?? userData['name'] ?? userData['email'] ?? 'User'}!',
             ),
             backgroundColor: Colors.green,
           ),
         );
 
-        // TODO: Store token securely and navigate to home page
-        // For now, print token for verification
-        print('Login successful!');
-        print('Token: $token');
-        print('User Data: $userData');
+        // Navigate based on user type
+        if (userType == 'parent') {
+          // Navigate to Parent Dashboard
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (context) => ParentDashboard(
+                token: token,
+                parentId: userData['parentId'] ?? userData['_id'] ?? '',
+                parentName:
+                    userData['parentName'] ??
+                    userData['name'] ??
+                    userData['email'] ??
+                    'Parent',
+                email: userData['email'] ?? userData['parentEmail'] ?? '',
+                children: childrenData,
+              ),
+            ),
+          );
+        } else if (userType == 'teacher') {
+          // TODO: Navigate to Teacher Dashboard
+          print('Teacher login - navigation coming soon');
+          print('Token: $token');
+          print('User Data: $userData');
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -108,10 +126,8 @@ class _LoginPageState extends State<LoginPage> {
   String _getUserTypeLabel() {
     switch (_currentPage) {
       case 0:
-        return 'Student';
-      case 1:
         return 'Teacher';
-      case 2:
+      case 1:
         return 'Parent';
       default:
         return 'User';
@@ -121,10 +137,8 @@ class _LoginPageState extends State<LoginPage> {
   Color _getUserTypeColor() {
     switch (_currentPage) {
       case 0:
-        return const Color(0xFF6366F1); // Indigo
-      case 1:
         return const Color(0xFF10B981); // Emerald
-      case 2:
+      case 1:
         return const Color(0xFFEC4899); // Pink
       default:
         return Colors.blue;
@@ -134,10 +148,8 @@ class _LoginPageState extends State<LoginPage> {
   IconData _getUserTypeIcon() {
     switch (_currentPage) {
       case 0:
-        return Icons.school;
-      case 1:
         return Icons.person;
-      case 2:
+      case 1:
         return Icons.family_restroom;
       default:
         return Icons.login;
@@ -155,7 +167,6 @@ class _LoginPageState extends State<LoginPage> {
               setState(() => _currentPage = index);
             },
             children: [
-              _buildLoginForm('Student', 'Enter your student credentials'),
               _buildLoginForm('Teacher', 'Enter your teacher credentials'),
               _buildLoginForm('Parent', 'Enter your parent credentials'),
             ],
@@ -170,7 +181,7 @@ class _LoginPageState extends State<LoginPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: List.generate(
-                    3,
+                    2,
                     (index) => GestureDetector(
                       onTap: () => _pageController.animateToPage(
                         index,
