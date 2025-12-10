@@ -12,7 +12,7 @@ class StudentService {
   static const List<String> possibleUrls = [
     'http://10.0.2.2:4000',  // Android Emulator
     'http://localhost:4000',  // iOS Simulator
-    'http://192.168.1.10:4000',  // Physical device (replace with your IP)
+    'http://192.168.64.95',  // Physical device (replace with your IP)
     'http://192.168.0.100:4000',  // Alternative IP range
   ];
   
