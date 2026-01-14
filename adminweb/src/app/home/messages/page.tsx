@@ -548,7 +548,7 @@ export default function MessagesPage() {
 
               <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
                 <p className="text-sm text-purple-700">
-                  <span className="font-semibold">{filteredStudents.length}</span> students will receive this message
+                  <span className="font-semibold">{filteredStudents.length}</span> parents will receive this message
                 </p>
               </div>
 
@@ -578,8 +578,8 @@ export default function MessagesPage() {
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">Contact Numbers Only</p>
-                        <p className="text-xs text-gray-500">{filteredStudents.filter(s => getContactNumbers(s).contact).length} students</p>
+                        <p className="font-medium text-gray-900 text-sm">Parent Contact Numbers</p>
+                        <p className="text-xs text-gray-500">{filteredStudents.filter(s => getContactNumbers(s).contact).length} parents</p>
                       </div>
                     </div>
                   </button>
@@ -606,8 +606,8 @@ export default function MessagesPage() {
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">Emergency Contacts Only</p>
-                        <p className="text-xs text-gray-500">{filteredStudents.filter(s => getContactNumbers(s).emergency).length} students</p>
+                        <p className="font-medium text-gray-900 text-sm">Emergency Contact Numbers</p>
+                        <p className="text-xs text-gray-500">{filteredStudents.filter(s => getContactNumbers(s).emergency).length} parents</p>
                       </div>
                     </div>
                   </button>
@@ -634,8 +634,8 @@ export default function MessagesPage() {
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-gray-900 text-sm">Both Contact Types</p>
-                        <p className="text-xs text-gray-500">All students</p>
+                        <p className="font-medium text-gray-900 text-sm">All Contact Types</p>
+                        <p className="text-xs text-gray-500">All parents</p>
                       </div>
                     </div>
                   </button>
