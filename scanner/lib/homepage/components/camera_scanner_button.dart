@@ -2,11 +2,17 @@ import 'package:flutter/material.dart';
 import '../../scanningpage/scanning.dart';
 
 class CameraScannerButton extends StatelessWidget {
-  const CameraScannerButton({super.key});
+  final bool isEnabled;
+
+  const CameraScannerButton({
+    super.key,
+    this.isEnabled = true,
+  });
 
   @override
   Widget build(BuildContext context) {
     const Color primaryGreen = Color(0xFF2E7D32);
+    const Color disabledGrey = Color(0xFFB0BEC5);
 
     return SizedBox(
       width: double.infinity,
@@ -14,7 +20,7 @@ class CameraScannerButton extends StatelessWidget {
       child: ElevatedButton.icon(
         icon: const Icon(Icons.camera_alt, color: Colors.white),
         label: const Text(
-          'Camera Scanner',
+          'Scan QR Code',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             fontSize: 16,
@@ -22,17 +28,21 @@ class CameraScannerButton extends StatelessWidget {
           ),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primaryGreen,
+          backgroundColor: isEnabled ? primaryGreen : disabledGrey,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          elevation: 4,
+          elevation: isEnabled ? 4 : 0,
         ),
-        onPressed: () {
-          Navigator.of(
-            context,
-          ).push(MaterialPageRoute(builder: (context) => const ScanningPage()));
-        },
+        onPressed: isEnabled
+            ? () {
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => const ScanningPage(),
+                  ),
+                );
+              }
+            : null,
       ),
     );
   }

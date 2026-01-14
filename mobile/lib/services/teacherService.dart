@@ -1,0 +1,268 @@
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+
+class TeacherService {
+  static const String baseUrl = 'http://localhost:4000/api';
+
+  // For Android emulator, use:
+  // static const String baseUrl = 'http://10.0.2.2:4000/api';
+
+  /// Get teacher profile information
+  static Future<Map<String, dynamic>> getTeacherProfile(
+    String teacherId,
+    String token,
+  ) async {
+    try {
+      final response = await http.get(
+        Uri.parse('$baseUrl/teachers/$teacherId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['teacher'] ?? data;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to fetch teacher profile');
+      }
+    } catch (e) {
+      throw Exception('Error fetching teacher profile: $e');
+    }
+  }
+
+  /// Get attendance records for teacher's classes
+  static Future<Map<String, dynamic>> getAttendanceRecords({
+    required String token,
+    String? gradeLevel,
+    String? section,
+    String? subject,
+    String? status,
+    int page = 1,
+    int limit = 50,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'page': page.toString(),
+        'limit': limit.toString(),
+      };
+
+      if (gradeLevel != null) queryParams['gradeLevel'] = gradeLevel;
+      if (section != null) queryParams['section'] = section;
+      if (subject != null) queryParams['subject'] = subject;
+      if (status != null) queryParams['status'] = status;
+
+      final uri = Uri.parse('$baseUrl/history').replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        return {
+          'records': data['records'] ?? <dynamic>[],
+          'pagination': data['pagination'] ?? <String, dynamic>{},
+        };
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized - Invalid or expired token');
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to fetch attendance records');
+      }
+    } catch (e) {
+      print('TeacherService Error fetching attendance records: $e');
+      // Return empty records on error instead of throwing
+      return {
+        'records': [],
+        'pagination': {},
+      };
+    }
+  }
+
+  /// Get students in a specific class (filtered by teacher's schedule)
+  static Future<List<dynamic>> getClassStudents({
+    required String gradeLevel,
+    required String section,
+    required String teacherName,
+    required String token,
+    String? subject,
+    String? shift,
+  }) async {
+    try {
+      final queryParams = {
+        'gradeLevel': gradeLevel,
+        'section': section,
+        'teacherName': teacherName,
+        if (subject != null) 'subject': subject,
+        if (shift != null) 'shift': shift,
+      };
+
+      // Use the new teacher schedule endpoint
+      final uri = Uri.parse('$baseUrl/students/teacher/schedule').replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data is List ? data : [data];
+      } else if (response.statusCode == 400) {
+        // If parameters are invalid, return empty list
+        print('Invalid parameters for class students');
+        return [];
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to fetch students');
+      }
+    } catch (e) {
+      print('Error fetching students for teacher schedule: $e');
+      throw Exception('Error fetching students: $e');
+    }
+  }
+
+  /// Get attendance statistics
+  static Future<Map<String, dynamic>> getAttendanceStats({
+    required String token,
+    String? gradeLevel,
+    String? section,
+    String? startDate,
+    String? endDate,
+  }) async {
+    try {
+      final queryParams = <String, String>{};
+
+      if (gradeLevel != null) queryParams['gradeLevel'] = gradeLevel;
+      if (section != null) queryParams['section'] = section;
+      if (startDate != null) queryParams['startDate'] = startDate;
+      if (endDate != null) queryParams['endDate'] = endDate;
+
+      final uri = Uri.parse('$baseUrl/history/stats').replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body) as Map<String, dynamic>;
+        // Handle different response formats from backend
+        if (data['stats'] != null) {
+          return data['stats'] as Map<String, dynamic>;
+        } else if (data.containsKey('present')) {
+          return data;
+        } else {
+          // Default stats format if not found
+          return {
+            'present': 0,
+            'absent': 0,
+            'late': 0,
+            'cutting': 0,
+            'total': 0,
+          };
+        }
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to fetch statistics');
+      }
+    } catch (e) {
+      print('TeacherService Error fetching statistics: $e');
+      // Return default stats on error instead of throwing
+      return {
+        'present': 0,
+        'absent': 0,
+        'late': 0,
+        'cutting': 0,
+        'total': 0,
+      };
+    }
+  }
+
+  /// Update attendance record
+  static Future<Map<String, dynamic>> updateAttendanceRecord({
+    required String recordId,
+    required String status,
+    required String token,
+    String? notes,
+    String? reason,
+  }) async {
+    try {
+      final body = {
+        'status': status,
+        if (notes != null) 'notes': notes,
+        if (reason != null) 'reason': reason,
+      };
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/history/$recordId'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['record'] ?? data;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to update attendance');
+      }
+    } catch (e) {
+      throw Exception('Error updating attendance: $e');
+    }
+  }
+
+  /// Get teacher schedule (only for the logged-in teacher)
+  static Future<List<dynamic>> getTeacherSchedule({
+    required String token,
+    String? teacherId,
+    String? teacherName,
+    String? day,
+  }) async {
+    try {
+      final queryParams = <String, String>{};
+      if (teacherId != null) queryParams['teacherId'] = teacherId;
+      if (teacherName != null) queryParams['teacher'] = teacherName;
+      if (day != null) queryParams['day'] = day;
+
+      final uri = Uri.parse('$baseUrl/schedules').replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final schedules = data['schedules'] ?? data;
+        return schedules is List ? schedules : [schedules];
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to fetch schedule');
+      }
+    } catch (e) {
+      print('TeacherService Error fetching schedule: $e');
+      // Return empty list on error instead of throwing
+      return [];
+    }
+  }
+}

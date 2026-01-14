@@ -114,22 +114,56 @@ const teacherLogin = async (req, res) => {
         const { email, password } = req.body;
 
         if (!email || !password) {
-            return res.status(400).json({ error: "Email and password are required" });
+            return res.status(400).json({ error: "Email/Username/Teacher ID and password are required" });
         }
 
-        // Find teacher by email
-        const teacher = await Teacher.findOne({ email });
+        console.log('\n========== TEACHER LOGIN ATTEMPT ==========');
+        console.log('📧 Email/ID received:', email);
+        console.log('🔐 Password received:', password ? `[${password.length} chars]` : 'undefined');
+        console.log('⏰ Timestamp:', new Date().toLocaleString());
+
+        // Find teacher by email, username, or teacherId
+        console.log('🔍 Searching database for teacher...');
+        let teacher = await Teacher.findOne({ email });
+        
+        // If not found by email, try username
         if (!teacher) {
-            return res.status(401).json({ error: "Invalid email or password" });
+            console.log('Not found by email, trying username...');
+            teacher = await Teacher.findOne({ username: email.toLowerCase() });
         }
+        
+        // If not found by username, try teacherId
+        if (!teacher) {
+            console.log('Not found by username, trying teacherId...');
+            teacher = await Teacher.findOne({ teacherId: email });
+        }
+
+        if (!teacher) {
+            console.log('❌ FAIL: No teacher found with email/username/teacherId:', email);
+            console.log('=========================================\n');
+            return res.status(401).json({ error: "Invalid email, username, teacher ID or password" });
+        }
+
+        console.log('✅ Teacher found!');
+        console.log('👤 Teacher ID:', teacher.teacherId);
+        console.log('📝 Full Name:', teacher.name);
+        console.log('📧 Email:', teacher.email);
+        console.log('👤 Username:', teacher.username);
 
         // Compare password
+        console.log('🔐 Comparing passwords...');
         const isPasswordValid = await bcrypt.compare(password, teacher.password);
+        
         if (!isPasswordValid) {
-            return res.status(401).json({ error: "Invalid email or password" });
+            console.log('❌ FAIL: Password does not match');
+            console.log('=========================================\n');
+            return res.status(401).json({ error: "Invalid email, username, teacher ID or password" });
         }
 
+        console.log('✅ Password valid!');
+
         // Generate JWT token
+        console.log('🔐 Generating JWT token...');
         const token = jwt.sign(
             { 
                 id: teacher._id, 
@@ -141,6 +175,10 @@ const teacherLogin = async (req, res) => {
             { expiresIn: JWT_EXPIRE }
         );
 
+        console.log('✅ SUCCESS: Teacher logged in successfully!');
+        console.log('🎟️  Token generated (expires in 7 days)');
+        console.log('=========================================\n');
+
         res.status(200).json({
             message: "Login successful",
             token,
@@ -149,13 +187,15 @@ const teacherLogin = async (req, res) => {
                 teacherId: teacher.teacherId,
                 name: teacher.name,
                 email: teacher.email,
+                username: teacher.username,
                 subject: teacher.subject,
                 role: teacher.role,
                 profilePicture: teacher.profilePicture
             }
         });
     } catch (error) {
-        console.error('Error logging in teacher:', error);
+        console.error('❌ ERROR in teacherLogin:', error);
+        console.log('=========================================\n');
         res.status(500).json({ error: error.message || "Error logging in" });
     }
 };

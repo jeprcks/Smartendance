@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/services/authService.dart';
 import 'package:mobile/pages/parents/parent.dart';
+import 'package:mobile/pages/teachers/teacher.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+typedef LoginSuccessCallback = Future<void> Function({
+  required String token,
+  required String parentId,
+  required String parentName,
+  required String parentEmail,
+  required List<dynamic> children,
+});
 
 class LoginPage extends StatefulWidget {
-  const LoginPage({super.key});
+  final LoginSuccessCallback? onLoginSuccess;
+
+  const LoginPage({super.key, this.onLoginSuccess});
 
   @override
   State<LoginPage> createState() => _LoginPageState();
@@ -16,6 +28,7 @@ class _LoginPageState extends State<LoginPage> {
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
   bool _isLoading = false;
+  final _storage = const FlutterSecureStorage();
 
   @override
   void initState() {
@@ -29,6 +42,46 @@ class _LoginPageState extends State<LoginPage> {
     _emailController.dispose();
     _passwordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _storeTeacherData({
+    required String token,
+    required String teacherId,
+    required String teacherName,
+    required String email,
+    required String subject,
+    required String role,
+  }) async {
+    try {
+      await _storage.write(key: 'teacher_token', value: token);
+      await _storage.write(key: 'teacher_id', value: teacherId);
+      await _storage.write(key: 'teacher_name', value: teacherName);
+      await _storage.write(key: 'teacher_email', value: email);
+      await _storage.write(key: 'teacher_subject', value: subject);
+      await _storage.write(key: 'teacher_role', value: role);
+
+      if (mounted) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => TeacherDashboard(
+              token: token,
+              teacherId: teacherId,
+              teacherName: teacherName,
+              email: email,
+              subject: subject,
+              role: role,
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error storing teacher data: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: $e')),
+        );
+      }
+    }
   }
 
   void _handleLogin() async {
@@ -63,6 +116,9 @@ class _LoginPageState extends State<LoginPage> {
       if (mounted) {
         setState(() => _isLoading = false);
 
+        print('=== LOGIN RESPONSE ===');
+        print('Response: $response');
+
         // Get user data from response
         final userData =
             response[userType] ??
@@ -74,6 +130,10 @@ class _LoginPageState extends State<LoginPage> {
         // Get children data (backend returns children array at root level)
         final childrenData =
             response['children'] ?? userData?['children'] ?? [];
+
+        print('User Data: $userData');
+        print('Children Data: $childrenData');
+        print('Children count: ${childrenData.length}');
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -87,27 +147,66 @@ class _LoginPageState extends State<LoginPage> {
 
         // Navigate based on user type
         if (userType == 'parent') {
-          // Navigate to Parent Dashboard
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (context) => ParentDashboard(
-                token: token,
-                parentId: userData['parentId'] ?? userData['_id'] ?? '',
-                parentName:
-                    userData['parentName'] ??
-                    userData['name'] ??
-                    userData['email'] ??
-                    'Parent',
-                email: userData['email'] ?? userData['parentEmail'] ?? '',
-                children: childrenData,
+          final parentId = userData['parentId'] ?? userData['_id'] ?? '';
+          final parentName = userData['parentName'] ?? userData['name'] ?? userData['email'] ?? 'Parent';
+          final email = userData['email'] ?? userData['parentEmail'] ?? '';
+
+          print('Calling onLoginSuccess with:');
+          print('  parentId: $parentId');
+          print('  parentName: $parentName');
+          print('  email: $email');
+          print('  children: $childrenData');
+
+          // If onLoginSuccess callback is provided, use it (from AuthWrapper)
+          if (widget.onLoginSuccess != null) {
+            await widget.onLoginSuccess!(
+              token: token,
+              parentId: parentId,
+              parentName: parentName,
+              parentEmail: email,
+              children: childrenData,
+            );
+          } else {
+            // Fallback: direct navigation (for standalone LoginPage usage)
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(
+                builder: (context) => ParentDashboard(
+                  token: token,
+                  parentId: parentId,
+                  parentName: parentName,
+                  email: email,
+                  children: childrenData,
+                ),
               ),
-            ),
-          );
+            );
+          }
         } else if (userType == 'teacher') {
-          // TODO: Navigate to Teacher Dashboard
-          print('Teacher login - navigation coming soon');
-          print('Token: $token');
-          print('User Data: $userData');
+          final teacherId = userData['teacherId'] ?? userData['_id'] ?? '';
+          final teacherName = userData['name'] ?? userData['fullName'] ?? userData['email'] ?? 'Teacher';
+          final email = userData['email'] ?? '';
+          final subject = userData['subject'] ?? '';
+          final role = userData['role'] ?? 'Teacher';
+
+          print('Calling teacher login with:');
+          print('  teacherId: $teacherId');
+          print('  teacherName: $teacherName');
+          print('  email: $email');
+          print('  subject: $subject');
+          print('  role: $role');
+
+          // If onLoginSuccess callback is provided, use it (from AuthWrapper)
+          if (widget.onLoginSuccess != null) {
+            // For teachers, we'll create a special callback
+            // Store teacher data and navigate
+            await _storeTeacherData(
+              token: token,
+              teacherId: teacherId,
+              teacherName: teacherName,
+              email: email,
+              subject: subject,
+              role: role,
+            );
+          }
         }
       }
     } catch (e) {

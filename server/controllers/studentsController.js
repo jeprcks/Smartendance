@@ -89,6 +89,16 @@ const createStudent = async (req, res) => {
 
         let student;
         await session.withTransaction(async () => {
+            // Clean up parentInfo to avoid null email causing unique constraint issues
+            let cleanedParentInfo = parentInfo;
+            if (parentInfo) {
+                cleanedParentInfo = {
+                    ...parentInfo,
+                    // Don't include email if it's null/undefined
+                    ...(parentInfo.email ? { email: parentInfo.email } : {}),
+                };
+            }
+
             // Generate QR code data
             const qrCodeData = {
                 id: studentId,
@@ -133,7 +143,7 @@ const createStudent = async (req, res) => {
                 photo,
                 shift,
                 address,
-                parentInfo,
+                parentInfo: cleanedParentInfo,
                 emergencyContact,
                 qrCode: {
                     data: JSON.stringify(qrCodeData),
@@ -198,6 +208,68 @@ const getStudentsByClass = async (req, res) => {
         const students = await Student.find({ gradeLevel, section }).sort({ fullName: 1 });
         res.status(200).json(students);
     } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// Get students enrolled in a specific teacher's schedule (new endpoint)
+const getStudentsByTeacherSchedule = async (req, res) => {
+    try {
+        const { teacherName, gradeLevel, section, subject, shift } = req.query;
+        
+        // Validate required parameters
+        if (!teacherName || !gradeLevel || !section) {
+            return res.status(400).json({ 
+                error: "teacherName, gradeLevel, and section are required parameters" 
+            });
+        }
+
+        // Import Schedule model
+        const Schedule = require("../models/scheduleSchema");
+
+        // Find all schedules for this teacher in this specific class (grade & section)
+        const scheduleFilter = { 
+            teacher: teacherName,
+            gradeLevel: gradeLevel,
+            section: section,
+            isActive: true
+        };
+        
+        if (subject) scheduleFilter.subject = subject;
+        // If shift is provided, filter by it; otherwise get all shifts for this teacher in this class
+        if (shift) scheduleFilter.shift = shift;
+        
+        const teacherSchedules = await Schedule.find(scheduleFilter);
+
+        if (!teacherSchedules || teacherSchedules.length === 0) {
+            console.log(`No schedules found for teacher: ${teacherName} in ${gradeLevel} ${section}`);
+            return res.status(200).json([]);
+        }
+
+        console.log(`Found ${teacherSchedules.length} schedule(s) for teacher: ${teacherName} in ${gradeLevel} ${section}`);
+        console.log('Teacher schedules:', teacherSchedules.map(s => ({ subject: s.subject, shift: s.shift, day: s.day })));
+
+        // Get all unique shifts from teacher's schedules in this class
+        const shiftsSet = new Set(teacherSchedules.map(s => s.shift));
+        const shiftsArray = Array.from(shiftsSet);
+        
+        console.log(`Teacher teaches in shifts: ${shiftsArray.join(', ')}`);
+
+        // Find students in this grade and section that match the teacher's shift(s)
+        const studentFilter = {
+            gradeLevel: gradeLevel,
+            section: section,
+            shift: { $in: shiftsArray }  // Only include students in shifts where teacher teaches
+        };
+
+        const students = await Student.find(studentFilter).sort({ fullName: 1 });
+
+        console.log(`Found ${students.length} students in ${gradeLevel} ${section} matching teacher's shift(s)`);
+        console.log(`Returning ${students.length} students for ${teacherName}`);
+        
+        res.status(200).json(students);
+    } catch (error) {
+        console.error('Error getting students by teacher schedule:', error);
         res.status(400).json({ error: error.message });
     }
 };
@@ -607,6 +679,7 @@ module.exports = {
     getAllStudents,
     getStudent,
     getStudentsByClass,
+    getStudentsByTeacherSchedule,
     updateStudent,
     deleteStudent,
     searchStudents,

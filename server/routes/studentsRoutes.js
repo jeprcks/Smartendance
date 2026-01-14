@@ -5,6 +5,7 @@ const {
   getAllStudents,
   getStudent,
   getStudentsByClass,
+  getStudentsByTeacherSchedule,
   updateStudent,
   deleteStudent,
   searchStudents,
@@ -26,6 +27,9 @@ router.get("/search", searchStudents);
 
 // GET: Get students by grade and section
 router.get("/class", getStudentsByClass);
+
+// GET: Get students enrolled in a specific teacher's schedule
+router.get("/teacher/schedule", getStudentsByTeacherSchedule);
 
 // GET: Retrieve a single student by ID
 router.get("/:id", getStudent);
