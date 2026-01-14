@@ -12,6 +12,8 @@ import toast from 'react-hot-toast';
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [sortGrade, setSortGrade] = useState('');
+  const [sortSection, setSortSection] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -119,14 +121,28 @@ export default function StudentsPage() {
 
   const filteredStudents = students.filter(student => {
     const query = searchQuery.toLowerCase();
-    return (
+    const matchesSearch = (
       student.fullName.toLowerCase().includes(query) ||
       student.studentId.toLowerCase().includes(query) ||
       student.gradeLevel.toLowerCase().includes(query) ||
       student.section.toLowerCase().includes(query) ||
       (student.shift?.toLowerCase() || '').includes(query)
     );
+    
+    const matchesGrade = !sortGrade || student.gradeLevel === sortGrade;
+    const matchesSection = !sortSection || student.section === sortSection;
+    
+    return matchesSearch && matchesGrade && matchesSection;
   });
+
+  // Get unique grades and sections for filter dropdowns
+  const uniqueGrades = Array.from(new Set(students.map(s => s.gradeLevel))).sort((a, b) => {
+    const numA = parseInt(a.match(/\d+/)?.[0] || '0');
+    const numB = parseInt(b.match(/\d+/)?.[0] || '0');
+    return numA - numB;
+  });
+
+  const uniqueSections = Array.from(new Set(students.map(s => s.section))).sort();
 
   const totalMale = students.filter(student => student.gender === 'Male').length;
   const totalFemale = students.filter(student => student.gender === 'Female').length;
@@ -164,6 +180,58 @@ export default function StudentsPage() {
 
       <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">
         <div className="p-6">
+          
+          {/* Filter Section */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+              </svg>
+              <label className="text-sm font-semibold text-gray-700">Filter by:</label>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {/* Grade Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Grade Level</label>
+                <select
+                  value={sortGrade}
+                  onChange={(e) => setSortGrade(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300 text-sm"
+                >
+                  <option value="">All Grades</option>
+                  {uniqueGrades.map(grade => (
+                    <option key={grade} value={grade}>{grade}</option>
+                  ))}
+                </select>
+              </div>
+              
+              {/* Section Filter */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Section</label>
+                <select
+                  value={sortSection}
+                  onChange={(e) => setSortSection(e.target.value)}
+                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300 text-sm"
+                >
+                  <option value="">All Sections</option>
+                  {uniqueSections.map(section => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            {(sortGrade || sortSection) && (
+              <button
+                onClick={() => {
+                  setSortGrade('');
+                  setSortSection('');
+                }}
+                className="mt-2 text-xs text-gray-600 hover:text-gray-900 underline transition-colors"
+              >
+                Clear filters
+              </button>
+            )}
+          </div>
           
           <div className="mb-6">
             <div className="relative group">
