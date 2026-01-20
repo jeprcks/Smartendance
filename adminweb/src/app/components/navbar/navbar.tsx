@@ -10,8 +10,9 @@ export default function Navbar() {
   const navItems = [
     { href: '/home/dashboard', label: 'Dashboard', icon: '📊' },
     { href: '/home/students', label: 'Students', icon: '👨‍🎓' },
-    { href: '/home/teachers', label: 'Teachers', icon: '�‍🏫' },
-    { href: '/home/history', label: 'History', icon: '�' },
+    { href: '/home/teachers', label: 'Teachers', icon: '🧑‍🏫' },
+    { href: '/home/messages', label: 'Messages', icon: '💬' },
+    { href: '/home/history', label: 'History', icon: '⏰' },
     { href: '/home/schedules', label: 'Schedules', icon: '🗓️' },
 
     // { href: '/settings', label: 'Settings', icon: '⚙️' },

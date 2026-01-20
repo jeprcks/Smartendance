@@ -133,7 +133,7 @@ export default function HistoryPage() {
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<AttendanceRecord['status'] | ''>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   type SelectedStudent = {
@@ -145,13 +145,54 @@ export default function HistoryPage() {
   const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
 
   // State for API data
-  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
+  const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([
+    {
+      _id: '1',
+      studentId: '12233',
+      studentName: 'Francis Rey R Ampoon',
+      subject: 'Mathematics',
+      scanTime: new Date(2024, 0, 14, 9, 0, 0),
+      status: 'Present'
+    },
+    {
+      _id: '2',
+      studentId: 'STU-303',
+      studentName: 'John Doe',
+      subject: 'English',
+      scanTime: new Date(2024, 0, 14, 8, 45, 0),
+      status: 'Late'
+    },
+    {
+      _id: '3',
+      studentId: 'STU-897',
+      studentName: 'Jane Smith',
+      subject: 'Science',
+      scanTime: new Date(2024, 0, 14, 10, 15, 0),
+      status: 'Present'
+    },
+    {
+      _id: '4',
+      studentId: 'STU-455',
+      studentName: 'Black Rice',
+      subject: 'History',
+      scanTime: new Date(2024, 0, 14, 7, 30, 0),
+      status: 'Absent'
+    },
+    {
+      _id: '5',
+      studentId: 'STU-789',
+      studentName: 'Maria Garcia',
+      subject: 'Physical Education',
+      scanTime: new Date(2024, 0, 14, 8, 30, 0),
+      status: 'Cutting'
+    }
+  ]);
   const [stats, setStats] = useState<AttendanceStats>({
-    present: 0,
-    absent: 0,
-    late: 0,
-    cutting: 0,
-    total: 0
+    present: 2,
+    absent: 1,
+    late: 1,
+    cutting: 1,
+    total: 5
   });
   const [pagination, setPagination] = useState({
     currentPage: 1,
@@ -162,30 +203,31 @@ export default function HistoryPage() {
   });
 
   // Fetch data from API
-  const fetchData = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-      
-      const response = await historyService.getHistoryPageData({
-        search: searchQuery || undefined,
-        status: selectedStatus || undefined,
-        startDate: selectedDate || undefined,
-        endDate: selectedDate || undefined,
-        page: 1,
-        limit: 50
-      });
-
-      setAttendanceRecords(response.records);
-      setStats(response.stats);
-      setPagination(response.pagination);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch data');
-      console.error('Error fetching history data:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Dummy data is now used as default - no API calls
+  // const fetchData = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     setError(null);
+  //     
+  //     const response = await historyService.getHistoryPageData({
+  //       search: searchQuery || undefined,
+  //       status: selectedStatus || undefined,
+  //       startDate: selectedDate || undefined,
+  //       endDate: selectedDate || undefined,
+  //       page: 1,
+  //       limit: 50
+  //     });
+  //
+  //     setAttendanceRecords(response.records);
+  //     setStats(response.stats);
+  //     setPagination(response.pagination);
+  //   } catch (err) {
+  //     setError(err instanceof Error ? err.message : 'Failed to fetch data');
+  //     console.error('Error fetching history data:', err);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   // Fetch student details for modal
   const fetchStudentDetails = async (studentId: string) => {
@@ -208,9 +250,9 @@ export default function HistoryPage() {
   // Note: Teacher functionality removed - this is for admin view only
 
   // Load data on component mount and when filters change
-  useEffect(() => {
-    fetchData();
-  }, [searchQuery, selectedDate, selectedStatus]);
+  // useEffect(() => {
+  //   fetchData();
+  // }, [searchQuery, selectedDate, selectedStatus]);
 
   const filteredRecords = attendanceRecords;
 

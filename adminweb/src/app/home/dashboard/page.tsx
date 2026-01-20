@@ -1,9 +1,11 @@
+'use client';
+
 export default function DashboardPage() {
   const stats = [
-    { title: 'Total Students', value: '1,234', icon: '👥' },
-    { title: 'Present Today', value: '1,180', icon: '✅' },
-    { title: 'Absent Today', value: '54', icon: '❌' },
-    { title: 'Total Classes', value: '32', icon: '📚' },
+    { title: 'Total Students', value: 1234, icon: '👥' },
+    { title: 'Present Today', value: 1180, icon: '✅' },
+    { title: 'Absent Today', value: 54, icon: '❌' },
+    { title: 'Total Classes', value: 32, icon: '📚' },
   ];
 
   return (
@@ -13,14 +15,44 @@ export default function DashboardPage() {
         <p className="page-subtitle">Overview of school attendance statistics</p>
       </div>
 
-      <div className="dashboard-grid">
-        {stats.map((stat, index) => (
-          <div key={index} className="stat-card">
-            <div className="text-3xl mb-2">{stat.icon}</div>
-            <div className="text-lg font-semibold text-gray-600">{stat.title}</div>
-            <div className="text-2xl font-bold text-primary-dark">{stat.value}</div>
+      {/* Bar Chart Section */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">School Statistics</h2>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: '600px', height: '400px' }} className="flex items-end justify-around gap-6 p-4">
+            {stats.map((stat, index) => (
+              <div key={index} className="flex flex-col items-center flex-1">
+                {/* Bar */}
+                <div className="flex flex-col items-center w-full">
+                  <div className="flex items-end justify-center h-80 mb-4">
+                    <div
+                      style={{
+                        height: `${(stat.value / 1234) * 100}%`,
+                        width: '60px',
+                      }}
+                      className={`rounded-t-lg transition-all duration-300 hover:opacity-80 cursor-pointer ${
+                        index === 0
+                          ? 'bg-blue-500'
+                          : index === 1
+                          ? 'bg-green-500'
+                          : index === 2
+                          ? 'bg-red-500'
+                          : 'bg-purple-500'
+                      }`}
+                      title={`${stat.title}: ${stat.value}`}
+                    />
+                  </div>
+                  {/* Label */}
+                  <div className="text-center">
+                    <div className="text-2xl mb-2">{stat.icon}</div>
+                    <p className="text-sm font-semibold text-gray-700 mb-2">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       <div className="content-section">
