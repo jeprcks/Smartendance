@@ -191,3 +191,66 @@ exports.getSchedulesByGradeAndSection = async (req, res) => {
     });
   }
 };
+
+exports.updateStudentAttendance = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { studentId, status, timestamp } = req.body;
+
+    // Validate required fields
+    if (!studentId || !status) {
+      return res.status(400).json({ 
+        error: 'studentId and status are required' 
+      });
+    }
+
+    const schedule = await Schedule.findById(id);
+
+    if (!schedule) {
+      return res.status(404).json({ 
+        error: 'Schedule not found' 
+      });
+    }
+
+    // Initialize students array if it doesn't exist
+    if (!schedule.students) {
+      schedule.students = [];
+    }
+
+    // Find or create student entry in the schedule
+    let studentEntry = schedule.students.find(s => s.studentId === studentId);
+    
+    if (!studentEntry) {
+      studentEntry = {
+        studentId,
+        status: 'Not Scanned',
+        scanTime: null,
+        timeIn: null
+      };
+      schedule.students.push(studentEntry);
+    }
+
+    // Update student status
+    studentEntry.status = status;
+    studentEntry.timestamp = timestamp || new Date().toISOString();
+
+    // Mark schedule as modified
+    schedule.markModified('students');
+
+    await schedule.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Student attendance updated successfully',
+      result: {
+        schedule,
+        student: studentEntry
+      }
+    });
+  } catch (error) {
+    console.error('Error updating student attendance:', error);
+    res.status(500).json({ 
+      error: error.message || 'Failed to update student attendance' 
+    });
+  }
+};

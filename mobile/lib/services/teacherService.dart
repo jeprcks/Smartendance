@@ -54,7 +54,9 @@ class TeacherService {
       if (subject != null) queryParams['subject'] = subject;
       if (status != null) queryParams['status'] = status;
 
-      final uri = Uri.parse('$baseUrl/history').replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/history',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -79,10 +81,7 @@ class TeacherService {
     } catch (e) {
       print('TeacherService Error fetching attendance records: $e');
       // Return empty records on error instead of throwing
-      return {
-        'records': [],
-        'pagination': {},
-      };
+      return {'records': [], 'pagination': {}};
     }
   }
 
@@ -105,7 +104,9 @@ class TeacherService {
       };
 
       // Use the new teacher schedule endpoint
-      final uri = Uri.parse('$baseUrl/students/teacher/schedule').replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/students/teacher/schedule',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -148,7 +149,9 @@ class TeacherService {
       if (startDate != null) queryParams['startDate'] = startDate;
       if (endDate != null) queryParams['endDate'] = endDate;
 
-      final uri = Uri.parse('$baseUrl/history/stats').replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/history/stats',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -182,13 +185,7 @@ class TeacherService {
     } catch (e) {
       print('TeacherService Error fetching statistics: $e');
       // Return default stats on error instead of throwing
-      return {
-        'present': 0,
-        'absent': 0,
-        'late': 0,
-        'cutting': 0,
-        'total': 0,
-      };
+      return {'present': 0, 'absent': 0, 'late': 0, 'cutting': 0, 'total': 0};
     }
   }
 
@@ -241,7 +238,9 @@ class TeacherService {
       if (teacherName != null) queryParams['teacher'] = teacherName;
       if (day != null) queryParams['day'] = day;
 
-      final uri = Uri.parse('$baseUrl/schedules').replace(queryParameters: queryParams);
+      final uri = Uri.parse(
+        '$baseUrl/schedules',
+      ).replace(queryParameters: queryParams);
 
       final response = await http.get(
         uri,
@@ -263,6 +262,43 @@ class TeacherService {
       print('TeacherService Error fetching schedule: $e');
       // Return empty list on error instead of throwing
       return [];
+    }
+  }
+
+  /// Update student attendance status for a specific schedule
+  /// This allows teachers to override QR scan status for their subject/class
+  static Future<Map<String, dynamic>> updateStudentAttendance({
+    required String token,
+    required String studentId,
+    required String scheduleId,
+    required String status,
+  }) async {
+    try {
+      final body = {
+        'studentId': studentId,
+        'scheduleId': scheduleId,
+        'status': status,
+        'timestamp': DateTime.now().toIso8601String(),
+      };
+
+      final response = await http.patch(
+        Uri.parse('$baseUrl/schedules/$scheduleId/student-attendance'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode(body),
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return data['result'] ?? data;
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(error['error'] ?? 'Failed to update attendance status');
+      }
+    } catch (e) {
+      throw Exception('Error updating student attendance: $e');
     }
   }
 }
