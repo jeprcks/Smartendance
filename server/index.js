@@ -18,16 +18,28 @@ app.use(limiter);
 // CORS configuration
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",     // Admin web panel
-      "http://localhost:5000",     // Flutter web (common port)
-      "http://localhost:5001",     // Flutter web (alternate)
-      /^http:\/\/localhost:\d+$/,  // Allow any localhost port (for Flutter web dynamic ports)
-      "http://10.0.2.2:4000",     // Android emulator
-      "http://localhost:4000",     // iOS simulator
-      /^http:\/\/192\.168\.\d+\.\d+:\d+$/,  // Physical devices on local network
-      /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/,   // Alternative network ranges
-    ],
+    origin: (origin, callback) => {
+      const allowedOrigins = [
+        "http://localhost:3000",     // Admin web panel
+        "http://localhost:5000",     // Flutter web (common port)
+        "http://localhost:5001",     // Flutter web (alternate)
+        "http://10.0.2.2:4000",     // Android emulator
+        "http://localhost:4000",     // iOS simulator
+      ];
+      
+      // Check if origin matches allowed patterns
+      const isAllowed = !origin || 
+        allowedOrigins.includes(origin) ||
+        /^http:\/\/localhost:\d+$/.test(origin) ||
+        /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
+        /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin);
+      
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
@@ -47,7 +59,13 @@ app.use((err, req, res, next) => {
 });
 
 // Connect to MongoDB
-mongoose.connect(process.env.MONGODB_URI)
+mongoose.connect(process.env.MONGODB_URI, {
+  serverSelectionTimeoutMS: 5000,
+  socketTimeoutMS: 45000,
+  family: 4, // Force IPv4
+  retryWrites: true,
+  w: 'majority'
+})
   .then(() => {
     console.log("Connected to MongoDB");
   })

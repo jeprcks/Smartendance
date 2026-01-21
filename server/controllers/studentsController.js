@@ -7,7 +7,6 @@ const pendingRequests = new Map();
 
 // Create new student
 const createStudent = async (req, res) => {
-    let session;
     try {
         const {
             studentId,
@@ -57,9 +56,6 @@ const createStudent = async (req, res) => {
             console.log('Request key removed due to timeout:', requestKey);
         }, 30000);
 
-        // Start a new session for transaction
-        session = await Student.startSession();
-        
         // Check if student ID already exists
         console.log('=== STUDENT ID VALIDATION DEBUG ===');
         console.log('Checking for existing student with ID:', studentId);
@@ -87,72 +83,68 @@ const createStudent = async (req, res) => {
         
         console.log('Student ID is unique, proceeding with creation');
 
-        let student;
-        await session.withTransaction(async () => {
-            // Clean up parentInfo to avoid null email causing unique constraint issues
-            let cleanedParentInfo = parentInfo;
-            if (parentInfo) {
-                cleanedParentInfo = {
-                    ...parentInfo,
-                    // Don't include email if it's null/undefined
-                    ...(parentInfo.email ? { email: parentInfo.email } : {}),
-                };
-            }
-
-            // Generate QR code data
-            const qrCodeData = {
-                id: studentId,
-                name: fullName,
-                grade: gradeLevel,
-                section: section,
-                shift: shift,
-                contact: phoneNumber,
-                emergencyContact: emergencyContact?.contactNumber || '',
-                parentEmail: parentInfo?.email || '',
-                parentPassword: parentInfo?.password || '',
-                timestamp: new Date().toISOString()
+        // Clean up parentInfo to avoid null email causing unique constraint issues
+        let cleanedParentInfo = parentInfo;
+        if (parentInfo) {
+            cleanedParentInfo = {
+                ...parentInfo,
+                // Don't include email if it's null/undefined
+                ...(parentInfo.email ? { email: parentInfo.email } : {}),
             };
+        }
 
-            // Generate QR code image
-            let qrCodeImage = '';
-            try {
-                qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrCodeData), {
-                    errorCorrectionLevel: 'H',
-                    type: 'image/png',
-                    quality: 0.92,
-                    margin: 1,
-                    color: {
-                        dark: '#000000',
-                        light: '#FFFFFF'
-                    }
-                });
-            } catch (qrError) {
-                console.error('Error generating QR code:', qrError);
-                // Continue without QR code if generation fails
-            }
+        // Generate QR code data
+        const qrCodeData = {
+            id: studentId,
+            name: fullName,
+            grade: gradeLevel,
+            section: section,
+            shift: shift,
+            contact: phoneNumber,
+            emergencyContact: emergencyContact?.contactNumber || '',
+            parentEmail: parentInfo?.email || '',
+            parentPassword: parentInfo?.password || '',
+            timestamp: new Date().toISOString()
+        };
 
-            const result = await Student.create([{
-                studentId,
-                fullName,
-                phoneNumber,
-                age,
-                birthDate,
-                gradeLevel,
-                section,
-                gender,
-                photo,
-                shift,
-                address,
-                parentInfo: cleanedParentInfo,
-                emergencyContact,
-                qrCode: {
-                    data: JSON.stringify(qrCodeData),
-                    image: qrCodeImage,
-                    generatedAt: new Date(),
-                    isActive: true
+        // Generate QR code image
+        let qrCodeImage = '';
+        try {
+            qrCodeImage = await QRCode.toDataURL(JSON.stringify(qrCodeData), {
+                errorCorrectionLevel: 'H',
+                type: 'image/png',
+                quality: 0.92,
+                margin: 1,
+                color: {
+                    dark: '#000000',
+                    light: '#FFFFFF'
                 }
-            }], { session });
-            student = result[0];
+            });
+        } catch (qrError) {
+            console.error('Error generating QR code:', qrError);
+            // Continue without QR code if generation fails
+        }
+
+        const student = await Student.create({
+            studentId,
+            fullName,
+            phoneNumber,
+            age,
+            birthDate,
+            gradeLevel,
+            section,
+            gender,
+            photo,
+            shift,
+            address,
+            parentInfo: cleanedParentInfo,
+            emergencyContact,
+            qrCode: {
+                data: JSON.stringify(qrCodeData),
+                image: qrCodeImage,
+                generatedAt: new Date(),
+                isActive: true
+            }
         });
 
         console.log('=== STUDENT CREATED SUCCESSFULLY ===');
@@ -168,10 +160,6 @@ const createStudent = async (req, res) => {
         pendingRequests.delete(requestKey);
         console.log('=== REQUEST CLEANED UP ===');
         console.log('Request key removed:', requestKey);
-        
-        if (session) {
-            await session.endSession();
-        }
     }
 };
 

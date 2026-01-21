@@ -96,6 +96,8 @@ const getAllTeachers = async (req, res) => {
     try {
         const { page = 1, limit = 50, search, subject, status, role } = req.query;
         
+        console.log('getAllTeachers called with params:', { page, limit, search, subject, status, role });
+        
         // Build filter object
         const filter = {};
         
@@ -114,11 +116,14 @@ const getAllTeachers = async (req, res) => {
             ];
         }
 
+        console.log('Filter:', JSON.stringify(filter));
+
         // Calculate pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
         
         // Get total count for pagination
         const totalTeachers = await Teacher.countDocuments(filter);
+        console.log('Total teachers:', totalTeachers);
         
         // Get teachers with pagination (excluding password)
         const teachers = await Teacher.find(filter)
@@ -126,6 +131,8 @@ const getAllTeachers = async (req, res) => {
             .sort({ createdAt: -1 })
             .skip(skip)
             .limit(parseInt(limit));
+
+        console.log('Teachers found:', teachers.length);
 
         // Backfill plainPassword for existing teachers that don't have it
         for (const teacher of teachers) {
@@ -135,7 +142,7 @@ const getAllTeachers = async (req, res) => {
             }
         }
 
-        res.status(200).json({
+        const response = {
             success: true,
             teachers,
             pagination: {
@@ -145,10 +152,13 @@ const getAllTeachers = async (req, res) => {
                 hasNext: skip + teachers.length < totalTeachers,
                 hasPrev: parseInt(page) > 1
             }
-        });
+        };
+        
+        console.log('Sending response with', teachers.length, 'teachers');
+        res.status(200).json(response);
     } catch (error) {
         console.error('Error getting teachers:', error);
-        res.status(400).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 };
 

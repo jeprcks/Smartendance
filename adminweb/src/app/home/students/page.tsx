@@ -5,6 +5,7 @@ import AddStudentModal from './components/AddStudentModal';
 import ViewStudentModal from './components/ViewStudentModal';
 import PrintQRCodeModal from './components/PrintQRCodeModal';
 import EditStudentModal from './components/EditStudentModal';
+import StudentScheduleModal from './components/StudentScheduleModal';
 import StatusCounter from './components/StatusCounter';
 import PDFExportButton from './components/PDFExportButton';
 import { studentService, Student } from '@/app/services/studentService';
@@ -18,6 +19,7 @@ export default function StudentsPage() {
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
@@ -373,6 +375,19 @@ export default function StudentsPage() {
                           </svg>
                           Print
                         </button>
+                        <button 
+                          className="inline-flex items-center px-3 py-2 bg-purple-50 text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          onClick={() => {
+                            setSelectedStudent(student);
+                            setIsScheduleModalOpen(true);
+                          }}
+                          title="View/Manage Schedule"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                          </svg>
+                          Schedule
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -410,6 +425,15 @@ export default function StudentsPage() {
           setSelectedStudent(null);
         }}
         onUpdate={handleUpdateStudent}
+        student={selectedStudent}
+      />
+
+      <StudentScheduleModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => {
+          setIsScheduleModalOpen(false);
+          setSelectedStudent(null);
+        }}
         student={selectedStudent}
       />
     </div>

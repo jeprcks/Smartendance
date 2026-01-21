@@ -30,7 +30,7 @@ class TeacherDashboard extends StatefulWidget {
 class _TeacherDashboardState extends State<TeacherDashboard> {
   final _storage = const FlutterSecureStorage();
   late PageController _pageController;
-  int _currentPage = 0;
+  final int _currentPage = 0;
   int _currentTab = 0;
   bool _isLoading = true;
   Map<String, dynamic> _attendanceStats = {
@@ -61,10 +61,14 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
       setState(() => _isLoading = true);
 
       // Fetch attendance stats
-      final stats = await TeacherService.getAttendanceStats(token: widget.token);
-      
+      final stats = await TeacherService.getAttendanceStats(
+        token: widget.token,
+      );
+
       // Fetch attendance records
-      final recordsResponse = await TeacherService.getAttendanceRecords(token: widget.token);
+      final recordsResponse = await TeacherService.getAttendanceRecords(
+        token: widget.token,
+      );
       final records = recordsResponse['records'] as List<dynamic>? ?? [];
 
       if (mounted) {
@@ -162,14 +166,8 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   setState(() => _currentTab = index);
                 },
                 tabs: const [
-                  Tab(
-                    icon: Icon(Icons.dashboard),
-                    text: 'Dashboard',
-                  ),
-                  Tab(
-                    icon: Icon(Icons.schedule),
-                    text: 'Schedule',
-                  ),
+                  Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
+                  Tab(icon: Icon(Icons.schedule), text: 'Schedule'),
                 ],
               ),
             ),
@@ -177,78 +175,80 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
         ),
         body: _currentTab == 0
             ? _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.green[600]!,
-                      ),
-                    ),
-                  )
-                : _error != null
-                    ? Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 64,
-                              color: Colors.red[400],
-                            ),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Error Loading Data',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.red[700],
-                              ),
-                            ),
-                            const SizedBox(height: 8),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: 16),
-                              child: Text(
-                                _error!,
-                                textAlign: TextAlign.center,
-                                style: TextStyle(
-                                    fontSize: 14, color: Colors.grey[600]),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            ElevatedButton.icon(
-                              onPressed: _loadDashboardData,
-                              icon: const Icon(Icons.refresh),
-                              label: const Text('Retry'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green[600],
-                                foregroundColor: Colors.white,
-                              ),
-                            ),
-                          ],
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(
+                          Colors.green[600]!,
                         ),
-                      )
-                    : SafeArea(
-                        child: SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Profile Section
-                                _buildProfileCard(),
-                                const SizedBox(height: 24),
-
-                                // Statistics Cards
-                                _buildStatisticsSection(),
-                                const SizedBox(height: 24),
-
-                                // Attendance Records Section
-                                _buildAttendanceRecordsSection(),
-                                const SizedBox(height: 40),
-                              ],
+                      ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error Loading Data',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red[700],
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _loadDashboardData,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green[600],
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SafeArea(
+                      child: SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Profile Section
+                              _buildProfileCard(),
+                              const SizedBox(height: 24),
+
+                              // Statistics Cards
+                              _buildStatisticsSection(),
+                              const SizedBox(height: 24),
+
+                              // Attendance Records Section
+                              _buildAttendanceRecordsSection(),
+                              const SizedBox(height: 40),
+                            ],
+                          ),
                         ),
-                      )
+                      ),
+                    )
             : TeacherSchedule(
                 token: widget.token,
                 teacherId: widget.teacherId,
@@ -280,10 +280,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  border: Border.all(
-                    color: Colors.green.shade300,
-                    width: 3,
-                  ),
+                  border: Border.all(color: Colors.green.shade300, width: 3),
                 ),
                 child: Center(
                   child: Text(
@@ -476,11 +473,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.event_note,
-                        size: 48,
-                        color: Colors.grey[400],
-                      ),
+                      Icon(Icons.event_note, size: 48, color: Colors.grey[400]),
                       const SizedBox(height: 8),
                       Text(
                         'No attendance records yet',
@@ -511,9 +504,7 @@ class _TeacherDashboardState extends State<TeacherDashboard> {
             child: TextButton(
               onPressed: () {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('View all records coming soon'),
-                  ),
+                  const SnackBar(content: Text('View all records coming soon')),
                 );
               },
               child: const Text('View All Records'),

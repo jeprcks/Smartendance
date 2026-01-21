@@ -20,7 +20,7 @@ class TeacherSchedule extends StatefulWidget {
 class _TeacherScheduleState extends State<TeacherSchedule> {
   bool _isLoading = true;
   List<dynamic> _schedules = [];
-  Map<String, List<dynamic>> _classStudents = {};
+  final Map<String, List<dynamic>> _classStudents = {};
   String? _error;
   String? _selectedScheduleId;
 
@@ -53,7 +53,8 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
           final section = schedule['section'] ?? 'N/A';
           final shift = schedule['shift'] ?? 'N/A';
           final subject = schedule['subject'] ?? 'N/A';
-          final classKey = '$gradeLevel-$section-$shift-${schedule['_id'] ?? ''}';
+          final classKey =
+              '$gradeLevel-$section-$shift-${schedule['_id'] ?? ''}';
 
           if (!_classStudents.containsKey(classKey)) {
             final students = await TeacherService.getClassStudents(
@@ -103,106 +104,96 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  Colors.green[600]!,
-                ),
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
               ),
             )
           : _error != null
-              ? Center(
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.error_outline, size: 64, color: Colors.red[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Error Loading Schedule',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red[700],
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Text(
+                      _error!,
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _loadScheduleData,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green[600],
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : _schedules.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.schedule, size: 64, color: Colors.grey[400]),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No schedules found',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            )
+          : SafeArea(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.error_outline,
-                        size: 64,
-                        color: Colors.red[400],
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        'Error Loading Schedule',
+                      // Schedules Section
+                      const Text(
+                        'Class Schedules',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 20,
                           fontWeight: FontWeight.bold,
-                          color: Colors.red[700],
+                          color: Colors.black87,
                         ),
                       ),
-                      const SizedBox(height: 8),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Text(
-                          _error!,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 14, color: Colors.grey[600]),
-                        ),
+                      const SizedBox(height: 12),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: _schedules.length,
+                        itemBuilder: (context, index) {
+                          final schedule = _schedules[index];
+                          return _buildScheduleCard(schedule);
+                        },
                       ),
-                      const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: _loadScheduleData,
-                        icon: const Icon(Icons.refresh),
-                        label: const Text('Retry'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.green[600],
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
+                      const SizedBox(height: 40),
                     ],
                   ),
-                )
-              : _schedules.isEmpty
-                  ? Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.schedule,
-                            size: 64,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No schedules found',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-                      ),
-                    )
-                  : SafeArea(
-                      child: SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // Schedules Section
-                              const Text(
-                                'Class Schedules',
-                                style: TextStyle(
-                                  fontSize: 20,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              ListView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: _schedules.length,
-                                itemBuilder: (context, index) {
-                                  final schedule = _schedules[index];
-                                  return _buildScheduleCard(schedule);
-                                },
-                              ),
-                              const SizedBox(height: 40),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
+                ),
+              ),
+            ),
     );
   }
 
@@ -256,10 +247,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                       const SizedBox(height: 4),
                       Text(
                         subject,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -382,12 +370,12 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
   }
 
   Widget _buildStudentTile(dynamic student) {
-    final studentName = student['studentName'] ??
+    final studentName =
+        student['studentName'] ??
         student['name'] ??
         student['fullName'] ??
         'Unknown';
-    final studentId =
-        student['studentId'] ?? student['id'] ?? 'N/A';
+    final studentId = student['studentId'] ?? student['id'] ?? 'N/A';
     final section = student['section'] ?? 'N/A';
 
     return Padding(
@@ -435,19 +423,12 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                   const SizedBox(height: 2),
                   Text(
                     'ID: $studentId | Section: $section',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey[500],
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey[500]),
                   ),
                 ],
               ),
             ),
-            Icon(
-              Icons.person,
-              size: 20,
-              color: Colors.grey[400],
-            ),
+            Icon(Icons.person, size: 20, color: Colors.grey[400]),
           ],
         ),
       ),

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { historyService, AttendanceRecord, AttendanceStats } from '../../services/historyService';
 
@@ -151,40 +151,70 @@ export default function HistoryPage() {
       studentId: '12233',
       studentName: 'Francis Rey R Ampoon',
       subject: 'Mathematics',
-      scanTime: new Date(2024, 0, 14, 9, 0, 0),
-      status: 'Present'
+      scanTime: new Date(2024, 0, 14, 9, 0, 0).toISOString(),
+      status: 'Present',
+      gradeLevel: '10',
+      section: 'A',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 9, 0, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 9, 0, 0).toISOString()
     },
     {
       _id: '2',
       studentId: 'STU-303',
       studentName: 'John Doe',
       subject: 'English',
-      scanTime: new Date(2024, 0, 14, 8, 45, 0),
-      status: 'Late'
+      scanTime: new Date(2024, 0, 14, 8, 45, 0).toISOString(),
+      status: 'Late',
+      gradeLevel: '10',
+      section: 'B',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 8, 45, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 8, 45, 0).toISOString()
     },
     {
       _id: '3',
       studentId: 'STU-897',
       studentName: 'Jane Smith',
       subject: 'Science',
-      scanTime: new Date(2024, 0, 14, 10, 15, 0),
-      status: 'Present'
+      scanTime: new Date(2024, 0, 14, 10, 15, 0).toISOString(),
+      status: 'Present',
+      gradeLevel: '11',
+      section: 'A',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 10, 15, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 10, 15, 0).toISOString()
     },
     {
       _id: '4',
       studentId: 'STU-455',
       studentName: 'Black Rice',
       subject: 'History',
-      scanTime: new Date(2024, 0, 14, 7, 30, 0),
-      status: 'Absent'
+      scanTime: new Date(2024, 0, 14, 7, 30, 0).toISOString(),
+      status: 'Absent',
+      gradeLevel: '9',
+      section: 'C',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 7, 30, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 7, 30, 0).toISOString()
     },
     {
       _id: '5',
       studentId: 'STU-789',
       studentName: 'Maria Garcia',
       subject: 'Physical Education',
-      scanTime: new Date(2024, 0, 14, 8, 30, 0),
-      status: 'Cutting'
+      scanTime: new Date(2024, 0, 14, 8, 30, 0).toISOString(),
+      status: 'Cutting',
+      gradeLevel: '10',
+      section: 'B',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 8, 30, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 8, 30, 0).toISOString()
     }
   ]);
   const [stats, setStats] = useState<AttendanceStats>({
@@ -203,31 +233,31 @@ export default function HistoryPage() {
   });
 
   // Fetch data from API
-  // Dummy data is now used as default - no API calls
-  // const fetchData = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     setError(null);
-  //     
-  //     const response = await historyService.getHistoryPageData({
-  //       search: searchQuery || undefined,
-  //       status: selectedStatus || undefined,
-  //       startDate: selectedDate || undefined,
-  //       endDate: selectedDate || undefined,
-  //       page: 1,
-  //       limit: 50
-  //     });
-  //
-  //     setAttendanceRecords(response.records);
-  //     setStats(response.stats);
-  //     setPagination(response.pagination);
-  //   } catch (err) {
-  //     setError(err instanceof Error ? err.message : 'Failed to fetch data');
-  //     console.error('Error fetching history data:', err);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await historyService.getHistoryPageData({
+        search: searchQuery || undefined,
+        status: selectedStatus || undefined,
+        startDate: selectedDate || undefined,
+        endDate: selectedDate || undefined,
+        page: 1,
+        limit: 50
+      });
+
+      setAttendanceRecords(response.records);
+      setStats(response.stats);
+      setPagination(response.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      console.error('Error fetching history data:', err);
+      // Keep dummy data as fallback
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, selectedStatus, selectedDate]);
 
   // Fetch student details for modal
   const fetchStudentDetails = async (studentId: string) => {
@@ -247,14 +277,10 @@ export default function HistoryPage() {
     }
   };
 
-  // Note: Teacher functionality removed - this is for admin view only
-
   // Load data on component mount and when filters change
-  // useEffect(() => {
-  //   fetchData();
-  // }, [searchQuery, selectedDate, selectedStatus]);
-
-  const filteredRecords = attendanceRecords;
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <div className="p-8">
@@ -348,7 +374,7 @@ export default function HistoryPage() {
               </div>
               <div className="flex items-center">
                 <ExportData 
-                  records={filteredRecords}
+                  records={attendanceRecords}
                   onExport={async (format) => {
                     try {
                       const data = await historyService.exportData({
@@ -398,14 +424,14 @@ export default function HistoryPage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredRecords.length === 0 ? (
+                ) : attendanceRecords.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                       No attendance records found
                     </td>
                   </tr>
                 ) : (
-                  filteredRecords.map((record) => (
+                  attendanceRecords.map((record) => (
                     <tr 
                       key={record._id} 
                     className="hover:bg-gray-50/50 transition-colors duration-200 cursor-pointer"
