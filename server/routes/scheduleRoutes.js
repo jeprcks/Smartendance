@@ -8,6 +8,9 @@ router.post('/', scheduleController.createSchedule);
 // Get all schedules (with optional filters)
 router.get('/', scheduleController.getAllSchedules);
 
+// Get schedule attendance records (specific route - must be before /:id)
+router.get('/:id/attendance', scheduleController.getScheduleAttendanceRecords);
+
 // Get schedule by ID
 router.get('/:id', scheduleController.getScheduleById);
 

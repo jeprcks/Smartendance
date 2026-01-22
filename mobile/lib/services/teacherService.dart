@@ -265,6 +265,50 @@ class TeacherService {
     }
   }
 
+  /// Get attendance records for a specific schedule
+  static Future<List<dynamic>> getScheduleAttendanceRecords({
+    required String token,
+    required String scheduleId,
+    required String date,
+  }) async {
+    try {
+      final queryParams = <String, String>{
+        'scheduleId': scheduleId,
+        'date': date,
+      };
+
+      final uri = Uri.parse(
+        '$baseUrl/schedules/$scheduleId/attendance',
+      ).replace(queryParameters: queryParams);
+
+      final response = await http.get(
+        uri,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final records = data['records'] ?? data['attendance'] ?? data;
+        return records is List ? records : [records];
+      } else if (response.statusCode == 404) {
+        // No records found for this schedule on this date
+        return [];
+      } else {
+        final error = jsonDecode(response.body);
+        throw Exception(
+          error['error'] ?? 'Failed to fetch schedule attendance records',
+        );
+      }
+    } catch (e) {
+      print('TeacherService Error fetching schedule attendance records: $e');
+      // Return empty list on error
+      return [];
+    }
+  }
+
   /// Update student attendance status for a specific schedule
   /// This allows teachers to override QR scan status for their subject/class
   static Future<Map<String, dynamic>> updateStudentAttendance({

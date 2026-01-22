@@ -22,7 +22,7 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
 
   return (
     <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-2xl transform transition-all duration-300 scale-100">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}'s Attendance History</h2>
@@ -76,13 +76,17 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
             <h3 className="text-lg font-semibold text-gray-900">Recent Attendance Records</h3>
             <div className="text-sm text-gray-500">{student.recentAttendance.length} records found</div>
           </div>
-          <div className="overflow-hidden rounded-xl border border-gray-200/80">
-            <table className="min-w-full divide-y divide-gray-200/80">
+          <div className="overflow-x-auto rounded-xl border border-gray-200/80">
+            <table className="w-full divide-y divide-gray-200/80">
               <thead className="bg-gradient-to-br from-gray-50/80 to-gray-100/50">
                 <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Schedule</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teacher</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
@@ -90,13 +94,39 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                 {student.recentAttendance.map((record) => (
                   <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
-                        {format(new Date(record.scanTime), 'MMM dd, yyyy')}
-                      </span>
+                      <div className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.scheduleDay || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200">
+                        {record.scheduleTimeSlot || 'N/A'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
-                        {format(new Date(record.scanTime), 'HH:mm')}
+                        {format(new Date(record.checkInTime || record.scanTime), 'MMM dd, yyyy')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
+                        record.attendanceType === 'In' ? 'bg-green-50 text-green-700 ring-green-200/50' :
+                        record.attendanceType === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50' :
+                        'bg-gray-50 text-gray-700 ring-gray-200/50'
+                      }`}>
+                        {record.attendanceType || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.attendanceType === 'In' && record.checkInTime
+                          ? format(new Date(record.checkInTime), 'HH:mm')
+                          : record.attendanceType === 'Out' && record.checkOutTime
+                          ? format(new Date(record.checkOutTime), 'HH:mm')
+                          : format(new Date(record.scanTime), 'HH:mm')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.durationMinutes ? `${Math.round(record.durationMinutes)} min` : '-'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -105,10 +135,16 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.scheduleTeacher || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 group-hover:shadow-sm ${
                         record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50 group-hover:bg-green-100' :
                         record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50 group-hover:bg-yellow-100' :
                         record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50 group-hover:bg-red-100' :
+                        record.status === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50 group-hover:bg-purple-100' :
                         'bg-orange-50 text-orange-700 ring-orange-200/50 group-hover:bg-orange-100'
                       } transition-all duration-200`}>
                         {record.status}
@@ -370,6 +406,7 @@ export default function HistoryPage() {
                   <option value="Late">Late</option>
                   <option value="Absent">Absent</option>
                   <option value="Cutting">Cutting</option>
+                  <option value="Out">Out</option>
                 </select>
               </div>
               <div className="flex items-center">
@@ -457,6 +494,7 @@ export default function HistoryPage() {
                           record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :
                           record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50' :
                           record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50' :
+                          record.status === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50' :
                           'bg-orange-50 text-orange-700 ring-orange-200/50'
                         } transition-colors duration-200`}>
                           {record.status}

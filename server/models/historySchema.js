@@ -18,6 +18,26 @@ const historySchema = new Schema(
             required: true,
             default: 'General'
         },
+        // Attendance Type: 'In' for login/entry, 'Out' for logout/exit
+        attendanceType: {
+            type: String,
+            required: true,
+            enum: ['In', 'Out'],
+            default: 'In'
+        },
+        // Check-in time (when student scans the 'In' tablet)
+        checkInTime: {
+            type: Date,
+            required: function() { return this.attendanceType === 'In'; }
+        },
+        // Check-out time (when student scans the 'Out' tablet)
+        checkOutTime: {
+            type: Date,
+            required: function() { return this.attendanceType === 'Out'; }
+        },
+        // Original scanTime field - kept for backward compatibility
+        // For 'In' records: scanTime = checkInTime
+        // For 'Out' records: scanTime = checkOutTime
         scanTime: {
             type: Date,
             required: true,
@@ -26,8 +46,20 @@ const historySchema = new Schema(
         status: {
             type: String,
             required: true,
-            enum: ['Present', 'Late', 'Absent', 'Cutting'],
+            enum: ['Present', 'Late', 'Absent', 'Cutting', 'Out'],
             default: 'Present'
+        },
+        // Duration in minutes between check-in and check-out
+        durationMinutes: {
+            type: Number,
+            required: false,
+            default: 0
+        },
+        // Linked attendance record (In and Out pair)
+        linkedRecordId: {
+            type: String,
+            required: false,
+            ref: 'History'
         },
         // Additional metadata
         gradeLevel: {
@@ -97,6 +129,11 @@ historySchema.index({ scanTime: -1 });
 historySchema.index({ status: 1 });
 historySchema.index({ subject: 1 });
 historySchema.index({ gradeLevel: 1, section: 1 });
+historySchema.index({ attendanceType: 1 });
+historySchema.index({ checkInTime: 1 });
+historySchema.index({ checkOutTime: 1 });
+historySchema.index({ studentId: 1, attendanceType: 1, scanTime: -1 });
+historySchema.index({ linkedRecordId: 1 });
 
 // Virtual field for formatted date
 historySchema.virtual('formattedDate').get(function () {
@@ -122,18 +159,37 @@ historySchema.virtual('isoDate').get(function () {
 });
 
 // Method to determine if student is late based on scan time and shift
-// Note: QR code scans are always marked as "Present" for "General" subject
-// Teachers can manually update status for specific subjects
+// Note: Status is determined by check-in time and shift
+// 'In' records determine if student is Present or Late
+// 'Out' records are always marked as Present (logged out)
 historySchema.methods.determineStatus = function() {
-    // For QR code scans, always mark as Present for General subject
-    // Teachers will manually update status for specific subjects
+    // For Out records, always mark as Present (successfully logged out)
+    if (this.attendanceType === 'Out') {
+        this.status = 'Present';
+        return this.status;
+    }
+    
+    // For In records, determine based on time and shift
+    // This logic can be expanded based on school's specific timing rules
     this.status = 'Present';
     return this.status;
 };
 
+// Method to calculate duration between check-in and check-out
+historySchema.methods.calculateDuration = function() {
+    if (this.checkInTime && this.checkOutTime) {
+        const duration = Math.round((this.checkOutTime - this.checkInTime) / (1000 * 60));
+        this.durationMinutes = duration > 0 ? duration : 0;
+    }
+    return this.durationMinutes;
+};
+
 // Static method to get attendance statistics for a student
 historySchema.statics.getStudentStats = async function(studentId, startDate, endDate) {
-    const matchQuery = { studentId };
+    const matchQuery = { 
+        studentId,
+        attendanceType: 'In'  // Only count 'In' records for attendance stats
+    };
     
     if (startDate && endDate) {
         matchQuery.scanTime = {
@@ -160,18 +216,46 @@ historySchema.statics.getStudentStats = async function(studentId, startDate, end
     };
     
     stats.forEach(stat => {
-        result[stat._id.toLowerCase()] = stat.count;
+        if (stat._id) {
+            result[stat._id.toLowerCase()] = stat.count;
+        }
     });
     
     return result;
 };
 
-// Static method to get recent attendance for a student
+// Static method to get student's check-in and check-out for a specific day
+historySchema.statics.getStudentDayAttendance = async function(studentId, date) {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+    
+    const records = await this.find({
+        studentId,
+        scanTime: {
+            $gte: startOfDay,
+            $lte: endOfDay
+        }
+    }).sort({ scanTime: 1 });
+    
+    return {
+        checkIn: records.find(r => r.attendanceType === 'In'),
+        checkOut: records.find(r => r.attendanceType === 'Out'),
+        allRecords: records
+    };
+};
+
+// Static method to get recent attendance for a student (In/Out pairs)
 historySchema.statics.getRecentAttendance = async function(studentId, limit = 10) {
-    return await this.find({ studentId })
+    return await this.find({ 
+        studentId,
+        attendanceType: 'In'  // Only return 'In' records as primary attendance
+    })
         .sort({ scanTime: -1 })
         .limit(limit)
-        .select('scanTime subject status');
+        .select('scanTime subject status checkInTime checkOutTime durationMinutes');
 };
 
 // Ensure virtuals are included when converting document to JSON

@@ -64,6 +64,8 @@ export default function DashboardPage() {
                 <th>Time</th>
                 <th>Student</th>
                 <th>Class</th>
+                <th>Type</th>
+                <th>Duration</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -72,12 +74,24 @@ export default function DashboardPage() {
                 <td>09:00 AM</td>
                 <td>John Doe</td>
                 <td>Mathematics</td>
+                <td><span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-semibold">IN</span></td>
+                <td>-</td>
+                <td><span className="text-green-600">Present</span></td>
+              </tr>
+              <tr>
+                <td>04:45 PM</td>
+                <td>John Doe</td>
+                <td>Mathematics</td>
+                <td><span className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">OUT</span></td>
+                <td>480 min</td>
                 <td><span className="text-green-600">Present</span></td>
               </tr>
               <tr>
                 <td>08:45 AM</td>
                 <td>Jane Smith</td>
                 <td>Physics</td>
+                <td><span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-semibold">IN</span></td>
+                <td>-</td>
                 <td><span className="text-yellow-600">Late</span></td>
               </tr>
               {/* Add more rows as needed */}

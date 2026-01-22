@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/services/teacherService.dart';
 import 'components/schedule_details.dart';
-import 'components/student_status_modal.dart';
+import 'components/attendance_modal.dart';
 
 // Color scheme for different shifts
 const Map<String, Color> shiftColors = {
@@ -712,37 +712,22 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                 if (students.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: _buildActionButton(
-                            'Take Attendance',
-                            Icons.check_circle_outline,
-                            Colors.green,
-                            () => StudentStatusModal.showStatusEditModal(
-                              context,
-                              students: students,
-                              token: widget.token,
-                              scheduleId: schedule['_id'] ?? '',
-                              scheduleTitle:
-                                  '${schedule['subject']} - ${schedule['day']} ${schedule['timeSlot']}',
-                              onStatusUpdated: () {
-                                // Refresh data after status update
-                                _loadScheduleData();
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildActionButton(
-                            'View Details',
-                            Icons.info_outline,
-                            Colors.blue,
-                            () {},
-                          ),
-                        ),
-                      ],
+                    child: _buildActionButton(
+                      'Take Attendance',
+                      Icons.check_circle_outline,
+                      Colors.green,
+                      () => StudentStatusModal.showStatusEditModal(
+                        context,
+                        students: students,
+                        token: widget.token,
+                        scheduleId: schedule['_id'] ?? '',
+                        scheduleTitle:
+                            '${schedule['subject']} - ${schedule['day']} ${schedule['timeSlot']}',
+                        onStatusUpdated: () {
+                          // Refresh data after status update
+                          _loadScheduleData();
+                        },
+                      ),
                     ),
                   ),
 

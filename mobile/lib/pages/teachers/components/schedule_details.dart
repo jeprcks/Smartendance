@@ -29,11 +29,57 @@ class ScheduleDetailsPage extends StatefulWidget {
 class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
   late List<dynamic> _students;
   String _searchQuery = '';
+  final Map<String, dynamic> _scannedAttendance =
+      {}; // Store scanned attendance data
+  final Map<String, String> _scanTimes = {}; // Store scan times
+  bool _isLoadingAttendance = true;
 
   @override
   void initState() {
     super.initState();
     _students = widget.students;
+    _fetchAttendanceData();
+  }
+
+  Future<void> _fetchAttendanceData() async {
+    try {
+      // Fetch attendance records from backend for this schedule
+      final attendanceRecords =
+          await TeacherService.getScheduleAttendanceRecords(
+            token: widget.token,
+            scheduleId: widget.scheduleId,
+            date: DateTime.now().toString().split(' ')[0],
+          );
+
+      if (mounted) {
+        setState(() {
+          // Map attendance by student ID
+          for (var record in attendanceRecords) {
+            final studentId = record['studentId'];
+            if (studentId != null) {
+              _scannedAttendance[studentId] = record;
+
+              // Store scan time - use scanTime from History schema
+              if (record['scanTime'] != null) {
+                try {
+                  final scanTime = DateTime.parse(record['scanTime']);
+                  _scanTimes[studentId] =
+                      '${scanTime.hour}:${scanTime.minute.toString().padLeft(2, '0')}';
+                } catch (e) {
+                  print('Error parsing scan time: $e');
+                }
+              }
+            }
+          }
+          _isLoadingAttendance = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching attendance data: $e');
+      if (mounted) {
+        setState(() => _isLoadingAttendance = false);
+      }
+    }
   }
 
   List<dynamic> _getFilteredStudents() {
@@ -423,13 +469,13 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
     final section = student['section'] ?? 'N/A';
     final gender = student['gender'] ?? student['sex'] ?? 'N/A';
 
-    // Get attendance/scan status from database
-    final scanTime = student['scanTime'] ?? student['timeIn'] ?? '';
-    final currentStatus =
-        student['status'] ?? student['attendanceStatus'] ?? 'Not Scanned';
+    // Get scanned attendance data from fetched records
+    final attendance = _scannedAttendance[studentId];
+    final scannedStatus = attendance?['status'] ?? 'Not Scanned';
+    final scanTime = _scanTimes[studentId];
 
-    // Determine status
-    String statusText = currentStatus;
+    // Determine status - use scanned status if available
+    String statusText = scannedStatus;
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.qr_code_2;
 
@@ -558,16 +604,26 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
                           ),
                         ),
                       ),
-                      if (scanTime.isNotEmpty)
+                      if (scanTime != null)
                         Padding(
                           padding: const EdgeInsets.only(top: 6),
-                          child: Text(
-                            'Scanned: $scanTime',
-                            style: TextStyle(
-                              fontSize: 10,
-                              color: Colors.grey[500],
-                              fontStyle: FontStyle.italic,
-                            ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 11,
+                                color: Colors.grey[500],
+                              ),
+                              const SizedBox(width: 2),
+                              Text(
+                                'Scanned: $scanTime',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.grey[500],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                     ],

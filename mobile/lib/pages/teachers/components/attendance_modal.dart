@@ -54,12 +54,89 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
   late List<dynamic> _students;
   String _searchQuery = '';
   bool _isUpdating = false;
+  bool _isLoading = true;
   final Map<String, String> _statusUpdates = {};
+  final Map<String, dynamic> _scannedAttendance =
+      {}; // Store scanned attendance data
+  final Map<String, String> _scanTimes = {}; // Store scan times
+  final Map<String, String> _scheduleDay = {}; // Store schedule day
+  final Map<String, String> _scheduleTimeSlot = {}; // Store schedule time
+  final Map<String, String> _scheduleTeacher = {}; // Store schedule teacher
 
   @override
   void initState() {
     super.initState();
     _students = List.from(widget.students);
+    _fetchAttendanceData();
+  }
+
+  Future<void> _fetchAttendanceData() async {
+    try {
+      setState(() => _isLoading = true);
+
+      final dateString = DateTime.now().toString().split(' ')[0];
+      print('Fetching attendance for date: $dateString');
+
+      // Fetch attendance records from backend for this schedule
+      final attendanceRecords =
+          await TeacherService.getScheduleAttendanceRecords(
+            token: widget.token,
+            scheduleId: widget.scheduleId,
+            date: dateString,
+          );
+
+      print('Received ${attendanceRecords.length} attendance records');
+      print('Records: $attendanceRecords');
+
+      if (mounted) {
+        setState(() {
+          // Map attendance by student ID
+          for (var record in attendanceRecords) {
+            final studentId = record['studentId'];
+            print(
+              'Processing record for student: $studentId, status: ${record['status']}',
+            );
+
+            if (studentId != null) {
+              _scannedAttendance[studentId] = record;
+              final status = record['status'] ?? 'Not Scanned';
+              _statusUpdates[studentId] = status;
+
+              // Store scan time - use scanTime from History schema
+              if (record['scanTime'] != null) {
+                try {
+                  final scanTime = DateTime.parse(record['scanTime']);
+                  _scanTimes[studentId] =
+                      '${scanTime.hour}:${scanTime.minute.toString().padLeft(2, '0')}';
+                } catch (e) {
+                  print('Error parsing scan time: $e');
+                }
+              }
+
+              // Store schedule information
+              if (record['scheduleDay'] != null) {
+                _scheduleDay[studentId] = record['scheduleDay'];
+              }
+              if (record['scheduleTimeSlot'] != null) {
+                _scheduleTimeSlot[studentId] = record['scheduleTimeSlot'];
+              }
+              if (record['scheduleTeacher'] != null) {
+                _scheduleTeacher[studentId] = record['scheduleTeacher'];
+              }
+            }
+          }
+          print(
+            'Loaded attendance data: ${_scannedAttendance.length} students',
+          );
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error fetching attendance data: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   List<dynamic> _getFilteredStudents() {
@@ -144,11 +221,17 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
           ),
         );
 
+        // Refetch attendance data to sync with backend changes
+        await _fetchAttendanceData();
+
         // Call callback if provided
         widget.onStatusUpdated?.call();
 
-        // Close modal
-        if (mounted) Navigator.pop(context);
+        // Close modal after a short delay
+        if (mounted) {
+          await Future.delayed(const Duration(seconds: 1));
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -165,6 +248,21 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
   Widget build(BuildContext context) {
     final filteredStudents = _getFilteredStudents();
     final hasUpdates = _statusUpdates.isNotEmpty;
+
+    if (_isLoading) {
+      return Container(
+        height: MediaQuery.of(context).size.height * 0.85,
+        decoration: const BoxDecoration(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          color: Colors.white,
+        ),
+        child: Center(
+          child: CircularProgressIndicator(
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+          ),
+        ),
+      );
+    }
 
     return Container(
       height: MediaQuery.of(context).size.height * 0.85,
@@ -188,7 +286,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const Text(
-                            'Edit Student Status',
+                            'Student Attendance',
                             style: TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -356,11 +454,20 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
         student['name'] ??
         student['fullName'] ??
         'Unknown';
-    final studentId = student['studentId'] ?? student['id'] ?? 'N/A';
-    final currentStatus =
-        student['status'] ?? student['attendanceStatus'] ?? 'Not Scanned';
-    final selectedStatus = _statusUpdates[studentId] ?? currentStatus;
-    final isUpdated = _statusUpdates.containsKey(studentId);
+    final studentId =
+        student['studentId'] ?? student['id'] ?? student['_id'] ?? 'N/A';
+
+    // Get scanned attendance data
+    final attendance = _scannedAttendance[studentId];
+    final scannedStatus = attendance?['status'] ?? 'Not Scanned';
+    final scanTime = _scanTimes[studentId];
+    final notes = attendance?['notes'] ?? '';
+
+    final selectedStatus = _statusUpdates[studentId] ?? scannedStatus;
+    final isUpdated =
+        _statusUpdates.containsKey(studentId) &&
+        _statusUpdates[studentId] != scannedStatus;
+    final isScanned = scannedStatus != 'Not Scanned';
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -371,7 +478,11 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             width: isUpdated ? 2 : 1,
           ),
           borderRadius: BorderRadius.circular(12),
-          color: isUpdated ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+          color: isUpdated
+              ? Colors.blue.withOpacity(0.05)
+              : isScanned
+              ? Colors.green.withOpacity(0.02)
+              : Colors.transparent,
         ),
         child: Padding(
           padding: const EdgeInsets.all(12),
@@ -400,89 +511,218 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                             color: Colors.grey[600],
                           ),
                         ),
+                        const SizedBox(height: 6),
+                        if (_scheduleDay[studentId] != null ||
+                            _scheduleTimeSlot[studentId] != null) ...[
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.calendar_today,
+                                size: 12,
+                                color: Colors.grey[500],
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${_scheduleDay[studentId] ?? 'N/A'} • ${_scheduleTimeSlot[studentId] ?? 'N/A'}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey[600],
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          if (_scheduleTeacher[studentId] != null)
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.person,
+                                  size: 12,
+                                  color: Colors.grey[500],
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Teacher: ${_scheduleTeacher[studentId]}',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[600],
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
                       ],
                     ),
                   ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _getStatusColor(currentStatus).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                    ),
-                    child: Text(
-                      currentStatus,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: _getStatusColor(currentStatus),
-                        fontWeight: FontWeight.w600,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(
+                            scannedStatus,
+                          ).withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          scannedStatus,
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: _getStatusColor(scannedStatus),
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ),
-                    ),
+                      if (scanTime != null) ...[
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.access_time,
+                              size: 12,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 2),
+                            Text(
+                              scanTime,
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
                   ),
                 ],
               ),
+              if (notes.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.amber[50],
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: Colors.amber[200]!, width: 0.5),
+                  ),
+                  child: Text(
+                    notes,
+                    style: TextStyle(fontSize: 10, color: Colors.amber[900]),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
-              // Status Options
-              Wrap(
-                spacing: 6,
-                runSpacing: 6,
-                children: attendanceStatus.map((status) {
-                  final isSelected = selectedStatus == status;
-                  final statusColor = _getStatusColor(status);
-
-                  return GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        _statusUpdates[studentId] = status;
-                      });
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isSelected
-                            ? statusColor.withOpacity(0.2)
-                            : Colors.grey[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(
-                          color: isSelected ? statusColor : Colors.grey[300]!,
-                          width: isSelected ? 2 : 1,
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (isSelected)
-                            Padding(
-                              padding: const EdgeInsets.only(right: 4),
-                              child: Icon(
-                                Icons.check,
-                                size: 14,
-                                color: statusColor,
-                              ),
-                            ),
-                          Text(
-                            status,
-                            style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: isSelected
-                                  ? FontWeight.bold
-                                  : FontWeight.w600,
-                              color: isSelected
-                                  ? statusColor
-                                  : Colors.grey[700],
-                            ),
-                          ),
-                        ],
+              // Status Options (only show if need to change)
+              if (isScanned)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Override Status:',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey[700],
                       ),
                     ),
-                  );
-                }).toList(),
-              ),
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 6,
+                      children: attendanceStatus.map((status) {
+                        final isSelected = selectedStatus == status;
+                        final statusColor = _getStatusColor(status);
+
+                        return GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              if (status == scannedStatus) {
+                                _statusUpdates.remove(studentId);
+                              } else {
+                                _statusUpdates[studentId] = status;
+                              }
+                            });
+                          },
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? statusColor.withOpacity(0.2)
+                                  : Colors.grey[100],
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: isSelected
+                                    ? statusColor
+                                    : Colors.grey[300]!,
+                                width: isSelected ? 2 : 1,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (isSelected)
+                                  Padding(
+                                    padding: const EdgeInsets.only(right: 4),
+                                    child: Icon(
+                                      Icons.check,
+                                      size: 14,
+                                      color: statusColor,
+                                    ),
+                                  ),
+                                Text(
+                                  status,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: isSelected
+                                        ? FontWeight.bold
+                                        : FontWeight.w600,
+                                    color: isSelected
+                                        ? statusColor
+                                        : Colors.grey[700],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                  ],
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[100],
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey[300]!, width: 1),
+                  ),
+                  child: Text(
+                    'Waiting for QR scan...',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
