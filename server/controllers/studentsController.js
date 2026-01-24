@@ -662,6 +662,167 @@ const clearDatabase = async (req, res) => {
     }
 };
 
+// Validate if student can check-in (check for open check-in without checkout)
+const validateCheckIn = async (req, res) => {
+    try {
+        const { qrData } = req.body;
+
+        if (!qrData) {
+            return res.status(400).json({ error: "QR data is required" });
+        }
+
+        let parsedData;
+        try {
+            parsedData = JSON.parse(qrData);
+        } catch (parseError) {
+            return res.status(400).json({ error: "Invalid QR code data format" });
+        }
+
+        const { id: studentId } = parsedData;
+
+        if (!studentId) {
+            return res.status(400).json({ error: "Student ID not found in QR code" });
+        }
+
+        // Find student
+        const student = await Student.findOne({ studentId: studentId });
+
+        if (!student) {
+            return res.status(404).json({ error: "Student not found" });
+        }
+
+        // Check if student has an open check-in today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Find open check-in: Has 'In' attendanceType but no corresponding 'Out'
+        // Use explicit query: attendanceType='In' AND (checkOutTime does not exist OR checkOutTime is null)
+        const openCheckIn = await History.findOne({
+            studentId: studentId,
+            attendanceType: 'In',
+            scanTime: {
+                $gte: today,
+                $lt: tomorrow
+            },
+            $or: [
+                { checkOutTime: { $exists: false } },
+                { checkOutTime: null }
+            ]
+        });
+
+        console.log(`🔍 Check-in validation for ${studentId}:`);
+        console.log(`  - Date range: ${today} to ${tomorrow}`);
+        console.log(`  - Open check-in found: ${openCheckIn ? 'YES (BLOCKED)' : 'NO (ALLOWED)'}`);
+        if (openCheckIn) {
+            console.log(`  - In Record ID: ${openCheckIn._id}`);
+            console.log(`  - Check-in Time: ${openCheckIn.checkInTime}`);
+            console.log(`  - Check-out Time: ${openCheckIn.checkOutTime}`);
+        }
+
+        res.status(200).json({
+            success: true,
+            hasOpenCheckIn: openCheckIn !== null,
+            studentName: student.fullName,
+            studentId: student.studentId
+        });
+
+    } catch (error) {
+        console.error('Error validating check-in:', error);
+        res.status(500).json({ error: error.message || 'Failed to validate check-in' });
+    }
+};
+
+// Validate checkout: must have open check-in and cannot checkout twice
+const validateCheckOut = async (req, res) => {
+    try {
+        const { qrData } = req.body;
+
+        if (!qrData) {
+            return res.status(400).json({ error: "QR data is required" });
+        }
+
+        let parsedData;
+        try {
+            parsedData = JSON.parse(qrData);
+        } catch (parseError) {
+            return res.status(400).json({ error: "Invalid QR code data format" });
+        }
+
+        const { id: studentId } = parsedData;
+
+        if (!studentId) {
+            return res.status(400).json({ error: "Student ID not found in QR code" });
+        }
+
+        // Find student
+        const student = await Student.findOne({ studentId: studentId });
+
+        if (!student) {
+            return res.status(404).json({ error: "Student not found" });
+        }
+
+        // Check for checkout conditions today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        // Find open check-in (has 'In' but no checkout yet)
+        const openCheckIn = await History.findOne({
+            studentId: studentId,
+            attendanceType: 'In',
+            scanTime: {
+                $gte: today,
+                $lt: tomorrow
+            },
+            $or: [
+                { checkOutTime: { $exists: false } },
+                { checkOutTime: null }
+            ]
+        });
+
+        // Check if student already checked out today
+        // (has 'Out' attendanceType today - which means they checked out)
+        const alreadyCheckedOut = await History.findOne({
+            studentId: studentId,
+            attendanceType: 'Out',
+            scanTime: {
+                $gte: today,
+                $lt: tomorrow
+            }
+        });
+
+        const hasNoCheckIn = !openCheckIn;
+        const hasOpenCheckOut = alreadyCheckedOut !== null; // Already has checkout record
+
+        console.log(`🔍 Check-out validation for ${studentId}:`);
+        console.log(`  - Has open check-in: ${!hasNoCheckIn}`);
+        console.log(`  - Already has 'Out' record: ${hasOpenCheckOut}`);
+        if (openCheckIn) {
+            console.log(`  - Open In Record ID: ${openCheckIn._id}`);
+            console.log(`  - Check-in Time: ${openCheckIn.checkInTime}`);
+        }
+        if (alreadyCheckedOut) {
+            console.log(`  - Previous Out Record ID: ${alreadyCheckedOut._id}`);
+        }
+        console.log(`  - Status: ${hasOpenCheckOut ? 'BLOCKED (double checkout)' : hasNoCheckIn ? 'BLOCKED (no check-in)' : 'ALLOWED'}`);
+
+        res.status(200).json({
+            success: true,
+            alreadyCheckedOut: hasOpenCheckOut,
+            hasNoCheckIn: hasNoCheckIn,
+            studentName: student.fullName,
+            studentId: student.studentId
+        });
+
+    } catch (error) {
+        console.error('Error validating check-out:', error);
+        res.status(500).json({ error: error.message || 'Failed to validate check-out' });
+    }
+};
+
 module.exports = {
     createStudent,
     getAllStudents,
@@ -675,5 +836,7 @@ module.exports = {
     getQRCode,
     regenerateAllQRCodes,
     getStudentByQRCode,
+    validateCheckIn,
+    validateCheckOut,
     clearDatabase
 };

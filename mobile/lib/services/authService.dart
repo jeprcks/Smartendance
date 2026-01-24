@@ -1,11 +1,21 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 class AuthService {
-  static const String baseUrl = 'http://localhost:4000/api/auth';
-
-  // For Android emulator, use:
-  // static const String baseUrl = 'http://10.0.2.2:4000/api/auth';
+  // URL configuration based on platform
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      // Android: use your computer's IP address
+      return 'http://192.168.0.151:4000/api/auth';
+    } else if (Platform.isIOS) {
+      // iOS: use your computer's IP address
+      return 'http://192.168.0.151:4000/api/auth';
+    } else {
+      // Fallback for other platforms
+      return 'http://localhost:4000/api/auth';
+    }
+  }
 
   // Student login
   static Future<Map<String, dynamic>> studentLogin(
@@ -27,29 +37,6 @@ class AuthService {
       }
     } catch (e) {
       throw Exception('Error during student login: $e');
-    }
-  }
-
-  // Parent login
-  static Future<Map<String, dynamic>> parentLogin(
-    String email,
-    String password,
-  ) async {
-    try {
-      final response = await http.post(
-        Uri.parse('$baseUrl/parent-login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      );
-
-      if (response.statusCode == 200) {
-        return jsonDecode(response.body);
-      } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['error'] ?? 'Parent login failed');
-      }
-    } catch (e) {
-      throw Exception('Error during parent login: $e');
     }
   }
 

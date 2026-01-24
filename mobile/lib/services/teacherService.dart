@@ -1,11 +1,22 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'dart:io' show Platform;
 
 class TeacherService {
-  static const String baseUrl = 'http://localhost:4000/api';
-
-  // For Android emulator, use:
-  // static const String baseUrl = 'http://10.0.2.2:4000/api';
+  // URL configuration based on platform
+  static String get baseUrl {
+    if (Platform.isAndroid) {
+      // Android emulator: try actual IP first, fallback to 10.0.2.2
+      return 'http://192.168.0.151:4000/api';
+    } else if (Platform.isIOS) {
+      // iOS simulator uses localhost
+      // Physical iPhone uses computer IP on network
+      return 'http://192.168.0.151:4000/api';
+    } else {
+      // Fallback for other platforms
+      return 'http://localhost:4000/api';
+    }
+  }
 
   /// Get teacher profile information
   static Future<Map<String, dynamic>> getTeacherProfile(
@@ -242,26 +253,51 @@ class TeacherService {
         '$baseUrl/schedules',
       ).replace(queryParameters: queryParams);
 
-      final response = await http.get(
-        uri,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-      );
+      print('🔄 Fetching schedules from: $uri');
+      print('📋 Query params: $queryParams');
+
+      final response = await http
+          .get(
+            uri,
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () => throw Exception(
+              'Request timeout - Schedule server not responding',
+            ),
+          );
+
+      print('📊 Response status: ${response.statusCode}');
+      print('📊 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final schedules = data['schedules'] ?? data;
-        return schedules is List ? schedules : [schedules];
+        final result = schedules is List ? schedules : [schedules];
+        print('✅ Schedules fetched successfully: ${result.length} schedules');
+        return result;
+      } else if (response.statusCode == 401) {
+        throw Exception('Unauthorized - Invalid or expired token');
       } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['error'] ?? 'Failed to fetch schedule');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(
+            error['error'] ??
+                'Failed to fetch schedule (Status: ${response.statusCode})',
+          );
+        } catch (e) {
+          throw Exception(
+            'Failed to fetch schedule (Status: ${response.statusCode}): ${response.body}',
+          );
+        }
       }
     } catch (e) {
-      print('TeacherService Error fetching schedule: $e');
-      // Return empty list on error instead of throwing
-      return [];
+      print('❌ TeacherService Error fetching schedule: $e');
+      rethrow; // Rethrow to let caller handle
     }
   }
 
@@ -316,6 +352,9 @@ class TeacherService {
     required String studentId,
     required String scheduleId,
     required String status,
+    String? subject,
+    String? gradeLevel,
+    String? section,
   }) async {
     try {
       final body = {
@@ -323,6 +362,9 @@ class TeacherService {
         'scheduleId': scheduleId,
         'status': status,
         'timestamp': DateTime.now().toIso8601String(),
+        if (subject != null) 'subject': subject,
+        if (gradeLevel != null) 'gradeLevel': gradeLevel,
+        if (section != null) 'section': section,
       };
 
       final response = await http.patch(

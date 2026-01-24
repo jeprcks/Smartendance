@@ -13,6 +13,8 @@ const {
   getQRCode,
   regenerateAllQRCodes,
   getStudentByQRCode,
+  validateCheckIn,
+  validateCheckOut,
   clearDatabase
 } = require("../controllers/studentsController");
 
@@ -52,6 +54,12 @@ router.post("/qr-codes/regenerate-all", regenerateAllQRCodes);
 
 // POST: Get student information by QR code scan (for mobile app)
 router.post("/scan-qr", getStudentByQRCode);
+
+// POST: Validate if student can check-in (check for open check-in without checkout)
+router.post("/validate-checkin", validateCheckIn);
+
+// POST: Validate if student can check-out (check for double checkout)
+router.post("/validate-checkout", validateCheckOut);
 
 // DEBUG: Clear database (for testing only)
 router.delete("/debug/clear", clearDatabase);

@@ -244,25 +244,77 @@ exports.getScheduleAttendanceRecords = async (req, res) => {
 
     console.log('Date filter:', dateFilter);
 
-    // Query by gradeLevel, section, shift (matches all QR scans for this class)
-    // Note: QR scans have subject='General', so we don't filter by subject
-    const query = {
+    // Query strategy: Get all attendance records for this SPECIFIC grade/section/shift
+    // Include both 'General' (QR scanned) and subject-specific records
+    // This allows QR scanned attendance (saved as 'General') to be found by teachers
+    
+    // Get all attendance records for this class (grade, section, shift) for today
+    // Include both General (QR scanned) and subject-specific records
+    const allRecords = await History.find({
       gradeLevel: schedule.gradeLevel,
       section: schedule.section,
       shift: schedule.shift,
+      $or: [
+        { subject: schedule.subject },  // Subject-specific records
+        { subject: 'General' }          // QR scanned records
+      ],
       scanTime: dateFilter
-    };
-
-    console.log('Query:', JSON.stringify(query, null, 2));
-
-    const attendanceRecords = await History.find(query)
-      .select('studentId studentName status scanTime notes subject gradeLevel section shift')
+    })
+      .select('studentId studentName status scanTime notes subject gradeLevel section shift statusHistory attendanceType')
       .sort({ scanTime: -1 });
 
-    console.log('Found records:', attendanceRecords.length);
-    if (attendanceRecords.length > 0) {
-      console.log('Sample records:', attendanceRecords.slice(0, 2));
+    console.log('=== ATTENDANCE QUERY DEBUG ===');
+    console.log(`Schedule: ${schedule.gradeLevel}-${schedule.section}-${schedule.shift} (${schedule.subject})`);
+    console.log(`Date range: ${dateFilter.$gte} to ${dateFilter.$lt}`);
+    console.log(`Subject filter: ${schedule.subject}`);
+    console.log(`Records found: ${allRecords.length}`);
+    if (allRecords.length > 0) {
+      console.log('Sample records:');
+      allRecords.slice(0, 3).forEach(r => {
+        console.log(`  - Student ${r.studentId}: ${r.subject} - ${r.status} - ${r.scanTime}`);
+      });
     }
+
+    // Merge records: prioritize subject-specific records, fallback to General
+    const recordMap = new Map();
+    
+    // Add all records
+    allRecords.forEach(record => {
+      const studentId = record.studentId;
+      
+      if (!recordMap.has(studentId)) {
+        recordMap.set(studentId, record);
+      } else {
+        // If we have multiple records for same student, prefer subject-specific over General
+        const existing = recordMap.get(studentId);
+        const existingIsGeneral = existing.subject === 'General' || !existing.subject;
+        const newIsSpecific = record.subject === schedule.subject;
+        const newIsGeneral = record.subject === 'General' || !record.subject;
+        
+        // Prefer: Specific Subject > General, and most recent scan
+        if (newIsSpecific && existingIsGeneral) {
+          recordMap.set(studentId, record);
+        } else if (newIsGeneral && !existingIsGeneral) {
+          // Keep the specific subject record
+        } else if (newIsGeneral && existingIsGeneral) {
+          // Both are general, use most recent
+          const newTime = new Date(record.scanTime || 0);
+          const existingTime = new Date(existing.scanTime || 0);
+          if (newTime > existingTime) {
+            recordMap.set(studentId, record);
+          }
+        }
+      }
+    });
+    
+    const attendanceRecords = Array.from(recordMap.values())
+      .sort((a, b) => {
+        const timeA = new Date(a.scanTime || 0);
+        const timeB = new Date(b.scanTime || 0);
+        return timeB - timeA;
+      });
+
+    console.log(`Returning ${attendanceRecords.length} merged records for teacher ${schedule.teacher}`);
 
     // Enrich records with schedule information
     const enrichedRecords = attendanceRecords.map(record => ({
@@ -287,10 +339,15 @@ exports.getScheduleAttendanceRecords = async (req, res) => {
           subject: schedule.subject, 
           gradeLevel: schedule.gradeLevel, 
           section: schedule.section, 
-          shift: schedule.shift 
+          shift: schedule.shift,
+          teacher: schedule.teacher
         },
-        query: query,
-        recordsFound: enrichedRecords.length
+        totalRecordsQueried: allRecords.length,
+        recordsAfterMerge: attendanceRecords.length,
+        dateRange: {
+          start: dateFilter.$gte,
+          end: dateFilter.$lt
+        }
       }
     });
   } catch (error) {

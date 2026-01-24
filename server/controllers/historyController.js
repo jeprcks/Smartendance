@@ -66,21 +66,41 @@ const createAttendanceRecord = async (req, res) => {
                 scanTime: {
                     $gte: startOfDay,
                     $lte: now
-                }
+                },
+                checkOutTime: { $exists: false } // Only find unclosed check-ins
             }).sort({ scanTime: -1 });
 
             if (inRecord) {
+                console.log(`📍 Found matching check-in for ${studentId} at ${inRecord.checkInTime}`);
+                
                 // Link the records
                 attendanceRecord.linkedRecordId = inRecord._id;
-                inRecord.linkedRecordId = attendanceRecord._id;
                 
-                // Calculate duration
+                // Calculate duration BEFORE updating
                 const duration = Math.round((now - inRecord.checkInTime) / (1000 * 60));
                 attendanceRecord.durationMinutes = duration > 0 ? duration : 0;
-                inRecord.durationMinutes = duration > 0 ? duration : 0;
                 
-                // Save the updated 'In' record
-                await inRecord.save();
+                // IMPORTANT: Update the 'In' record with checkOutTime using explicit update
+                // This ensures the record is closed and student can check in again
+                const updateResult = await History.updateOne(
+                    { _id: inRecord._id },
+                    { 
+                        $set: { 
+                            checkOutTime: now,
+                            linkedRecordId: attendanceRecord._id,
+                            durationMinutes: attendanceRecord.durationMinutes
+                        }
+                    }
+                );
+                
+                console.log(`✓ Check-out recorded for ${studentId}`);
+                console.log(`  - In record ID: ${inRecord._id}`);
+                console.log(`  - CheckOutTime set: ${now}`);
+                console.log(`  - Duration: ${attendanceRecord.durationMinutes} minutes`);
+                console.log(`  - Update acknowledged: ${updateResult.acknowledged}`);
+                console.log(`  - Docs modified: ${updateResult.modifiedCount}`);
+            } else {
+                console.log(`⚠️ No unclosed check-in found for ${studentId} checkout`);
             }
         }
 

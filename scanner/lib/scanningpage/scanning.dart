@@ -61,6 +61,48 @@ class _ScanningPageState extends State<ScanningPage> {
       studentInfo = null;
     });
 
+    // For Check-In: Validate that student hasn't already checked in without checkout
+    if (attendanceMode == 'In') {
+      final validationResult = await _studentService.validateCheckIn(qrData);
+
+      if (validationResult['hasOpenCheckIn'] == true) {
+        final studentName = validationResult['studentName'] ?? 'Unknown';
+
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              '$studentName already checked in today.\n\nPlease checkout first.';
+          studentInfo = null;
+        });
+
+        return; // Prevent the check-in
+      }
+    }
+
+    // For Check-Out: Validate if student has checked in
+    if (attendanceMode == 'Out') {
+      final validationResult = await _studentService.validateCheckIn(qrData);
+      final hasOpenCheckIn = validationResult['hasOpenCheckIn'] == true;
+
+      // Check if student already checked out today
+      final checkoutValidation = await _studentService.validateCheckOut(qrData);
+      final alreadyCheckedOut = checkoutValidation['alreadyCheckedOut'] == true;
+
+      if (alreadyCheckedOut) {
+        // Student already checked out, block it
+        final studentName = validationResult['studentName'] ?? 'Unknown';
+
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              '$studentName already checked out today.\n\nPlease check-in first.';
+          studentInfo = null;
+        });
+
+        return; // Prevent the second checkout
+      }
+    }
+
     // QR code scans are always "General" subject - teachers will update for specific subjects
     final result = await _studentService.fetchStudentInfo(
       qrData,
