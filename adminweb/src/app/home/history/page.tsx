@@ -95,10 +95,10 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                   <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
-                        {record.scheduleDay || 'N/A'}
+                        {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? 'N/A' : record.scheduleDay || 'N/A'}
                       </div>
                       <div className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200">
-                        {record.scheduleTimeSlot || 'N/A'}
+                        {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? '' : record.scheduleTimeSlot || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -108,11 +108,17 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
-                        record.attendanceType === 'In' ? 'bg-green-50 text-green-700 ring-green-200/50' :
-                        record.attendanceType === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50' :
-                        'bg-gray-50 text-gray-700 ring-gray-200/50'
+                        record.statusHistory && record.statusHistory.length > 0 
+                          ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                          : record.attendanceType === 'In' 
+                          ? 'bg-green-50 text-green-700 ring-green-200/50' 
+                          : record.attendanceType === 'Out' 
+                          ? 'bg-purple-50 text-purple-700 ring-purple-200/50' 
+                          : 'bg-gray-50 text-gray-700 ring-gray-200/50'
                       }`}>
-                        {record.attendanceType || 'N/A'}
+                        {record.statusHistory && record.statusHistory.length > 0 
+                          ? `Teacher (${record.statusHistory[record.statusHistory.length - 1].changedBy || 'Unknown'})` 
+                          : record.attendanceType || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

@@ -369,13 +369,14 @@ exports.updateStudentAttendance = async (req, res) => {
     try {
       const dateString = new Date(timestamp || Date.now()).toISOString().split('T')[0];
       
-      // Try to find existing history record for this student for today
+      // Try to find existing history record for this student for today (In records only)
       let historyRecord = await History.findOne({
         studentId: studentId,
         gradeLevel: schedule.gradeLevel,
         section: schedule.section,
         shift: schedule.shift,
         subject: schedule.subject,
+        attendanceType: 'In',  // Only update In records from teachers
         scanTime: {
           $gte: new Date(dateString + 'T00:00:00Z'),
           $lt: new Date(dateString + 'T23:59:59Z')
@@ -403,6 +404,8 @@ exports.updateStudentAttendance = async (req, res) => {
           subject: schedule.subject,
           scanTime: new Date(timestamp || Date.now()),
           status: status,
+          attendanceType: 'In',  // Default to In for teacher-recorded status
+          checkInTime: new Date(timestamp || Date.now()),
           gradeLevel: schedule.gradeLevel,
           section: schedule.section,
           shift: schedule.shift,
