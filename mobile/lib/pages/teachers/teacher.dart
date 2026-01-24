@@ -272,6 +272,17 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           : 'Unknown';
       final records = entry.value;
 
+      // Check for 3 consecutive days of absence
+      final consecutiveDays = _checkConsecutiveAbsences(records);
+      if (consecutiveDays >= 3) {
+        alerts.add({
+          'studentName': studentName,
+          'reason': '$consecutiveDays consecutive days of absence detected',
+          'severity': 'high',
+          'type': 'Consecutive Absences',
+        });
+      }
+
       // Count recent absences (last 10 records)
       final recentRecords = records.length > 10
           ? records.sublist(records.length - 10)
@@ -308,6 +319,48 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     }
 
     return alerts.take(5).toList(); // Show top 5 alerts
+  }
+
+  int _checkConsecutiveAbsences(List<dynamic> records) {
+    // Extract unique dates with absences and sort them
+    final Map<String, bool> dateAbsenceMap = {};
+
+    for (var record in records) {
+      final createdAt = record['createdAt'] as String?;
+      final status = record['status'] as String?;
+
+      if (createdAt != null && status == 'Absent') {
+        // Extract date in YYYY-MM-DD format
+        final date = createdAt.substring(0, 10);
+        dateAbsenceMap[date] = true;
+      }
+    }
+
+    if (dateAbsenceMap.isEmpty) return 0;
+
+    // Sort dates
+    final sortedDates = dateAbsenceMap.keys.toList()..sort();
+
+    // Find the longest consecutive sequence
+    int maxConsecutive = 1;
+    int currentConsecutive = 1;
+
+    for (int i = 1; i < sortedDates.length; i++) {
+      final currentDate = DateTime.parse(sortedDates[i]);
+      final previousDate = DateTime.parse(sortedDates[i - 1]);
+
+      // Check if dates are consecutive (1 day apart)
+      if (currentDate.difference(previousDate).inDays == 1) {
+        currentConsecutive++;
+        maxConsecutive = maxConsecutive > currentConsecutive
+            ? maxConsecutive
+            : currentConsecutive;
+      } else {
+        currentConsecutive = 1;
+      }
+    }
+
+    return maxConsecutive;
   }
 
   List<Map<String, dynamic>> _calculateWeeklyTrends(List<dynamic> records) {
@@ -1007,8 +1060,35 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       children: [
         Expanded(
           child: _buildQuickActionButton(
+            icon: Icons.calendar_today,
+            label: 'Today',
+            color: Colors.blue,
+            onTap: () => _showTodayStats(),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionButton(
+            icon: Icons.date_range,
+            label: 'Weekly',
+            color: Colors.green,
+            onTap: () => _showWeeklyStats(),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionButton(
+            icon: Icons.calendar_month,
+            label: 'Monthly',
+            color: Colors.orange,
+            onTap: () => _showMonthlyStats(),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _buildQuickActionButton(
             icon: Icons.file_download,
-            label: 'Download Reports',
+            label: 'Download',
             color: Colors.purple,
             onTap: () => _showReportOptions(),
           ),
@@ -1064,6 +1144,217 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           ],
         ),
       ),
+    );
+  }
+
+  void _showTodayStats() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Today's Statistics"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatsRow('Total Students', _todayStats['total'].toString()),
+            const SizedBox(height: 8),
+            _buildStatsRow(
+              'Present',
+              _todayStats['present'].toString(),
+              Colors.green,
+            ),
+            const SizedBox(height: 8),
+            _buildStatsRow(
+              'Absent',
+              _todayStats['absent'].toString(),
+              Colors.red,
+            ),
+            const SizedBox(height: 8),
+            _buildStatsRow(
+              'Late',
+              _todayStats['late'].toString(),
+              Colors.orange,
+            ),
+            const SizedBox(height: 8),
+            _buildStatsRow(
+              'Cutting',
+              _todayStats['cutting'].toString(),
+              Colors.purple,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showWeeklyStats() {
+    // Calculate weekly stats from trends
+    int totalPresent = 0;
+    for (var trend in _weeklyTrends) {
+      totalPresent += (trend['count'] as int? ?? 0);
+    }
+
+    int totalRecordsThisWeek = _attendanceRecords.where((r) {
+      final createdAt = r['createdAt'] as String?;
+      final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+      final createdDate = DateTime.tryParse(createdAt ?? '');
+      return createdDate != null && createdDate.isAfter(sevenDaysAgo);
+    }).length;
+
+    final avgAttendance = _weeklyTrends.isEmpty
+        ? 0
+        : _weeklyTrends
+                  .map((t) => t['percentage'] as int? ?? 0)
+                  .reduce((a, b) => a + b) ~/
+              _weeklyTrends.length;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Weekly Statistics (Last 7 Days)'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatsRow('Total Records', totalRecordsThisWeek.toString()),
+            const SizedBox(height: 8),
+            _buildStatsRow(
+              'Present Count',
+              totalPresent.toString(),
+              Colors.green,
+            ),
+            const SizedBox(height: 8),
+            _buildStatsRow(
+              'Average Attendance',
+              '$avgAttendance%',
+              Colors.blue,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Daily Breakdown:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            ..._weeklyTrends.map(
+              (trend) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(trend['day'] ?? ''),
+                    Text(
+                      '${trend['percentage']}%',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showMonthlyStats() {
+    // Calculate monthly stats
+    int totalRecordsThisMonth = _attendanceRecords.where((r) {
+      final createdAt = r['createdAt'] as String?;
+      final now = DateTime.now();
+      final firstDayOfMonth = DateTime(now.year, now.month, 1);
+      final createdDate = DateTime.tryParse(createdAt ?? '');
+      return createdDate != null && createdDate.isAfter(firstDayOfMonth);
+    }).length;
+
+    int presentCount = _attendanceStats['present'] ?? 0;
+    int absentCount = _attendanceStats['absent'] ?? 0;
+    int lateCount = _attendanceStats['late'] ?? 0;
+    int cuttingCount = _attendanceStats['cutting'] ?? 0;
+
+    final overallAttendance = totalRecordsThisMonth > 0
+        ? ((presentCount / totalRecordsThisMonth) * 100).toStringAsFixed(1)
+        : '0';
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Monthly Statistics'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatsRow('Total Records', totalRecordsThisMonth.toString()),
+            const SizedBox(height: 8),
+            _buildStatsRow('Present', presentCount.toString(), Colors.green),
+            const SizedBox(height: 8),
+            _buildStatsRow('Absent', absentCount.toString(), Colors.red),
+            const SizedBox(height: 8),
+            _buildStatsRow('Late', lateCount.toString(), Colors.orange),
+            const SizedBox(height: 8),
+            _buildStatsRow('Cutting', cuttingCount.toString(), Colors.purple),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Overall Attendance',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    '$overallAttendance%',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatsRow(String label, String value, [Color? valueColor]) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: const TextStyle(fontSize: 14)),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.bold,
+            color: valueColor ?? Colors.black,
+          ),
+        ),
+      ],
     );
   }
 
@@ -1622,29 +1913,19 @@ ${_classPerformance.map((c) {
                     const SizedBox(height: 4),
                     Text(
                       widget.email,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.white70,
-                      ),
+                      style: const TextStyle(fontSize: 12, color: Colors.white),
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 8),
-                    if (widget.subject != null)
-                      Chip(
-                        label: Text(
-                          widget.subject!,
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                        backgroundColor: Colors.white.withOpacity(0.3),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'ID: ${widget.teacherId}',
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
                       ),
+                    ),
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -2116,4 +2397,4 @@ ${_classPerformance.map((c) {
       ),
     );
   }
-}
+} 

@@ -58,6 +58,11 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
     try {
       setState(() => _isLoading = true);
 
+      print('\n========== LOADING SCHEDULE ==========');
+      print('Teacher ID: ${widget.teacherId}');
+      print('Teacher Name: ${widget.teacherName}');
+      print('Token: ${widget.token.substring(0, 20)}...');
+
       // Fetch ONLY this teacher's schedules by name
       final schedules = await TeacherService.getTeacherSchedule(
         token: widget.token,
@@ -65,9 +70,12 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
         teacherName: widget.teacherName,
       );
 
+      print('✅ Schedules loaded: ${schedules.length} schedules');
+
       setState(() {
         // Sort schedules by day (Monday first)
         _schedules = _sortSchedulesByDay(schedules);
+        _error = null;
         _isLoading = false;
       });
 
@@ -100,13 +108,13 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
         }
       }
     } catch (e) {
+      print('❌ Error loading schedule: $e');
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = e.toString().replaceAll('Exception: ', '');
           _isLoading = false;
         });
       }
-      print('Error loading schedule data: $e');
     }
   }
 
@@ -721,6 +729,9 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                         students: students,
                         token: widget.token,
                         scheduleId: schedule['_id'] ?? '',
+                        subject: schedule['subject'] ?? 'General',
+                        gradeLevel: schedule['gradeLevel'] ?? 'N/A',
+                        section: schedule['section'] ?? 'N/A',
                         scheduleTitle:
                             '${schedule['subject']} - ${schedule['day']} ${schedule['timeSlot']}',
                         onStatusUpdated: () {

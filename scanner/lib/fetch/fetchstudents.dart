@@ -286,4 +286,94 @@ class StudentService {
       return '--:--';
     }
   }
+
+  // Validate if student has an open check-in without checkout
+  Future<Map<String, dynamic>> validateCheckIn(String qrData) async {
+    if (workingUrl == null) {
+      workingUrl = await findWorkingUrl();
+      if (workingUrl == null) {
+        return {
+          'hasOpenCheckIn': false,
+          'error': 'No working server connection',
+        };
+      }
+    }
+
+    try {
+      print('🔍 Validating check-in for QR: $qrData');
+
+      final response = await http
+          .post(
+            Uri.parse('$workingUrl/api/students/validate-checkin'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'qrData': qrData}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Validation Response Status: ${response.statusCode}');
+      print('Validation Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'hasOpenCheckIn': data['hasOpenCheckIn'] ?? false,
+          'studentName': data['studentName'],
+          'error': null,
+        };
+      } else {
+        // If endpoint doesn't exist or errors, allow the check-in
+        // (graceful fallback)
+        return {'hasOpenCheckIn': false, 'error': null};
+      }
+    } catch (e) {
+      print('❌ Validation error: $e');
+      // On error, allow the check-in to proceed
+      return {'hasOpenCheckIn': false, 'error': null};
+    }
+  }
+
+  // Validate if student can check out (check for double checkout)
+  Future<Map<String, dynamic>> validateCheckOut(String qrData) async {
+    if (workingUrl == null) {
+      workingUrl = await findWorkingUrl();
+      if (workingUrl == null) {
+        return {
+          'alreadyCheckedOut': false,
+          'error': 'No working server connection',
+        };
+      }
+    }
+
+    try {
+      print('🔍 Validating checkout for QR: $qrData');
+
+      final response = await http
+          .post(
+            Uri.parse('$workingUrl/api/students/validate-checkout'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'qrData': qrData}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Checkout Validation Response Status: ${response.statusCode}');
+      print('Checkout Validation Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'alreadyCheckedOut': data['alreadyCheckedOut'] ?? false,
+          'studentName': data['studentName'],
+          'error': null,
+        };
+      } else {
+        // If endpoint doesn't exist or errors, allow the checkout
+        // (graceful fallback)
+        return {'alreadyCheckedOut': false, 'error': null};
+      }
+    } catch (e) {
+      print('❌ Checkout validation error: $e');
+      // On error, allow the checkout to proceed
+      return {'alreadyCheckedOut': false, 'error': null};
+    }
+  }
 }

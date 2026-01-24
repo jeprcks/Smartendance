@@ -11,6 +11,9 @@ class StudentStatusModal {
     required String token,
     required String scheduleId,
     required String scheduleTitle,
+    String? subject,
+    String? gradeLevel,
+    String? section,
     VoidCallback? onStatusUpdated,
   }) {
     return showModalBottomSheet(
@@ -24,6 +27,9 @@ class StudentStatusModal {
         token: token,
         scheduleId: scheduleId,
         scheduleTitle: scheduleTitle,
+        subject: subject,
+        gradeLevel: gradeLevel,
+        section: section,
         onStatusUpdated: onStatusUpdated,
       ),
     );
@@ -35,6 +41,9 @@ class _StudentStatusEditSheet extends StatefulWidget {
   final String token;
   final String scheduleId;
   final String scheduleTitle;
+  final String? subject;
+  final String? gradeLevel;
+  final String? section;
   final VoidCallback? onStatusUpdated;
 
   const _StudentStatusEditSheet({
@@ -42,6 +51,9 @@ class _StudentStatusEditSheet extends StatefulWidget {
     required this.token,
     required this.scheduleId,
     required this.scheduleTitle,
+    this.subject,
+    this.gradeLevel,
+    this.section,
     this.onStatusUpdated,
   });
 
@@ -58,6 +70,8 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
   final Map<String, String> _statusUpdates = {};
   final Map<String, dynamic> _scannedAttendance =
       {}; // Store scanned attendance data
+  final Map<String, String> _scannedStatus =
+      {}; // Store processed scanned status
   final Map<String, String> _scanTimes = {}; // Store scan times
   final Map<String, String> _scheduleDay = {}; // Store schedule day
   final Map<String, String> _scheduleTimeSlot = {}; // Store schedule time
@@ -75,7 +89,8 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
       setState(() => _isLoading = true);
 
       final dateString = DateTime.now().toString().split(' ')[0];
-      print('Fetching attendance for date: $dateString');
+      print('📅 Fetching attendance for date: $dateString');
+      print('📍 Schedule ID: ${widget.scheduleId}');
 
       // Fetch attendance records from backend for this schedule
       final attendanceRecords =
@@ -85,22 +100,55 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             date: dateString,
           );
 
-      print('Received ${attendanceRecords.length} attendance records');
-      print('Records: $attendanceRecords');
+      print('📊 Received ${attendanceRecords.length} attendance records');
+      if (attendanceRecords.isNotEmpty) {
+        print('✅ Sample record: ${attendanceRecords.first}');
+      } else {
+        print('❌ NO ATTENDANCE RECORDS RETURNED FROM BACKEND');
+      }
 
       if (mounted) {
         setState(() {
+          // Clear previous data
+          _scannedAttendance.clear();
+          _statusUpdates.clear();
+          _scannedStatus.clear();
+          _scanTimes.clear();
+          _scheduleDay.clear();
+          _scheduleTimeSlot.clear();
+          _scheduleTeacher.clear();
+
           // Map attendance by student ID
           for (var record in attendanceRecords) {
             final studentId = record['studentId'];
+            final status = record['status'];
+            final subject = record['subject'];
             print(
-              'Processing record for student: $studentId, status: ${record['status']}',
+              '👤 Processing: $studentId, Status: $status, Subject: $subject',
             );
 
             if (studentId != null) {
               _scannedAttendance[studentId] = record;
-              final status = record['status'] ?? 'Not Scanned';
-              _statusUpdates[studentId] = status;
+
+              // Priority: Use statusHistory if available (teacher-updated), otherwise use current status
+              String finalStatus;
+              if (record['statusHistory'] != null &&
+                  (record['statusHistory'] as List).isNotEmpty) {
+                // Get the latest status from statusHistory
+                final lastUpdate =
+                    record['statusHistory'][(record['statusHistory'] as List)
+                            .length -
+                        1];
+                finalStatus =
+                    lastUpdate['status'] ?? record['status'] ?? 'Not Scanned';
+                print('  ✅ Using statusHistory: $finalStatus');
+              } else {
+                finalStatus = record['status'] ?? 'Not Scanned';
+                print('  📌 Using current status: $finalStatus');
+              }
+
+              _statusUpdates[studentId] = finalStatus;
+              _scannedStatus[studentId] = finalStatus;
 
               // Store scan time - use scanTime from History schema
               if (record['scanTime'] != null) {
@@ -109,7 +157,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                   _scanTimes[studentId] =
                       '${scanTime.hour}:${scanTime.minute.toString().padLeft(2, '0')}';
                 } catch (e) {
-                  print('Error parsing scan time: $e');
+                  print('⏰ Error parsing scan time: $e');
                 }
               }
 
@@ -126,13 +174,17 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             }
           }
           print(
-            'Loaded attendance data: ${_scannedAttendance.length} students',
+            '✅ Loaded attendance data: ${_scannedAttendance.length} students',
+          );
+          print('📋 All students in class: ${_students.length}');
+          print(
+            '📊 Students with attendance records: ${_scannedAttendance.length}',
           );
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('Error fetching attendance data: $e');
+      print('❌ Error fetching attendance data: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -192,6 +244,9 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             studentId: studentId,
             scheduleId: widget.scheduleId,
             status: newStatus,
+            subject: widget.subject ?? 'General',
+            gradeLevel: widget.gradeLevel,
+            section: widget.section,
           );
           successCount++;
         } catch (e) {
@@ -457,9 +512,9 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
     final studentId =
         student['studentId'] ?? student['id'] ?? student['_id'] ?? 'N/A';
 
-    // Get scanned attendance data
+    // Get scanned attendance data - use processed status from _scannedStatus
     final attendance = _scannedAttendance[studentId];
-    final scannedStatus = attendance?['status'] ?? 'Not Scanned';
+    final scannedStatus = _scannedStatus[studentId] ?? 'Not Scanned';
     final scanTime = _scanTimes[studentId];
     final notes = attendance?['notes'] ?? '';
 
