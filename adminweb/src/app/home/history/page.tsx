@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { format } from 'date-fns';
 import { historyService, AttendanceRecord, AttendanceStats } from '../../services/historyService';
 
@@ -22,7 +22,7 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
 
   return (
     <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-2xl transform transition-all duration-300 scale-100">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
         <div className="flex justify-between items-center mb-6">
           <div>
             <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}'s Attendance History</h2>
@@ -76,13 +76,17 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
             <h3 className="text-lg font-semibold text-gray-900">Recent Attendance Records</h3>
             <div className="text-sm text-gray-500">{student.recentAttendance.length} records found</div>
           </div>
-          <div className="overflow-hidden rounded-xl border border-gray-200/80">
-            <table className="min-w-full divide-y divide-gray-200/80">
+          <div className="overflow-x-auto rounded-xl border border-gray-200/80">
+            <table className="w-full divide-y divide-gray-200/80">
               <thead className="bg-gradient-to-br from-gray-50/80 to-gray-100/50">
                 <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Schedule</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Duration</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teacher</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
@@ -90,13 +94,45 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                 {student.recentAttendance.map((record) => (
                   <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
-                        {format(new Date(record.scanTime), 'MMM dd, yyyy')}
-                      </span>
+                      <div className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                        {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? 'N/A' : record.scheduleDay || 'N/A'}
+                      </div>
+                      <div className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200">
+                        {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? '' : record.scheduleTimeSlot || 'N/A'}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
-                        {format(new Date(record.scanTime), 'HH:mm')}
+                        {format(new Date(record.checkInTime || record.scanTime), 'MMM dd, yyyy')}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
+                        record.statusHistory && record.statusHistory.length > 0 
+                          ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                          : record.attendanceType === 'In' 
+                          ? 'bg-green-50 text-green-700 ring-green-200/50' 
+                          : record.attendanceType === 'Out' 
+                          ? 'bg-purple-50 text-purple-700 ring-purple-200/50' 
+                          : 'bg-gray-50 text-gray-700 ring-gray-200/50'
+                      }`}>
+                        {record.statusHistory && record.statusHistory.length > 0 
+                          ? `Teacher (${record.statusHistory[record.statusHistory.length - 1].changedBy || 'Unknown'})` 
+                          : record.attendanceType || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.attendanceType === 'In' && record.checkInTime
+                          ? format(new Date(record.checkInTime), 'HH:mm')
+                          : record.attendanceType === 'Out' && record.checkOutTime
+                          ? format(new Date(record.checkOutTime), 'HH:mm')
+                          : format(new Date(record.scanTime), 'HH:mm')}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.durationMinutes ? `${Math.round(record.durationMinutes)} min` : '-'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -105,10 +141,16 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                        {record.scheduleTeacher || 'N/A'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 group-hover:shadow-sm ${
                         record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50 group-hover:bg-green-100' :
                         record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50 group-hover:bg-yellow-100' :
                         record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50 group-hover:bg-red-100' :
+                        record.status === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50 group-hover:bg-purple-100' :
                         'bg-orange-50 text-orange-700 ring-orange-200/50 group-hover:bg-orange-100'
                       } transition-all duration-200`}>
                         {record.status}
@@ -151,40 +193,70 @@ export default function HistoryPage() {
       studentId: '12233',
       studentName: 'Francis Rey R Ampoon',
       subject: 'Mathematics',
-      scanTime: new Date(2024, 0, 14, 9, 0, 0),
-      status: 'Present'
+      scanTime: new Date(2024, 0, 14, 9, 0, 0).toISOString(),
+      status: 'Present',
+      gradeLevel: '10',
+      section: 'A',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 9, 0, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 9, 0, 0).toISOString()
     },
     {
       _id: '2',
       studentId: 'STU-303',
       studentName: 'John Doe',
       subject: 'English',
-      scanTime: new Date(2024, 0, 14, 8, 45, 0),
-      status: 'Late'
+      scanTime: new Date(2024, 0, 14, 8, 45, 0).toISOString(),
+      status: 'Late',
+      gradeLevel: '10',
+      section: 'B',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 8, 45, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 8, 45, 0).toISOString()
     },
     {
       _id: '3',
       studentId: 'STU-897',
       studentName: 'Jane Smith',
       subject: 'Science',
-      scanTime: new Date(2024, 0, 14, 10, 15, 0),
-      status: 'Present'
+      scanTime: new Date(2024, 0, 14, 10, 15, 0).toISOString(),
+      status: 'Present',
+      gradeLevel: '11',
+      section: 'A',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 10, 15, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 10, 15, 0).toISOString()
     },
     {
       _id: '4',
       studentId: 'STU-455',
       studentName: 'Black Rice',
       subject: 'History',
-      scanTime: new Date(2024, 0, 14, 7, 30, 0),
-      status: 'Absent'
+      scanTime: new Date(2024, 0, 14, 7, 30, 0).toISOString(),
+      status: 'Absent',
+      gradeLevel: '9',
+      section: 'C',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 7, 30, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 7, 30, 0).toISOString()
     },
     {
       _id: '5',
       studentId: 'STU-789',
       studentName: 'Maria Garcia',
       subject: 'Physical Education',
-      scanTime: new Date(2024, 0, 14, 8, 30, 0),
-      status: 'Cutting'
+      scanTime: new Date(2024, 0, 14, 8, 30, 0).toISOString(),
+      status: 'Cutting',
+      gradeLevel: '10',
+      section: 'B',
+      shift: 'Morning',
+      isVerified: true,
+      createdAt: new Date(2024, 0, 14, 8, 30, 0).toISOString(),
+      updatedAt: new Date(2024, 0, 14, 8, 30, 0).toISOString()
     }
   ]);
   const [stats, setStats] = useState<AttendanceStats>({
@@ -203,31 +275,31 @@ export default function HistoryPage() {
   });
 
   // Fetch data from API
-  // Dummy data is now used as default - no API calls
-  // const fetchData = async () => {
-  //   try {
-  //     setIsLoading(true);
-  //     setError(null);
-  //     
-  //     const response = await historyService.getHistoryPageData({
-  //       search: searchQuery || undefined,
-  //       status: selectedStatus || undefined,
-  //       startDate: selectedDate || undefined,
-  //       endDate: selectedDate || undefined,
-  //       page: 1,
-  //       limit: 50
-  //     });
-  //
-  //     setAttendanceRecords(response.records);
-  //     setStats(response.stats);
-  //     setPagination(response.pagination);
-  //   } catch (err) {
-  //     setError(err instanceof Error ? err.message : 'Failed to fetch data');
-  //     console.error('Error fetching history data:', err);
-  //   } finally {
-  //     setIsLoading(false);
-  //   }
-  // };
+  const fetchData = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const response = await historyService.getHistoryPageData({
+        search: searchQuery || undefined,
+        status: selectedStatus || undefined,
+        startDate: selectedDate || undefined,
+        endDate: selectedDate || undefined,
+        page: 1,
+        limit: 50
+      });
+
+      setAttendanceRecords(response.records);
+      setStats(response.stats);
+      setPagination(response.pagination);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to fetch data');
+      console.error('Error fetching history data:', err);
+      // Keep dummy data as fallback
+    } finally {
+      setIsLoading(false);
+    }
+  }, [searchQuery, selectedStatus, selectedDate]);
 
   // Fetch student details for modal
   const fetchStudentDetails = async (studentId: string) => {
@@ -247,14 +319,10 @@ export default function HistoryPage() {
     }
   };
 
-  // Note: Teacher functionality removed - this is for admin view only
-
   // Load data on component mount and when filters change
-  // useEffect(() => {
-  //   fetchData();
-  // }, [searchQuery, selectedDate, selectedStatus]);
-
-  const filteredRecords = attendanceRecords;
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   return (
     <div className="p-8">
@@ -344,11 +412,12 @@ export default function HistoryPage() {
                   <option value="Late">Late</option>
                   <option value="Absent">Absent</option>
                   <option value="Cutting">Cutting</option>
+                  <option value="Out">Out</option>
                 </select>
               </div>
               <div className="flex items-center">
                 <ExportData 
-                  records={filteredRecords}
+                  records={attendanceRecords}
                   onExport={async (format) => {
                     try {
                       const data = await historyService.exportData({
@@ -398,14 +467,14 @@ export default function HistoryPage() {
                       </div>
                     </td>
                   </tr>
-                ) : filteredRecords.length === 0 ? (
+                ) : attendanceRecords.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
                       No attendance records found
                     </td>
                   </tr>
                 ) : (
-                  filteredRecords.map((record) => (
+                  attendanceRecords.map((record) => (
                     <tr 
                       key={record._id} 
                     className="hover:bg-gray-50/50 transition-colors duration-200 cursor-pointer"
@@ -431,6 +500,7 @@ export default function HistoryPage() {
                           record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :
                           record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50' :
                           record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50' :
+                          record.status === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50' :
                           'bg-orange-50 text-orange-700 ring-orange-200/50'
                         } transition-colors duration-200`}>
                           {record.status}

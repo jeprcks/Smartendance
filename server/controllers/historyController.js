@@ -9,11 +9,19 @@ const createAttendanceRecord = async (req, res) => {
             studentName,
             subject = 'General',
             status = 'Present',
+            attendanceType = 'In',  // 'In' for login, 'Out' for logout
             qrCodeData,
             location,
             deviceInfo,
             notes
         } = req.body;
+
+        // Validate attendanceType
+        if (!['In', 'Out'].includes(attendanceType)) {
+            return res.status(400).json({ 
+                error: "Invalid attendance type. Must be 'In' or 'Out'" 
+            });
+        }
 
         // Try to find the student to get additional information
         let student = null;
@@ -23,13 +31,21 @@ const createAttendanceRecord = async (req, res) => {
             console.log('Student lookup failed, proceeding with provided data:', studentError.message);
         }
 
+        const now = new Date();
+
+        // When type is checkout (Out), status should be Out
+        const finalStatus = attendanceType === 'Out' ? 'Out' : status;
+
         // Create new attendance record
         const attendanceRecord = new History({
             studentId,
             studentName: studentName || (student ? student.fullName : 'Unknown Student'),
             subject,
-            status,
-            scanTime: new Date(),
+            status: finalStatus,
+            attendanceType,
+            checkInTime: attendanceType === 'In' ? now : undefined,
+            checkOutTime: attendanceType === 'Out' ? now : undefined,
+            scanTime: now,
             gradeLevel: student ? student.gradeLevel : 'Unknown',
             section: student ? student.section : 'Unknown',
             shift: student ? student.shift : 'Unknown',
@@ -39,12 +55,41 @@ const createAttendanceRecord = async (req, res) => {
             notes
         });
 
+        // If this is an 'Out' record, try to find the matching 'In' record
+        if (attendanceType === 'Out') {
+            const startOfDay = new Date(now);
+            startOfDay.setHours(0, 0, 0, 0);
+            
+            const inRecord = await History.findOne({
+                studentId,
+                attendanceType: 'In',
+                scanTime: {
+                    $gte: startOfDay,
+                    $lte: now
+                }
+            }).sort({ scanTime: -1 });
+
+            if (inRecord) {
+                // Link the records
+                attendanceRecord.linkedRecordId = inRecord._id;
+                inRecord.linkedRecordId = attendanceRecord._id;
+                
+                // Calculate duration
+                const duration = Math.round((now - inRecord.checkInTime) / (1000 * 60));
+                attendanceRecord.durationMinutes = duration > 0 ? duration : 0;
+                inRecord.durationMinutes = duration > 0 ? duration : 0;
+                
+                // Save the updated 'In' record
+                await inRecord.save();
+            }
+        }
+
         // Save the record
         await attendanceRecord.save();
 
         res.status(201).json({
             success: true,
-            message: "Attendance record created successfully",
+            message: `${attendanceType === 'In' ? 'Check-in' : 'Check-out'} record created successfully`,
             record: attendanceRecord
         });
     } catch (error) {
@@ -67,11 +112,18 @@ const getAllAttendanceRecords = async (req, res) => {
             gradeLevel,
             section,
             shift,
-            search
+            search,
+            attendanceType  // Optional: filter by 'In' or 'Out', default is 'In'
         } = req.query;
 
         // Build filter object
         const filter = {};
+        
+        // Default to 'In' records for main attendance view
+        // Set attendanceType to 'All' in query to see both In and Out
+        if (attendanceType !== 'All') {
+            filter.attendanceType = attendanceType || 'In';
+        }
         
         if (studentId) filter.studentId = studentId;
         if (subject) filter.subject = subject;
@@ -213,7 +265,9 @@ const getAttendanceStats = async (req, res) => {
     try {
         const { startDate, endDate, gradeLevel, section, shift } = req.query;
         
-        const filter = {};
+        const filter = {
+            attendanceType: 'In'  // Only count 'In' records for attendance stats
+        };
         
         if (startDate || endDate) {
             filter.scanTime = {};
@@ -243,7 +297,9 @@ const getAttendanceStats = async (req, res) => {
         };
 
         stats.forEach(stat => {
-            result[stat._id.toLowerCase()] = stat.count;
+            if (stat._id) {
+                result[stat._id.toLowerCase()] = stat.count;
+            }
             result.total += stat.count;
         });
 
@@ -262,8 +318,12 @@ const getStudentAttendanceHistory = async (req, res) => {
     try {
         const { studentId } = req.params;
         const { startDate, endDate, limit = 50 } = req.query;
+        const Schedule = require('../models/scheduleSchema');
 
-        const filter = { studentId };
+        const filter = { 
+            studentId
+            // Return all records (both In and Out) to show complete attendance history
+        };
         
         if (startDate || endDate) {
             filter.scanTime = {};
@@ -278,9 +338,59 @@ const getStudentAttendanceHistory = async (req, res) => {
         }
 
         // Get attendance records
-        const records = await History.find(filter)
+        let records = await History.find(filter)
             .sort({ scanTime: -1 })
             .limit(parseInt(limit));
+
+        // Enrich records with schedule information and check-out details
+        records = await Promise.all(records.map(async (record) => {
+            const recordObj = record.toObject ? record.toObject() : record;
+            
+            try {
+                // Find the corresponding check-out record
+                const checkOutRecord = await History.findOne({
+                    studentId,
+                    attendanceType: 'Out',
+                    linkedRecordId: record._id
+                });
+                
+                if (checkOutRecord) {
+                    recordObj.checkOutTime = checkOutRecord.checkOutTime;
+                    recordObj.durationMinutes = checkOutRecord.durationMinutes;
+                }
+                
+                // Find the schedule for this student's grade/section/subject
+                let schedule = await Schedule.findOne({
+                    gradeLevel: recordObj.gradeLevel,
+                    section: recordObj.section,
+                    subject: recordObj.subject !== 'General' ? recordObj.subject : { $ne: 'General' },
+                    isActive: true
+                });
+                
+                if (schedule) {
+                    recordObj.scheduleDay = schedule.day;
+                    recordObj.scheduleTimeSlot = schedule.timeSlot;
+                    recordObj.scheduleTeacher = schedule.teacher;
+                } else {
+                    // If no specific subject schedule, try to get any schedule for this class
+                    schedule = await Schedule.findOne({
+                        gradeLevel: recordObj.gradeLevel,
+                        section: recordObj.section,
+                        isActive: true
+                    });
+                    
+                    if (schedule) {
+                        recordObj.scheduleDay = schedule.day;
+                        recordObj.scheduleTimeSlot = schedule.timeSlot;
+                        recordObj.scheduleTeacher = schedule.teacher;
+                    }
+                }
+            } catch (scheduleError) {
+                console.log('Could not fetch schedule for subject:', recordObj.subject);
+            }
+            
+            return recordObj;
+        }));
 
         // Get student statistics
         const stats = await History.getStudentStats(studentId, startDate, endDate);
@@ -314,6 +424,7 @@ const getHistoryPageData = async (req, res) => {
             page = 1,
             limit = 50
         } = req.query;
+        const Schedule = require('../models/scheduleSchema');
 
         // Build filter object
         const filter = {};
@@ -357,10 +468,48 @@ const getHistoryPageData = async (req, res) => {
         const totalRecords = await History.countDocuments(filter);
         
         // Get records with pagination and populate student details
-        const records = await History.find(filter)
+        let records = await History.find(filter)
             .sort({ scanTime: -1 })
             .skip(skip)
             .limit(parseInt(limit));
+
+        // Enrich records with schedule information for each specific subject
+        records = await Promise.all(records.map(async (record) => {
+            const recordObj = record.toObject ? record.toObject() : record;
+            
+            try {
+                // Find the schedule for this student's grade/section/subject
+                let schedule = await Schedule.findOne({
+                    gradeLevel: recordObj.gradeLevel,
+                    section: recordObj.section,
+                    subject: recordObj.subject !== 'General' ? recordObj.subject : { $ne: 'General' },
+                    isActive: true
+                });
+                
+                if (schedule) {
+                    recordObj.scheduleDay = schedule.day;
+                    recordObj.scheduleTimeSlot = schedule.timeSlot;
+                    recordObj.scheduleTeacher = schedule.teacher;
+                } else {
+                    // If no specific subject schedule, try to get any schedule for this class
+                    schedule = await Schedule.findOne({
+                        gradeLevel: recordObj.gradeLevel,
+                        section: recordObj.section,
+                        isActive: true
+                    });
+                    
+                    if (schedule) {
+                        recordObj.scheduleDay = schedule.day;
+                        recordObj.scheduleTimeSlot = schedule.timeSlot;
+                        recordObj.scheduleTeacher = schedule.teacher;
+                    }
+                }
+            } catch (scheduleError) {
+                console.log('Could not fetch schedule for subject:', recordObj.subject);
+            }
+            
+            return recordObj;
+        }));
 
         // Get statistics for the filtered data
         const stats = await History.aggregate([
@@ -382,7 +531,9 @@ const getHistoryPageData = async (req, res) => {
         };
 
         stats.forEach(stat => {
-            statsResult[stat._id.toLowerCase()] = stat.count;
+            if (stat._id) {
+                statsResult[stat._id.toLowerCase()] = stat.count;
+            }
             statsResult.total += stat.count;
         });
 
@@ -400,6 +551,103 @@ const getHistoryPageData = async (req, res) => {
         });
     } catch (error) {
         console.error('Error getting history page data:', error);
+        res.status(400).json({ error: error.message });
+    }
+};
+
+// Get daily attendance summary for all students (with check-in and check-out)
+const getDailyAttendanceSummary = async (req, res) => {
+    try {
+        const { date, gradeLevel, section, shift } = req.query;
+        
+        if (!date) {
+            return res.status(400).json({ 
+                error: "Date parameter is required (format: YYYY-MM-DD)" 
+            });
+        }
+
+        const startDate = new Date(date);
+        startDate.setHours(0, 0, 0, 0);
+        
+        const endDate = new Date(date);
+        endDate.setHours(23, 59, 59, 999);
+
+        const filter = {
+            scanTime: {
+                $gte: startDate,
+                $lte: endDate
+            }
+        };
+
+        if (gradeLevel) filter.gradeLevel = gradeLevel;
+        if (section) filter.section = section;
+        if (shift) filter.shift = shift;
+
+        // Get all check-in records for the day
+        const checkInRecords = await History.find({
+            ...filter,
+            attendanceType: 'In'
+        }).sort({ scanTime: 1 });
+
+        // Get all check-out records for the day
+        const checkOutRecords = await History.find({
+            ...filter,
+            attendanceType: 'Out'
+        }).sort({ scanTime: 1 });
+
+        // Pair check-ins with check-outs
+        const attendanceSummary = await Promise.all(checkInRecords.map(async (checkIn) => {
+            let checkOut = null;
+            let durationMinutes = 0;
+
+            if (checkIn.linkedRecordId) {
+                checkOut = await History.findById(checkIn.linkedRecordId);
+            } else {
+                // Try to find matching check-out
+                checkOut = checkOutRecords.find(r => 
+                    r.studentId === checkIn.studentId && 
+                    r.scanTime > checkIn.scanTime
+                );
+            }
+
+            if (checkOut) {
+                durationMinutes = Math.round((checkOut.scanTime - checkIn.scanTime) / (1000 * 60));
+            }
+
+            return {
+                studentId: checkIn.studentId,
+                studentName: checkIn.studentName,
+                gradeLevel: checkIn.gradeLevel,
+                section: checkIn.section,
+                shift: checkIn.shift,
+                subject: checkIn.subject,
+                checkInTime: checkIn.scanTime,
+                checkOutTime: checkOut ? checkOut.scanTime : null,
+                durationMinutes: durationMinutes,
+                status: checkIn.status,
+                hasCheckedOut: !!checkOut
+            };
+        }));
+
+        // Sort by check-in time
+        attendanceSummary.sort((a, b) => new Date(a.checkInTime) - new Date(b.checkInTime));
+
+        res.status(200).json({
+            success: true,
+            date,
+            summary: attendanceSummary,
+            statistics: {
+                totalPresent: attendanceSummary.filter(r => r.status === 'Present').length,
+                totalAbsent: attendanceSummary.filter(r => r.status === 'Absent').length,
+                totalLate: attendanceSummary.filter(r => r.status === 'Late').length,
+                totalCutting: attendanceSummary.filter(r => r.status === 'Cutting').length,
+                checkedOut: attendanceSummary.filter(r => r.hasCheckedOut).length,
+                notCheckedOut: attendanceSummary.filter(r => !r.hasCheckedOut).length,
+                total: attendanceSummary.length
+            }
+        });
+    } catch (error) {
+        console.error('Error getting daily attendance summary:', error);
         res.status(400).json({ error: error.message });
     }
 };
@@ -471,5 +719,6 @@ module.exports = {
     getAttendanceStats,
     getStudentAttendanceHistory,
     getHistoryPageData,
+    getDailyAttendanceSummary,
     exportAttendanceData
 };

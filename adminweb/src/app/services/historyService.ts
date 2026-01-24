@@ -6,10 +6,13 @@ export interface AttendanceRecord {
   studentName: string;
   subject: string;
   scanTime: string;
-  status: 'Present' | 'Late' | 'Absent' | 'Cutting';
+  status: 'Present' | 'Late' | 'Absent' | 'Cutting' | 'Out';
   gradeLevel: string;
   section: string;
   shift: string;
+  scheduleDay?: string;
+  scheduleTimeSlot?: string;
+  scheduleTeacher?: string;
   qrCodeData?: any;
   location?: {
     latitude?: number;
@@ -31,6 +34,12 @@ export interface AttendanceRecord {
   isVerified: boolean;
   verifiedBy?: string;
   verifiedAt?: string;
+  // New In/Out fields
+  attendanceType?: 'In' | 'Out';
+  checkInTime?: string;
+  checkOutTime?: string;
+  durationMinutes?: number;
+  linkedRecordId?: string;
   createdAt: string;
   updatedAt: string;
 }

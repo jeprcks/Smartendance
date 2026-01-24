@@ -302,18 +302,6 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Parent/Guardian Email Address</p>
-                <p className="text-base text-gray-900">
-                  {student.parentInfo?.email || 'N/A'}
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500">Parent/Guardian Password</p>
-                <p className="text-base text-gray-900 font-mono">
-                  {student.parentInfo?.password ? '••••••••' : 'N/A'}
-                </p>
-              </div>
-              <div>
                 <p className="text-sm text-gray-500">Parent/Guardian Contact</p>
                 <p className="text-base text-gray-900">
                   {student.parentInfo?.contactNumber || student.parentContact || 'N/A'}

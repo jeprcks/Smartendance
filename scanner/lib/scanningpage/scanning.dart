@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import '../fetch/fetchstudents.dart';
+import '../main.dart';
 import 'components/studentsinformation.dart';
 
 class ScanningPage extends StatefulWidget {
@@ -22,12 +23,16 @@ class _ScanningPageState extends State<ScanningPage> {
   bool isLoading = false;
   String? errorMessage;
 
+  // Attendance mode toggle
+  late String attendanceMode;
+
   // Student service instance
   final StudentService _studentService = StudentService();
 
   @override
   void initState() {
     super.initState();
+    attendanceMode = ATTENDANCE_TYPE; // Initialize with the constant value
     _initializeService();
   }
 
@@ -64,16 +69,37 @@ class _ScanningPageState extends State<ScanningPage> {
           'QR Code scanned - Teacher can update status for specific subjects',
     );
 
-    setState(() {
-      if (result['success'] == true) {
-        studentInfo = result['student'];
-        errorMessage = null;
-      } else {
+    if (result['success'] == true && result['student'] != null) {
+      final student = result['student'];
+
+      // Now create attendance record with the new In/Out system
+      final attendanceResult = await _studentService.createAttendanceRecord(
+        student['studentId'],
+        student['fullName'],
+        attendanceType:
+            attendanceMode, // Use local variable instead of constant
+        subject: 'General',
+        qrCodeData: {'encodedText': qrData},
+      );
+
+      setState(() {
+        if (attendanceResult['success'] == true) {
+          studentInfo = student;
+          errorMessage = null;
+        } else {
+          studentInfo = null;
+          errorMessage =
+              attendanceResult['error'] ?? 'Failed to record attendance';
+        }
+        isLoading = false;
+      });
+    } else {
+      setState(() {
         studentInfo = null;
         errorMessage = result['error'];
-      }
-      isLoading = false;
-    });
+        isLoading = false;
+      });
+    }
   }
 
   @override
@@ -92,6 +118,54 @@ class _ScanningPageState extends State<ScanningPage> {
           ),
         ),
         actions: [
+          // Check-In button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: attendanceMode == 'In'
+                  ? const Color(0xFF4CAF50)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Tooltip(
+              message: 'Check-In',
+              child: IconButton(
+                icon: const Icon(Icons.login, color: Colors.white, size: 24),
+                onPressed: () {
+                  setState(() {
+                    attendanceMode = 'In';
+                    studentInfo = null;
+                    scannedCode = null;
+                    errorMessage = null;
+                  });
+                },
+              ),
+            ),
+          ),
+          // Check-Out button
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            decoration: BoxDecoration(
+              color: attendanceMode == 'Out'
+                  ? const Color(0xFFE53935)
+                  : Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Tooltip(
+              message: 'Check-Out',
+              child: IconButton(
+                icon: const Icon(Icons.logout, color: Colors.white, size: 24),
+                onPressed: () {
+                  setState(() {
+                    attendanceMode = 'Out';
+                    studentInfo = null;
+                    scannedCode = null;
+                    errorMessage = null;
+                  });
+                },
+              ),
+            ),
+          ),
           // Connection status indicator
           Container(
             margin: const EdgeInsets.only(right: 8),

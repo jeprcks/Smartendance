@@ -161,9 +161,7 @@ teacherSchema.virtual('yearsOfExperience').get(function () {
 });
 
 // Indexes for better query performance
-teacherSchema.index({ teacherId: 1 });
-teacherSchema.index({ username: 1 });
-teacherSchema.index({ email: 1 });
+// Note: teacherId, username, and email already have indices from unique: true
 teacherSchema.index({ subject: 1 });
 teacherSchema.index({ status: 1 });
 teacherSchema.index({ role: 1 });
