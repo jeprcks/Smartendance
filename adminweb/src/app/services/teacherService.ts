@@ -80,7 +80,7 @@ class TeacherService {
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({})) as { error?: string };
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      throw new Error(errorData.error ?? `HTTP error! status: ${response.status}`);
     }
 
     return response.json();

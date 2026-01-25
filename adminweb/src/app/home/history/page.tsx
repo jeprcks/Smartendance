@@ -18,7 +18,23 @@ interface StudentDetailsModalProps {
 }
 
 function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalProps) {
+  const [recordSearchQuery, setRecordSearchQuery] = useState('');
+  const [recordSelectedDate, setRecordSelectedDate] = useState('');
+
   if (!isOpen || !student) return null;
+
+  // Filter records based on search and date
+  const filteredRecords = student.recentAttendance.filter((record) => {
+    const matchesSearch = recordSearchQuery === '' || 
+      record.subject.toLowerCase().includes(recordSearchQuery.toLowerCase()) ||
+      record.scheduleTeacher?.toLowerCase().includes(recordSearchQuery.toLowerCase()) ||
+      record.status.toLowerCase().includes(recordSearchQuery.toLowerCase());
+    
+    const matchesDate = recordSelectedDate === '' || 
+      format(new Date(record.checkInTime || record.scanTime), 'yyyy-MM-dd') === recordSelectedDate;
+    
+    return matchesSearch && matchesDate;
+  });
 
   return (
     <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50">
@@ -74,8 +90,50 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
         <div>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">Recent Attendance Records</h3>
-            <div className="text-sm text-gray-500">{student.recentAttendance.length} records found</div>
+            <div className="text-sm text-gray-500">{filteredRecords.length} records found</div>
           </div>
+
+          {/* Filters for Recent Attendance Records */}
+          <div className="mb-6 flex gap-4 items-end">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">Search</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400 group-focus-within:text-blue-500 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by subject, teacher, or status..."
+                  className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-300 text-sm"
+                  value={recordSearchQuery}
+                  onChange={(e) => setRecordSearchQuery(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="w-48">
+              <label className="block text-sm font-medium text-gray-600 mb-1.5">Date</label>
+              <input
+                type="date"
+                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:bg-white transition-all duration-300 text-sm"
+                value={recordSelectedDate}
+                onChange={(e) => setRecordSelectedDate(e.target.value)}
+              />
+            </div>
+            {(recordSearchQuery || recordSelectedDate) && (
+              <button
+                onClick={() => {
+                  setRecordSearchQuery('');
+                  setRecordSelectedDate('');
+                }}
+                className="px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm font-medium"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+
           <div className="overflow-x-auto rounded-xl border border-gray-200/80">
             <table className="w-full divide-y divide-gray-200/80">
               <thead className="bg-gradient-to-br from-gray-50/80 to-gray-100/50">
@@ -91,8 +149,15 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200/80">
-                {student.recentAttendance.map((record) => (
-                  <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
+                {filteredRecords.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                      No records found matching your filters
+                    </td>
+                  </tr>
+                ) : (
+                  filteredRecords.map((record) => (
+                    <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
                         {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? 'N/A' : record.scheduleDay || 'N/A'}
@@ -157,7 +222,8 @@ function StudentDetailsModal({ isOpen, onClose, student }: StudentDetailsModalPr
                       </span>
                     </td>
                   </tr>
-                ))}
+                ))
+                )}
               </tbody>
             </table>
           </div>
