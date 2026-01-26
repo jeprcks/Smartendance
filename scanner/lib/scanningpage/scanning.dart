@@ -61,7 +61,8 @@ class _ScanningPageState extends State<ScanningPage> {
       studentInfo = null;
     });
 
-    // For Check-In: Validate that student hasn't already checked in without checkout
+    // For Check-In: Only prevent if student has an open check-in (hasn't checked out yet)
+    // If student has checked out (status "Out"), allow check-in again
     if (attendanceMode == 'In') {
       final validationResult = await _studentService.validateCheckIn(qrData);
 
@@ -71,36 +72,55 @@ class _ScanningPageState extends State<ScanningPage> {
         setState(() {
           isLoading = false;
           errorMessage =
-              '$studentName already checked in today.\n\nPlease checkout first.';
+              '$studentName already checked in (status: Present).\n\nPlease checkout first before checking in again.';
           studentInfo = null;
         });
 
-        return; // Prevent the check-in
+        return; // Prevent check-in if there's an open check-in
       }
+      // If hasOpenCheckIn is false, student can check in (either first time or after checkout)
     }
 
-    // For Check-Out: Validate if student has checked in
+    // For Check-Out: Only allow if student has checked in (status "Present")
+    // Prevent if student hasn't checked in yet, already checked out, or has checked in 2 times
     if (attendanceMode == 'Out') {
       final validationResult = await _studentService.validateCheckIn(qrData);
       final hasOpenCheckIn = validationResult['hasOpenCheckIn'] == true;
 
-      // Check if student already checked out today
-      final checkoutValidation = await _studentService.validateCheckOut(qrData);
-      final alreadyCheckedOut = checkoutValidation['alreadyCheckedOut'] == true;
-
-      if (alreadyCheckedOut) {
-        // Student already checked out, block it
-        final studentName = validationResult['studentName'] ?? 'Unknown';
+      // If student hasn't checked in yet, prevent checkout
+      if (!hasOpenCheckIn) {
+        final studentName = validationResult['studentName'] ?? 'Student';
 
         setState(() {
           isLoading = false;
           errorMessage =
-              '$studentName already checked out today.\n\nPlease check-in first.';
+              '$studentName has not checked in yet.\n\nPlease check-in first (status: Present) before checking out.';
           studentInfo = null;
         });
 
-        return; // Prevent the second checkout
+        return; // Prevent checkout if no check-in exists
       }
+
+      // Check if student already checked out today (without checking in again)
+      final checkoutValidation = await _studentService.validateCheckOut(qrData);
+      final alreadyCheckedOut = checkoutValidation['alreadyCheckedOut'] == true;
+
+      if (alreadyCheckedOut) {
+        // Student already checked out, need to check in again first
+        final studentName = checkoutValidation['studentName'] ?? 
+                           validationResult['studentName'] ?? 
+                           'Student';
+
+        setState(() {
+          isLoading = false;
+          errorMessage =
+              '$studentName has already checked out (status: Out).\n\nPlease check-in again (status: Present) before checking out.';
+          studentInfo = null;
+        });
+
+        return; // Prevent checkout if already checked out
+      }
+      // Allow checkout after any check-in (including 2nd check-in)
     }
 
     // QR code scans are always "General" subject - teachers will update for specific subjects

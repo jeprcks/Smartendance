@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/services/teacherService.dart';
 import 'schedule.dart';
+import 'components/background_logo.dart';
 
 class TeacherDashboard extends StatefulWidget {
   final String token;
@@ -42,6 +43,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   };
   List<dynamic> _attendanceRecords = [];
   List<dynamic> _todaySchedules = [];
+  List<dynamic> _allSchedules = [];
   List<dynamic> _classPerformance = [];
   List<dynamic> _todayAbsentStudents = [];
   List<dynamic> _criticalAlerts = [];
@@ -72,6 +74,19 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     try {
       setState(() => _isLoading = true);
 
+      // Fetch teacher's schedules FIRST to filter data
+      final todaySchedules = await TeacherService.getTeacherSchedule(
+        token: widget.token,
+        teacherId: widget.teacherId,
+        teacherName: widget.teacherName,
+      );
+
+      // Filter for today's schedules
+      final today = _getTodaySchedules(todaySchedules);
+      
+      // Store all schedules
+      final allSchedules = List<dynamic>.from(todaySchedules);
+
       // Fetch attendance stats
       final stats = await TeacherService.getAttendanceStats(
         token: widget.token,
@@ -81,38 +96,35 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       final recordsResponse = await TeacherService.getAttendanceRecords(
         token: widget.token,
       );
-      final records = recordsResponse['records'] as List<dynamic>? ?? [];
+      final allRecords = recordsResponse['records'] as List<dynamic>? ?? [];
 
-      // Fetch today's schedules
-      final todaySchedules = await TeacherService.getTeacherSchedule(
-        token: widget.token,
-        teacherId: widget.teacherId,
-        teacherName: widget.teacherName,
-      );
+      // Filter records to only include this teacher's classes
+      final records = _filterRecordsByTeacherSchedules(allRecords, allSchedules);
 
-      // Filter for today's schedules
-      final today = _getTodaySchedules(todaySchedules);
-
-      // Calculate class performance
+      // Calculate class performance (using filtered records)
       final performance = _calculateClassPerformance(records);
 
-      // Calculate today's stats
+      // Calculate today's stats (using filtered records)
       final todayStats = _calculateTodayStats(records);
 
-      // Get today's absent students
+      // Get today's absent students (using filtered records)
       final absentStudents = _getTodayAbsentStudents(records);
 
-      // Get critical alerts
+      // Get critical alerts (using filtered records)
       final alerts = _calculateCriticalAlerts(records);
 
-      // Get weekly trends
+      // Get weekly trends (using filtered records)
       final trends = _calculateWeeklyTrends(records);
+
+      // Calculate stats from filtered records
+      final filteredStats = _calculateStatsFromRecords(records);
 
       if (mounted) {
         setState(() {
-          _attendanceStats = stats;
+          _attendanceStats = filteredStats; // Use filtered stats instead of API stats
           _attendanceRecords = records;
           _todaySchedules = today;
+          _allSchedules = allSchedules;
           _classPerformance = performance;
           _todayStats = todayStats;
           _todayAbsentStudents = absentStudents;
@@ -132,6 +144,70 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     }
   }
 
+  // Filter attendance records to only include records from teacher's assigned classes
+  List<dynamic> _filterRecordsByTeacherSchedules(
+    List<dynamic> records,
+    List<dynamic> schedules,
+  ) {
+    if (schedules.isEmpty) return [];
+
+    // Create a set of class keys from teacher's schedules
+    // Format: "gradeLevel-section-shift-subject"
+    final teacherClassKeys = <String>{};
+    for (var schedule in schedules) {
+      final gradeLevel = schedule['gradeLevel'] ?? '';
+      final section = schedule['section'] ?? '';
+      final shift = schedule['shift'] ?? '';
+      final subject = schedule['subject'] ?? '';
+      
+      if (gradeLevel.isNotEmpty && section.isNotEmpty && shift.isNotEmpty) {
+        // Add subject-specific key
+        teacherClassKeys.add('$gradeLevel-$section-$shift-$subject');
+        // Also add General key (QR scanned records)
+        teacherClassKeys.add('$gradeLevel-$section-$shift-General');
+      }
+    }
+
+    // Filter records that match teacher's classes
+    return records.where((record) {
+      final gradeLevel = record['gradeLevel'] ?? '';
+      final section = record['section'] ?? '';
+      final shift = record['shift'] ?? '';
+      final subject = record['subject'] ?? '';
+      
+      final recordKey = '$gradeLevel-$section-$shift-$subject';
+      return teacherClassKeys.contains(recordKey);
+    }).toList();
+  }
+
+  // Calculate stats from filtered records
+  Map<String, dynamic> _calculateStatsFromRecords(List<dynamic> records) {
+    final stats = {
+      'present': 0,
+      'absent': 0,
+      'late': 0,
+      'cutting': 0,
+      'total': 0,
+    };
+
+    for (var record in records) {
+      final status = (record['status'] ?? '').toString().toLowerCase();
+      stats['total'] = (stats['total'] as int) + 1;
+      
+      if (status == 'present') {
+        stats['present'] = (stats['present'] as int) + 1;
+      } else if (status == 'absent') {
+        stats['absent'] = (stats['absent'] as int) + 1;
+      } else if (status == 'late') {
+        stats['late'] = (stats['late'] as int) + 1;
+      } else if (status == 'cutting') {
+        stats['cutting'] = (stats['cutting'] as int) + 1;
+      }
+    }
+
+    return stats;
+  }
+
   List<dynamic> _getTodaySchedules(List<dynamic> schedules) {
     final today = DateTime.now();
     final dayName = _getDayName(today.weekday);
@@ -140,8 +216,47 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       ..sort((a, b) {
         final timeA = a['timeSlot'] ?? '';
         final timeB = b['timeSlot'] ?? '';
-        return timeA.compareTo(timeB);
+        return _compareTimeSlots(timeA, timeB);
       });
+  }
+
+  // Helper function to compare time slots for sorting (earliest first)
+  int _compareTimeSlots(String timeA, String timeB) {
+    try {
+      // Extract start time from time slot (e.g., "08:00-09:00" -> "08:00")
+      String startTimeA = timeA;
+      String startTimeB = timeB;
+      
+      if (timeA.contains('-')) {
+        startTimeA = timeA.split('-')[0].trim();
+      }
+      if (timeB.contains('-')) {
+        startTimeB = timeB.split('-')[0].trim();
+      }
+      
+      // Parse time to hours and minutes
+      final partsA = startTimeA.split(':');
+      final partsB = startTimeB.split(':');
+      
+      if (partsA.length >= 2 && partsB.length >= 2) {
+        final hourA = int.parse(partsA[0]);
+        final minuteA = int.parse(partsA[1].substring(0, 2));
+        final hourB = int.parse(partsB[0]);
+        final minuteB = int.parse(partsB[1].substring(0, 2));
+        
+        // Compare hours first, then minutes
+        if (hourA != hourB) {
+          return hourA.compareTo(hourB);
+        }
+        return minuteA.compareTo(minuteB);
+      }
+      
+      // Fallback to string comparison if parsing fails
+      return timeA.compareTo(timeB);
+    } catch (e) {
+      // Fallback to string comparison if parsing fails
+      return timeA.compareTo(timeB);
+    }
   }
 
   String _getDayName(int weekday) {
@@ -536,50 +651,57 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     ),
                   )
                 : SafeArea(
-                    child: SingleChildScrollView(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            // Profile Section
-                            _buildProfileCard(),
-                            const SizedBox(height: 24),
+                    child: Stack(
+                      children: [
+                        // Background Logo
+                        const BackgroundLogo(),
+                        // Main Content
+                        SingleChildScrollView(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                // Profile Section
+                                _buildProfileCard(),
+                                const SizedBox(height: 24),
 
-                            // Quick Actions Bar
-                            _buildQuickActionsBar(),
-                            const SizedBox(height: 24),
+                                // Quick Actions Bar
+                                _buildQuickActionsBar(),
+                                const SizedBox(height: 24),
 
-                            // Today's Quick Stats Cards
-                            _buildTodayQuickStatsSection(),
-                            const SizedBox(height: 24),
+                                // Today's Quick Stats Cards
+                                _buildTodayQuickStatsSection(),
+                                const SizedBox(height: 24),
 
-                            // Critical Alerts Panel
-                            _buildCriticalAlertsSection(),
-                            const SizedBox(height: 24),
+                                // Critical Alerts Panel
+                                _buildCriticalAlertsSection(),
+                                const SizedBox(height: 24),
 
-                            // Today's Schedule Section
-                            _buildTodayScheduleSection(),
-                            const SizedBox(height: 24),
+                                // Today's Schedule Section
+                                _buildTodayScheduleSection(),
+                                const SizedBox(height: 24),
 
-                            // Today's Absent Students
-                            _buildTodayAbsentStudentsSection(),
-                            const SizedBox(height: 24),
+                                // Today's Absent Students
+                                _buildTodayAbsentStudentsSection(),
+                                const SizedBox(height: 24),
 
-                            // Attendance Trends
-                            _buildAttendanceTrendsSection(),
-                            const SizedBox(height: 24),
+                                // Attendance Trends
+                                _buildAttendanceTrendsSection(),
+                                const SizedBox(height: 24),
 
-                            // Class Performance Overview
-                            _buildClassPerformanceSection(),
-                            const SizedBox(height: 24),
+                                // Class Performance Overview
+                                _buildClassPerformanceSection(),
+                                const SizedBox(height: 24),
 
-                            // Attendance Records Section
-                            _buildAttendanceRecordsSection(),
-                            const SizedBox(height: 40),
-                          ],
+                                // Attendance Records Section
+                                _buildAttendanceRecordsSection(),
+                                const SizedBox(height: 40),
+                              ],
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
                   )
           : TeacherSchedule(
@@ -1056,44 +1178,61 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   }
 
   Widget _buildQuickActionsBar() {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildQuickActionButton(
-            icon: Icons.calendar_today,
-            label: 'Today',
-            color: Colors.blue,
-            onTap: () => _showTodayStats(),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: _buildQuickActionButton(
+              icon: Icons.calendar_today,
+              label: 'Today',
+              color: Colors.blue,
+              onTap: () => _showTodayStats(),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionButton(
-            icon: Icons.date_range,
-            label: 'Weekly',
-            color: Colors.green,
-            onTap: () => _showWeeklyStats(),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 90,
+            child: _buildQuickActionButton(
+              icon: Icons.date_range,
+              label: 'Weekly',
+              color: Colors.green,
+              onTap: () => _showWeeklyStats(),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionButton(
-            icon: Icons.calendar_month,
-            label: 'Monthly',
-            color: Colors.orange,
-            onTap: () => _showMonthlyStats(),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 90,
+            child: _buildQuickActionButton(
+              icon: Icons.calendar_month,
+              label: 'Monthly',
+              color: Colors.orange,
+              onTap: () => _showMonthlyStats(),
+            ),
           ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _buildQuickActionButton(
-            icon: Icons.file_download,
-            label: 'Download',
-            color: Colors.purple,
-            onTap: () => _showReportOptions(),
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 90,
+            child: _buildQuickActionButton(
+              icon: Icons.schedule,
+              label: 'Schedule',
+              color: Colors.teal,
+              onTap: () => _showAllSchedules(),
+            ),
           ),
-        ),
-      ],
+          const SizedBox(width: 12),
+          SizedBox(
+            width: 90,
+            child: _buildQuickActionButton(
+              icon: Icons.file_download,
+              label: 'Download',
+              color: Colors.purple,
+              onTap: () => _showReportOptions(),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1189,6 +1328,209 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             child: const Text('Close'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showAllSchedules() {
+    // Sort all schedules by day and time
+    final sortedSchedules = List<dynamic>.from(_allSchedules)
+      ..sort((a, b) {
+        // First sort by day
+        final dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        final dayA = a['day'] ?? '';
+        final dayB = b['day'] ?? '';
+        final dayIndexA = dayOrder.indexOf(dayA);
+        final dayIndexB = dayOrder.indexOf(dayB);
+        
+        if (dayIndexA != dayIndexB) {
+          return dayIndexA.compareTo(dayIndexB);
+        }
+        
+        // Then sort by time
+        final timeA = a['timeSlot'] ?? '';
+        final timeB = b['timeSlot'] ?? '';
+        return _compareTimeSlots(timeA, timeB);
+      });
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'All Schedules',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black87,
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            if (sortedSchedules.isEmpty)
+              Padding(
+                padding: const EdgeInsets.all(32.0),
+                child: Center(
+                  child: Text(
+                    'No schedules found',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blue[600],
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxHeight: MediaQuery.of(context).size.height * 0.7,
+                ),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: sortedSchedules.length,
+                  itemBuilder: (context, index) {
+                    final schedule = sortedSchedules[index];
+                    final subject = schedule['subject'] ?? 'N/A';
+                    final gradeLevel = schedule['gradeLevel'] ?? 'N/A';
+                    final section = schedule['section'] ?? 'N/A';
+                    final timeSlot = schedule['timeSlot'] ?? 'N/A';
+                    final day = schedule['day'] ?? 'N/A';
+                    final shift = schedule['shift'] ?? 'N/A';
+                    
+                    // Convert time to AM/PM format
+                    final formattedTime = timeSlot != 'N/A' 
+                        ? _convertTo12HourFormat(timeSlot)
+                        : 'N/A';
+                    
+                    // Get shift color
+                    final Map<String, Color> shiftColors = {
+                      'Morning': const Color(0xFF3B82F6),
+                      'Afternoon': const Color(0xFFF59E0B),
+                      'Evening': const Color(0xFF8B5CF6),
+                    };
+                    final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
+                    
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: shiftColor.withOpacity(0.3), width: 1.5),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.05),
+                              blurRadius: 4,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              subject,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                                color: shiftColor,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              children: [
+                                Icon(Icons.school, size: 14, color: Colors.blue[700]),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Grade $gradeLevel - Section $section',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Colors.blue[700],
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
+                              children: [
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.calendar_today, size: 12, color: Colors.purple[700]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      day,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.purple[700],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.access_time, size: 12, color: Colors.green[700]),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      formattedTime,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.green[700],
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.layers, size: 12, color: shiftColor),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      shift,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: shiftColor,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            const SizedBox(height: 16),
+          ],
+        ),
       ),
     );
   }
@@ -1589,6 +1931,54 @@ ${_classPerformance.map((c) {
     );
   }
 
+  // Helper function to convert 24-hour time to AM/PM format
+  String _convertTo12HourFormat(String time24) {
+    try {
+      // Handle time range format like "08:00-09:00" or single time "08:00"
+      if (time24.contains('-')) {
+        final parts = time24.split('-');
+        if (parts.length == 2) {
+          final startTime = _formatSingleTime(parts[0].trim());
+          final endTime = _formatSingleTime(parts[1].trim());
+          return '$startTime - $endTime';
+        }
+      }
+      // Single time format
+      return _formatSingleTime(time24.trim());
+    } catch (e) {
+      // If parsing fails, return original time
+      return time24;
+    }
+  }
+
+  // Helper function to format a single time string (HH:mm) to AM/PM
+  String _formatSingleTime(String time24) {
+    try {
+      final parts = time24.split(':');
+      if (parts.length >= 2) {
+        final hour = int.parse(parts[0]);
+        final minute = parts[1].substring(0, 2); // Get first 2 digits of minutes
+        
+        String period = 'AM';
+        int hour12 = hour;
+        
+        if (hour == 0) {
+          hour12 = 12; // Midnight
+        } else if (hour == 12) {
+          period = 'PM'; // Noon
+        } else if (hour > 12) {
+          hour12 = hour - 12;
+          period = 'PM';
+        }
+        
+        return '$hour12:$minute $period';
+      }
+      return time24;
+    } catch (e) {
+      return time24;
+    }
+  }
+
   Widget _buildTodayScheduleCard(dynamic schedule) {
     final subject = schedule['subject'] ?? 'N/A';
     final gradeLevel = schedule['gradeLevel'] ?? 'N/A';
@@ -1603,6 +1993,11 @@ ${_classPerformance.map((c) {
     };
 
     final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
+    
+    // Convert timeSlot to AM/PM format
+    final formattedTimeSlot = timeSlot != 'N/A' 
+        ? _convertTo12HourFormat(timeSlot)
+        : 'N/A';
 
     return Card(
       elevation: 2,
@@ -1659,7 +2054,7 @@ ${_classPerformance.map((c) {
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
-                      timeSlot,
+                      formattedTimeSlot,
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w600,
