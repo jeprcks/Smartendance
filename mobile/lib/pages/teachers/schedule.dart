@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/services/teacherService.dart';
+import 'package:mobile/fetch/teacherService.dart';
 import 'components/schedule_details.dart';
 import 'components/attendance_modal.dart';
 import 'components/background_logo.dart';
@@ -543,7 +543,9 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                           if (_getFilteredSchedules().isEmpty)
                             Center(
                               child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 32),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 32,
+                                ),
                                 child: Column(
                                   children: [
                                     Icon(
@@ -572,7 +574,9 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                                       icon: const Icon(Icons.clear),
                                       label: const Text('Clear Filters'),
                                       style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF10B981),
+                                        backgroundColor: const Color(
+                                          0xFF10B981,
+                                        ),
                                         foregroundColor: Colors.white,
                                       ),
                                     ),

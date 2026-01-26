@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/services/authService.dart';
+import 'package:mobile/fetch/authService.dart';
 import 'package:mobile/pages/teachers/teacher.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
@@ -137,10 +137,8 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
 
-        final teacherId = userData['teacherId'] ?? 
-                         userData['_id'] ?? 
-                         userData['id'] ?? 
-                         '';
+        final teacherId =
+            userData['teacherId'] ?? userData['_id'] ?? userData['id'] ?? '';
         final teacherName =
             userData['name'] ??
             userData['fullName'] ??
@@ -187,24 +185,26 @@ class _LoginPageState extends State<LoginPage> {
       print('=== LOGIN ERROR ===');
       print('Error: $e');
       print('Error type: ${e.runtimeType}');
-      
+
       if (mounted) {
         setState(() => _isLoading = false);
-        
+
         String errorMessage = 'Login failed';
-        if (e.toString().contains('SocketException') || 
+        if (e.toString().contains('SocketException') ||
             e.toString().contains('Failed host lookup') ||
             e.toString().contains('Connection refused')) {
-          errorMessage = 'Cannot connect to server. Please check:\n1. Server is running\n2. Network connection\n3. Server URL: http://192.168.0.151:4000';
-        } else if (e.toString().contains('401') || 
-                   e.toString().contains('Unauthorized')) {
+          errorMessage =
+              'Cannot connect to server. Please check:\n1. Server is running\n2. Network connection\n3. Server URL: http://192.168.0.151:4000';
+        } else if (e.toString().contains('401') ||
+            e.toString().contains('Unauthorized')) {
           errorMessage = 'Invalid email or password. Please try again.';
         } else if (e.toString().contains('404')) {
-          errorMessage = 'Server endpoint not found. Please check server configuration.';
+          errorMessage =
+              'Server endpoint not found. Please check server configuration.';
         } else {
           errorMessage = 'Login failed: ${e.toString()}';
         }
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(errorMessage),
@@ -215,7 +215,6 @@ class _LoginPageState extends State<LoginPage> {
       }
     }
   }
-
 
   Color _getUserTypeColor() {
     return const Color(0xFF10B981); // Emerald

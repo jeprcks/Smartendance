@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/services/teacherService.dart';
+import 'package:mobile/fetch/teacherService.dart';
 
 // Attendance status options
 const List<String> attendanceStatus = ['Present', 'Absent', 'Late', 'Cutting'];

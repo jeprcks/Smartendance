@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:mobile/services/teacherService.dart';
+import 'package:mobile/fetch/teacherService.dart';
 import 'schedule.dart';
 import 'components/background_logo.dart';
 
