@@ -32,7 +32,6 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
   final Map<String, dynamic> _scannedAttendance =
       {}; // Store scanned attendance data
   final Map<String, String> _scanTimes = {}; // Store scan times
-  bool _isLoadingAttendance = true;
 
   @override
   void initState() {
@@ -71,13 +70,11 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
               }
             }
           }
-          _isLoadingAttendance = false;
         });
       }
     } catch (e) {
       print('Error fetching attendance data: $e');
       if (mounted) {
-        setState(() => _isLoadingAttendance = false);
       }
     }
   }

@@ -83,7 +83,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
       // Filter for today's schedules
       final today = _getTodaySchedules(todaySchedules);
-      
+
       // Store all schedules
       final allSchedules = List<dynamic>.from(todaySchedules);
 
@@ -99,7 +99,10 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       final allRecords = recordsResponse['records'] as List<dynamic>? ?? [];
 
       // Filter records to only include this teacher's classes
-      final records = _filterRecordsByTeacherSchedules(allRecords, allSchedules);
+      final records = _filterRecordsByTeacherSchedules(
+        allRecords,
+        allSchedules,
+      );
 
       // Calculate class performance (using filtered records)
       final performance = _calculateClassPerformance(records);
@@ -121,7 +124,8 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
       if (mounted) {
         setState(() {
-          _attendanceStats = filteredStats; // Use filtered stats instead of API stats
+          _attendanceStats =
+              filteredStats; // Use filtered stats instead of API stats
           _attendanceRecords = records;
           _todaySchedules = today;
           _allSchedules = allSchedules;
@@ -159,7 +163,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       final section = schedule['section'] ?? '';
       final shift = schedule['shift'] ?? '';
       final subject = schedule['subject'] ?? '';
-      
+
       if (gradeLevel.isNotEmpty && section.isNotEmpty && shift.isNotEmpty) {
         // Add subject-specific key
         teacherClassKeys.add('$gradeLevel-$section-$shift-$subject');
@@ -174,7 +178,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       final section = record['section'] ?? '';
       final shift = record['shift'] ?? '';
       final subject = record['subject'] ?? '';
-      
+
       final recordKey = '$gradeLevel-$section-$shift-$subject';
       return teacherClassKeys.contains(recordKey);
     }).toList();
@@ -193,7 +197,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     for (var record in records) {
       final status = (record['status'] ?? '').toString().toLowerCase();
       stats['total'] = (stats['total'] as int) + 1;
-      
+
       if (status == 'present') {
         stats['present'] = (stats['present'] as int) + 1;
       } else if (status == 'absent') {
@@ -226,31 +230,31 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       // Extract start time from time slot (e.g., "08:00-09:00" -> "08:00")
       String startTimeA = timeA;
       String startTimeB = timeB;
-      
+
       if (timeA.contains('-')) {
         startTimeA = timeA.split('-')[0].trim();
       }
       if (timeB.contains('-')) {
         startTimeB = timeB.split('-')[0].trim();
       }
-      
+
       // Parse time to hours and minutes
       final partsA = startTimeA.split(':');
       final partsB = startTimeB.split(':');
-      
+
       if (partsA.length >= 2 && partsB.length >= 2) {
         final hourA = int.parse(partsA[0]);
         final minuteA = int.parse(partsA[1].substring(0, 2));
         final hourB = int.parse(partsB[0]);
         final minuteB = int.parse(partsB[1].substring(0, 2));
-        
+
         // Compare hours first, then minutes
         if (hourA != hourB) {
           return hourA.compareTo(hourB);
         }
         return minuteA.compareTo(minuteB);
       }
-      
+
       // Fallback to string comparison if parsing fails
       return timeA.compareTo(timeB);
     } catch (e) {
@@ -1337,16 +1341,24 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     final sortedSchedules = List<dynamic>.from(_allSchedules)
       ..sort((a, b) {
         // First sort by day
-        final dayOrder = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+        final dayOrder = [
+          'Monday',
+          'Tuesday',
+          'Wednesday',
+          'Thursday',
+          'Friday',
+          'Saturday',
+          'Sunday',
+        ];
         final dayA = a['day'] ?? '';
         final dayB = b['day'] ?? '';
         final dayIndexA = dayOrder.indexOf(dayA);
         final dayIndexB = dayOrder.indexOf(dayB);
-        
+
         if (dayIndexA != dayIndexB) {
           return dayIndexA.compareTo(dayIndexB);
         }
-        
+
         // Then sort by time
         final timeA = a['timeSlot'] ?? '';
         final timeB = b['timeSlot'] ?? '';
@@ -1413,20 +1425,21 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     final timeSlot = schedule['timeSlot'] ?? 'N/A';
                     final day = schedule['day'] ?? 'N/A';
                     final shift = schedule['shift'] ?? 'N/A';
-                    
+
                     // Convert time to AM/PM format
-                    final formattedTime = timeSlot != 'N/A' 
+                    final formattedTime = timeSlot != 'N/A'
                         ? _convertTo12HourFormat(timeSlot)
                         : 'N/A';
-                    
+
                     // Get shift color
                     final Map<String, Color> shiftColors = {
                       'Morning': const Color(0xFF3B82F6),
                       'Afternoon': const Color(0xFFF59E0B),
                       'Evening': const Color(0xFF8B5CF6),
                     };
-                    final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
-                    
+                    final shiftColor =
+                        shiftColors[shift] ?? const Color(0xFF10B981);
+
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Container(
@@ -1434,7 +1447,10 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: shiftColor.withOpacity(0.3), width: 1.5),
+                          border: Border.all(
+                            color: shiftColor.withOpacity(0.3),
+                            width: 1.5,
+                          ),
                           boxShadow: [
                             BoxShadow(
                               color: Colors.black.withOpacity(0.05),
@@ -1457,7 +1473,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                             const SizedBox(height: 6),
                             Row(
                               children: [
-                                Icon(Icons.school, size: 14, color: Colors.blue[700]),
+                                Icon(
+                                  Icons.school,
+                                  size: 14,
+                                  color: Colors.blue[700],
+                                ),
                                 const SizedBox(width: 4),
                                 Text(
                                   'Grade $gradeLevel - Section $section',
@@ -1477,7 +1497,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.calendar_today, size: 12, color: Colors.purple[700]),
+                                    Icon(
+                                      Icons.calendar_today,
+                                      size: 12,
+                                      color: Colors.purple[700],
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       day,
@@ -1492,7 +1516,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.access_time, size: 12, color: Colors.green[700]),
+                                    Icon(
+                                      Icons.access_time,
+                                      size: 12,
+                                      color: Colors.green[700],
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       formattedTime,
@@ -1507,7 +1535,11 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                                 Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.layers, size: 12, color: shiftColor),
+                                    Icon(
+                                      Icons.layers,
+                                      size: 12,
+                                      color: shiftColor,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       shift,
@@ -1957,11 +1989,14 @@ ${_classPerformance.map((c) {
       final parts = time24.split(':');
       if (parts.length >= 2) {
         final hour = int.parse(parts[0]);
-        final minute = parts[1].substring(0, 2); // Get first 2 digits of minutes
-        
+        final minute = parts[1].substring(
+          0,
+          2,
+        ); // Get first 2 digits of minutes
+
         String period = 'AM';
         int hour12 = hour;
-        
+
         if (hour == 0) {
           hour12 = 12; // Midnight
         } else if (hour == 12) {
@@ -1970,7 +2005,7 @@ ${_classPerformance.map((c) {
           hour12 = hour - 12;
           period = 'PM';
         }
-        
+
         return '$hour12:$minute $period';
       }
       return time24;
@@ -1993,9 +2028,9 @@ ${_classPerformance.map((c) {
     };
 
     final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
-    
+
     // Convert timeSlot to AM/PM format
-    final formattedTimeSlot = timeSlot != 'N/A' 
+    final formattedTimeSlot = timeSlot != 'N/A'
         ? _convertTo12HourFormat(timeSlot)
         : 'N/A';
 
@@ -2700,7 +2735,6 @@ ${_classPerformance.map((c) {
     final studentName = record['studentName'] ?? 'Unknown';
     final status = record['status'] ?? 'Unknown';
     final subject = record['subject'] ?? 'N/A';
-    final scanTime = record['scanTime'] ?? 'N/A';
 
     Color statusColor = Colors.grey;
     IconData statusIcon = Icons.help;
@@ -2792,4 +2826,4 @@ ${_classPerformance.map((c) {
       ),
     );
   }
-} 
+}

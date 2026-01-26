@@ -1,11 +1,15 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class TeacherService {
   // URL configuration based on platform
   static String get baseUrl {
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+      // Web platform: use the server IP address
+      return 'http://192.168.0.151:4000/api';
+    } else if (Platform.isAndroid) {
       // Android emulator: try actual IP first, fallback to 10.0.2.2
       return 'http://192.168.0.151:4000/api';
     } else if (Platform.isIOS) {
@@ -13,8 +17,8 @@ class TeacherService {
       // Physical iPhone uses computer IP on network
       return 'http://192.168.0.151:4000/api';
     } else {
-      // Fallback for other platforms
-      return 'http://localhost:4000/api';
+      // Fallback for other platforms (desktop)
+      return 'http://192.168.0.151:4000/api';
     }
   }
 
