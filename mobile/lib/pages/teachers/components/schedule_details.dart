@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:mobile/services/teacherService.dart';
+import 'package:mobile/fetch/teacherService.dart';
 
 // Color scheme for different shifts
 const Map<String, Color> shiftColors = {
@@ -74,8 +74,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
       }
     } catch (e) {
       print('Error fetching attendance data: $e');
-      if (mounted) {
-      }
+      if (mounted) {}
     }
   }
 
