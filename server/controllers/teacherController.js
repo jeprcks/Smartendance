@@ -134,13 +134,13 @@ const getAllTeachers = async (req, res) => {
 
         console.log('Teachers found:', teachers.length);
 
-        // Backfill plainPassword for existing teachers that don't have it
-        for (const teacher of teachers) {
+        // Backfill plainPassword for existing teachers that don't have it (only set, don't save on every request)
+        // This prevents unnecessary database writes on every API call
+        teachers.forEach(teacher => {
             if (!teacher.plainPassword) {
-                teacher.plainPassword = 'N/A'; // Fallback for older records
-                await teacher.save();
+                teacher.plainPassword = 'N/A'; // Fallback for older records (virtual/display only)
             }
-        }
+        });
 
         const response = {
             success: true,

@@ -4,9 +4,10 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --primary: oklch(0.205 0 0);
+  --primary: #2e7d32;
   --primary-light: #60a564;
   --primary-dark: #1b5e20;
+  --primary-hover: #388e3c;
   --accent: oklch(0.97 0 0);
   --success: #43a047;
   --error: #e65100;
@@ -27,7 +28,7 @@
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: #4caf50;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -35,12 +36,12 @@
   --chart-5: oklch(0.769 0.188 70.08);
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: #2e7d32;
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: #4caf50;
 }
 
 .btn-primary {
@@ -122,7 +123,8 @@
   max-width: 1400px;
   margin: 0 auto;
   min-height: calc(100vh - 4rem);
-  background: var(--background);
+  position: relative;
+  z-index: 1;
 }
 
 .page-header {
@@ -347,6 +349,7 @@ body {
   }
   body {
     @apply bg-background text-foreground;
+    position: relative;
   }
 }
 
@@ -366,4 +369,22 @@ body {
   border-color: rgba(59, 130, 246, 0.5) !important;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
   transform: scale(1.05) !important;
+}
+
+/* Watermark Logo Background */
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 1000px;
+  height: 1000px;
+  background-image: url("/logo/umapadlogo.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
 }

@@ -88,11 +88,11 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
               Schedule for {student.fullName}
             </h2>
             <div className="flex gap-3 flex-wrap">
-              <div className="inline-flex items-center px-3 py-1.5 bg-blue-50 border border-blue-200 rounded-lg">
-                <svg className="w-4 h-4 text-blue-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <div className="inline-flex items-center px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
+                <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
                   <path d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" />
                 </svg>
-                <span className="text-xs font-semibold text-blue-900">{student.studentId}</span>
+                <span className="text-xs font-semibold text-green-900">{student.studentId}</span>
               </div>
               <div className="inline-flex items-center px-3 py-1.5 bg-green-50 border border-green-200 rounded-lg">
                 <svg className="w-4 h-4 text-green-600 mr-2" fill="currentColor" viewBox="0 0 20 20">
@@ -122,7 +122,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
         <div className="space-y-6 overflow-y-auto flex-1 pr-2">
           {loading ? (
             <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mr-3"></div>
               <span className="text-gray-600">Loading schedule...</span>
             </div>
           ) : error ? (
@@ -139,10 +139,10 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
                 {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'].map((day) => (
                   <div
                     key={day}
-                    className="bg-gradient-to-br from-blue-50 to-blue-100/50 border border-blue-200/50 rounded-lg p-4"
+                    className="bg-gradient-to-br from-green-50 to-green-100/50 border border-green-200/50 rounded-lg p-4"
                   >
-                    <h3 className="font-semibold text-blue-900 mb-3 flex items-center">
-                      <span className="inline-flex items-center justify-center w-6 h-6 bg-blue-600 text-white text-xs font-bold rounded-full mr-2">
+                    <h3 className="font-semibold text-green-900 mb-3 flex items-center">
+                      <span className="inline-flex items-center justify-center w-6 h-6 bg-green-600 text-white text-xs font-bold rounded-full mr-2">
                         {groupedClasses[day]?.length || 0}
                       </span>
                       {day}
@@ -152,7 +152,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
                         groupedClasses[day].map((schedule, idx) => (
                           <div
                             key={idx}
-                            className="bg-white rounded p-3 text-sm border border-blue-100 hover:shadow-md transition-shadow"
+                            className="bg-white rounded p-3 text-sm border border-green-100 hover:shadow-md transition-shadow"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
@@ -162,7 +162,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
                             </div>
                             <div className="mt-2 space-y-1">
                               <div className="flex items-center text-xs text-gray-700">
-                                <svg className="w-4 h-4 mr-1.5 text-blue-600" fill="currentColor" viewBox="0 0 20 20">
+                                <svg className="w-4 h-4 mr-1.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00-.293.707l-2.828 2.829a1 1 0 101.414 1.414L8 9.586V6z" clipRule="evenodd" />
                                 </svg>
                                 <span className="font-medium">{schedule.timeSlot}</span>
@@ -199,7 +199,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
               </div>
             </>
           ) : schedules.length > 0 ? (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-6 text-center">
+            <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
               <svg className="h-12 w-12 text-blue-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
               </svg>

@@ -7,8 +7,10 @@ import PrintQRCodeModal from './components/PrintQRCodeModal';
 import EditStudentModal from './components/EditStudentModal';
 import StudentScheduleModal from './components/StudentScheduleModal';
 import StatusCounter from './components/StatusCounter';
-import PDFExportButton from './components/PDFExportButton';
+import AdvancedSearch, { SearchFilters } from '@/app/components/search/AdvancedSearch';
+import BulkActions from '@/app/components/bulk/BulkActions';
 import { studentService, Student } from '@/app/services/studentService';
+import { exportStudentsToPDF } from './components/exportToPDF';
 import toast from 'react-hot-toast';
 
 export default function StudentsPage() {
@@ -24,6 +26,9 @@ export default function StudentsPage() {
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
   const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
+  const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({ query: '' });
+  const [savedFilters, setSavedFilters] = useState<Array<{ name: string; filters: SearchFilters }>>([]);
 
   const fetchStudents = async () => {
     try {
@@ -51,6 +56,16 @@ export default function StudentsPage() {
 
   useEffect(() => {
     fetchStudents();
+    // Load saved filters from localStorage
+    const saved = localStorage.getItem('savedFilters');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSavedFilters(parsed);
+      } catch (e) {
+        console.error('Error loading saved filters:', e);
+      }
+    }
   }, []);
 
   const handleAddStudent = async (studentData: Partial<Student>) => {
@@ -95,6 +110,9 @@ export default function StudentsPage() {
   const LoadingSkeleton = () => (
     <tr className="animate-pulse">
       <td className="px-6 py-4 whitespace-nowrap">
+        <div className="h-4 w-4 bg-gray-200 rounded"/>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
         <div className="h-10 w-10 bg-gray-200 rounded-full"/>
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
@@ -121,9 +139,91 @@ export default function StudentsPage() {
     </tr>
   );
 
+  const handleSearch = (filters: SearchFilters) => {
+    setSearchFilters(filters);
+    setSearchQuery(filters.query || '');
+    // Set or clear grade filter
+    setSortGrade(filters.gradeLevel || '');
+    // Set or clear section filter
+    setSortSection(filters.section || '');
+  };
+
+  const handleSaveFilter = (filterName: string, filters: SearchFilters) => {
+    const newSaved = [...savedFilters, { name: filterName, filters }];
+    setSavedFilters(newSaved);
+    localStorage.setItem('savedFilters', JSON.stringify(newSaved));
+  };
+
+  const handleLoadFilter = (filters: SearchFilters) => {
+    setSearchFilters(filters);
+    handleSearch(filters);
+  };
+
+  const handleSelectAll = () => {
+    const allIds = new Set(filteredStudents.map(s => s.studentId));
+    const allSelected = filteredStudents.length > 0 && 
+      filteredStudents.every(s => selectedStudents.has(s.studentId));
+    
+    if (allSelected) {
+      // Deselect all
+      setSelectedStudents(new Set());
+    } else {
+      // Select all filtered students
+      setSelectedStudents(allIds);
+    }
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedStudents(new Set());
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      // Find students by studentId and get their _id
+      const studentsToDelete = students.filter(s => ids.includes(s.studentId));
+      const deletePromises = studentsToDelete.map(async (student) => {
+        if (student._id) {
+          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/students/${student._id}`, {
+            method: 'DELETE',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          if (!response.ok) {
+            throw new Error(`Failed to delete ${student.studentId}`);
+          }
+          return response.json();
+        }
+        return Promise.resolve();
+      });
+      
+      await Promise.all(deletePromises);
+      setStudents(prev => prev.filter(s => !ids.includes(s.studentId)));
+      setSelectedStudents(new Set());
+      toast.success(`Successfully deleted ${ids.length} student(s)`);
+      fetchStudents(); // Refresh the list
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast.error('Failed to delete some students');
+    }
+  };
+
+  const handleBulkExport = (ids: string[]) => {
+    const selectedStudentsData = students.filter(s => ids.includes(s.studentId));
+    if (selectedStudentsData.length === 0) {
+      toast.error('No students selected');
+      return;
+    }
+    // Export selected students to PDF
+    const filename = selectedStudentsData.length === 1 
+      ? `student_${selectedStudentsData[0].studentId}_export.pdf`
+      : `selected_students_export_${new Date().toISOString().split('T')[0]}.pdf`;
+    exportStudentsToPDF(selectedStudentsData, filename);
+  };
+
   const filteredStudents = students.filter(student => {
-    const query = searchQuery.toLowerCase();
-    const matchesSearch = (
+    const query = (searchFilters.query || searchQuery).toLowerCase();
+    const matchesSearch = !query || (
       student.fullName.toLowerCase().includes(query) ||
       student.studentId.toLowerCase().includes(query) ||
       student.gradeLevel.toLowerCase().includes(query) ||
@@ -131,11 +231,24 @@ export default function StudentsPage() {
       (student.shift?.toLowerCase() || '').includes(query)
     );
     
-    const matchesGrade = !sortGrade || student.gradeLevel === sortGrade;
-    const matchesSection = !sortSection || student.section === sortSection;
+    const gradeFilter = searchFilters.gradeLevel || sortGrade;
+    const sectionFilter = searchFilters.section || sortSection;
+    
+    const matchesGrade = !gradeFilter || student.gradeLevel === gradeFilter;
+    const matchesSection = !sectionFilter || student.section === sectionFilter;
     
     return matchesSearch && matchesGrade && matchesSection;
   });
+
+  const quickFilterOptions = [
+    { label: 'All Students', value: 'all', filters: { query: '', gradeLevel: '', section: '' } },
+    { label: 'Grade 1', value: 'grade1', filters: { query: '', gradeLevel: 'Grade 1', section: '' } },
+    { label: 'Grade 2', value: 'grade2', filters: { query: '', gradeLevel: 'Grade 2', section: '' } },
+    { label: 'Grade 3', value: 'grade3', filters: { query: '', gradeLevel: 'Grade 3', section: '' } },
+    { label: 'Grade 4', value: 'grade4', filters: { query: '', gradeLevel: 'Grade 4', section: '' } },
+    { label: 'Grade 5', value: 'grade5', filters: { query: '', gradeLevel: 'Grade 5', section: '' } },
+    { label: 'Grade 6', value: 'grade6', filters: { query: '', gradeLevel: 'Grade 6', section: '' } },
+  ];
 
   // Get unique grades and sections for filter dropdowns
   const uniqueGrades = Array.from(new Set(students.map(s => s.gradeLevel))).sort((a, b) => {
@@ -161,7 +274,6 @@ export default function StudentsPage() {
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Students</h1>
         </div>
         <div className="flex items-center space-x-3">
-          <PDFExportButton students={students} disabled={loading} />
           <button 
             onClick={() => setIsAddModalOpen(true)}
             className="inline-flex items-center px-5 py-2.5 bg-green-600 text-sm font-semibold text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
@@ -182,80 +294,40 @@ export default function StudentsPage() {
 
       <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">
         <div className="p-6">
-          
-          {/* Filter Section */}
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
-              </svg>
-              <label className="text-sm font-semibold text-gray-700">Filter by:</label>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {/* Grade Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Grade Level</label>
-                <select
-                  value={sortGrade}
-                  onChange={(e) => setSortGrade(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300 text-sm"
-                >
-                  <option value="">All Grades</option>
-                  {uniqueGrades.map(grade => (
-                    <option key={grade} value={grade}>{grade}</option>
-                  ))}
-                </select>
-              </div>
-              
-              {/* Section Filter */}
-              <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">Section</label>
-                <select
-                  value={sortSection}
-                  onChange={(e) => setSortSection(e.target.value)}
-                  className="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300 text-sm"
-                >
-                  <option value="">All Sections</option>
-                  {uniqueSections.map(section => (
-                    <option key={section} value={section}>{section}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            {(sortGrade || sortSection) && (
-              <button
-                onClick={() => {
-                  setSortGrade('');
-                  setSortSection('');
-                }}
-                className="mt-2 text-xs text-gray-600 hover:text-gray-900 underline transition-colors"
-              >
-                Clear filters
-              </button>
-            )}
-          </div>
-          
-          <div className="mb-6">
-            <div className="relative group">
-              <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400 group-focus-within:text-green-500 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <input
-                type="text"
-                placeholder="Search students..."
-                className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
+          {/* Advanced Search */}
+          <AdvancedSearch
+            onSearch={handleSearch}
+            onSaveFilter={handleSaveFilter}
+            savedFilters={savedFilters}
+            onLoadFilter={handleLoadFilter}
+            placeholder="Search by name, ID, grade, section..."
+            showQuickFilters={true}
+            quickFilterOptions={quickFilterOptions}
+          />
+
+          {/* Bulk Actions */}
+          <BulkActions
+            items={filteredStudents}
+            selectedItems={selectedStudents}
+            onSelectAll={handleSelectAll}
+            onDeselectAll={handleDeselectAll}
+            onBulkExport={handleBulkExport}
+            getId={(student) => student.studentId}
+            getLabel={(student) => student.fullName}
+          />
 
           <div className="overflow-x-auto rounded-xl border border-gray-200/80">
             <table className="min-w-full divide-y divide-gray-200/80">
               <thead className="bg-gray-50/50">
                 <tr>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedStudents.size === filteredStudents.length && filteredStudents.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Profile</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student ID</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Full Name</th>
@@ -273,7 +345,7 @@ export default function StudentsPage() {
                 ) : filteredStudents.length === 0 ? (
                   // Show empty state
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -285,8 +357,25 @@ export default function StudentsPage() {
                 ) : (
                   // Show student data
                   filteredStudents.map((student) => {
+                    const isSelected = selectedStudents.has(student.studentId);
                     return (
-                  <tr key={student.studentId} className="hover:bg-gray-50/50 transition-colors duration-200">
+                  <tr key={student.studentId} className={`hover:bg-gray-50/50 transition-colors duration-200 ${isSelected ? 'bg-green-50' : ''}`}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={(e) => {
+                          const newSelected = new Set(selectedStudents);
+                          if (e.target.checked) {
+                            newSelected.add(student.studentId);
+                          } else {
+                            newSelected.delete(student.studentId);
+                          }
+                          setSelectedStudents(newSelected);
+                        }}
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center justify-center">
                         {student.photo && student.photo.startsWith('data:image/') && !imageErrors.has(student.studentId) ? (
@@ -323,7 +412,7 @@ export default function StudentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 ${
                         student.gender === 'Male' 
-                          ? 'bg-blue-50 text-blue-700 ring-blue-200/50' 
+                          ? 'bg-green-50 text-green-700 ring-green-200/50' 
                           : 'bg-pink-50 text-pink-700 ring-pink-200/50'
                       } transition-colors duration-200`}>
                         {student.gender}
@@ -337,7 +426,7 @@ export default function StudentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-100 hover:text-blue-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsViewModalOpen(true);

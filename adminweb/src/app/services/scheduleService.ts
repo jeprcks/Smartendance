@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export interface Schedule {
   _id?: string;
@@ -62,17 +62,27 @@ export const scheduleService = {
       if (filters?.isActive !== undefined) queryParams.append('isActive', String(filters.isActive));
 
       const url = `${API_BASE_URL}/api/schedules${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
-      const response = await fetch(url);
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to fetch schedules');
+        const errorData = await response.json().catch(() => ({})) as { error?: string; message?: string };
+        throw new Error(errorData.error || errorData.message || `Failed to fetch schedules: ${response.status}`);
       }
 
       const data: ScheduleResponse = await response.json();
       return data.schedules || [];
     } catch (error) {
       console.error('Error fetching schedules:', error);
-      throw error instanceof Error ? error : new Error('Failed to fetch schedules');
+      // Return empty array instead of throwing to allow dashboard to continue
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('Network error: API server may not be running');
+        return [];
+      }
+      throw error;
     }
   },
 

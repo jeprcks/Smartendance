@@ -1,20 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import ViewTeacherModal from '../teachers/components/ViewTeacherModal';
 import AddTeacherModal from '../teachers/components/AddTeacherModal';
 import EditTeacherModal from '../teachers/components/EditTeacherModal';
+import AdvancedSearch, { SearchFilters } from '@/app/components/search/AdvancedSearch';
+import BulkActions from '@/app/components/bulk/BulkActions';
 import { teacherService, Teacher } from '../../services/teacherService';
+import toast from 'react-hot-toast';
 
 
 
 export default function TeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('');
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [statusUpdating, setStatusUpdating] = useState<string | null>(null);
   
   // State for API data
   const [teachers, setTeachers] = useState<Teacher[]>([]);
@@ -27,33 +32,190 @@ export default function TeachersPage() {
   });
 
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const [selectedTeachers, setSelectedTeachers] = useState<Set<string>>(new Set());
+  const [searchFilters, setSearchFilters] = useState<SearchFilters>({ query: '' });
+  const [savedFilters, setSavedFilters] = useState<Array<{ name: string; filters: SearchFilters }>>([]);
 
-  // Fetch teachers from API
-  const fetchTeachers = async () => {
+  // Fetch teachers from API with request cancellation
+  const fetchTeachers = useCallback(async () => {
+    // Cancel previous request if it exists
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this request
+    abortControllerRef.current = new AbortController();
+
     try {
       setIsLoading(true);
       setError(null);
       
-      const response = await teacherService.getAllTeachers({
-        search: searchQuery || undefined,
+      // Build params object, only including defined values
+      const params: {
+        page?: number;
+        limit?: number;
+        search?: string;
+        status?: string;
+      } = {
         page: 1,
         limit: 50
-      });
+      };
+      
+      if (searchQuery && searchQuery.trim()) {
+        params.search = searchQuery.trim();
+      }
+      
+      if (statusFilter && statusFilter.trim()) {
+        params.status = statusFilter.trim();
+      }
+      
+      const response = await teacherService.getAllTeachers(params);
 
-      setTeachers(response.teachers);
-      setPagination(response.pagination);
+      // Only update state if request wasn't aborted
+      if (!abortControllerRef.current?.signal.aborted) {
+        setTeachers(response.teachers);
+        setPagination(response.pagination);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to fetch teachers');
-      console.error('Error fetching teachers:', err);
+      // Don't set error if request was aborted
+      if (err instanceof Error && err.name !== 'AbortError' && !abortControllerRef.current?.signal.aborted) {
+        setError(err.message || 'Failed to fetch teachers');
+        console.error('Error fetching teachers:', err);
+      }
     } finally {
-      setIsLoading(false);
+      if (!abortControllerRef.current?.signal.aborted) {
+        setIsLoading(false);
+      }
+    }
+  }, [searchQuery, statusFilter]);
+
+  // Handle updating teacher status
+  const handleStatusUpdate = async (teacherId: string, newStatus: 'Active' | 'Inactive') => {
+    try {
+      setStatusUpdating(teacherId);
+      await teacherService.updateTeacher(teacherId, { status: newStatus });
+      await fetchTeachers(); // Refresh the list
+    } catch (err) {
+      console.error('Error updating teacher status:', err);
+      setError('Failed to update teacher status');
+    } finally {
+      setStatusUpdating(null);
     }
   };
 
-  // Load teachers on component mount and when search changes
+  // Load teachers on component mount and when search or filter changes
   useEffect(() => {
     fetchTeachers();
-  }, [searchQuery]);
+    
+    // Load saved filters from localStorage
+    const saved = localStorage.getItem('savedFilters');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSavedFilters(parsed);
+      } catch (e) {
+        console.error('Error loading saved filters:', e);
+      }
+    }
+    
+    // Cleanup: abort request on unmount or when dependencies change
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, [fetchTeachers]);
+
+  const handleSearch = (filters: SearchFilters) => {
+    setSearchFilters(filters);
+    setSearchQuery(filters.query || '');
+    setStatusFilter(filters.status ?? '');
+  };
+
+  const handleSaveFilter = (filterName: string, filters: SearchFilters) => {
+    const newSaved = [...savedFilters, { name: filterName, filters }];
+    setSavedFilters(newSaved);
+    localStorage.setItem('savedFilters', JSON.stringify(newSaved));
+  };
+
+  const handleLoadFilter = (filters: SearchFilters) => {
+    setSearchFilters(filters);
+    handleSearch(filters);
+  };
+
+  const handleSelectAll = () => {
+    const allIds = new Set(teachers.map(t => t._id));
+    setSelectedTeachers(allIds);
+  };
+
+  const handleDeselectAll = () => {
+    setSelectedTeachers(new Set());
+  };
+
+  const handleBulkDelete = async (ids: string[]) => {
+    try {
+      const deletePromises = ids.map(id => teacherService.deleteTeacher(id));
+      await Promise.all(deletePromises);
+      setTeachers(prev => prev.filter(t => !ids.includes(t._id)));
+      setSelectedTeachers(new Set());
+      toast.success(`Successfully deleted ${ids.length} teacher(s)`);
+      fetchTeachers(); // Refresh the list
+    } catch (error) {
+      console.error('Bulk delete error:', error);
+      toast.error('Failed to delete some teachers');
+    }
+  };
+
+  const handleBulkUpdate = async (ids: string[], updates: Partial<Teacher>) => {
+    try {
+      const updatePromises = ids.map(id => teacherService.updateTeacher(id, updates));
+      await Promise.all(updatePromises);
+      setSelectedTeachers(new Set());
+      toast.success(`Successfully updated ${ids.length} teacher(s)`);
+      fetchTeachers(); // Refresh the list
+    } catch (error) {
+      console.error('Bulk update error:', error);
+      toast.error('Failed to update some teachers');
+    }
+  };
+
+  const quickFilterOptions = [
+    { label: 'All Teachers', value: 'all', filters: { query: '', status: '' } },
+    { label: 'Active', value: 'active', filters: { query: '', status: 'Active' } },
+    { label: 'Inactive', value: 'inactive', filters: { query: '', status: 'Inactive' } },
+  ];
+
+  // Separate teachers into active and inactive (before filtering)
+  const allActiveTeachers = teachers.filter(teacher => teacher.status === 'Active');
+  const allInactiveTeachers = teachers.filter(teacher => teacher.status === 'Inactive');
+
+  // Filter teachers based on search filters
+  const filteredActiveTeachers = allActiveTeachers.filter(teacher => {
+    const query = (searchFilters.query || searchQuery).toLowerCase();
+    const matchesSearch = !query || (
+      teacher.name.toLowerCase().includes(query) ||
+      teacher.teacherId.toLowerCase().includes(query) ||
+      teacher.username.toLowerCase().includes(query) ||
+      teacher.subject.toLowerCase().includes(query)
+    );
+    const statusFilterValue = searchFilters.status || statusFilter;
+    const matchesStatus = !statusFilterValue || teacher.status === statusFilterValue;
+    return matchesSearch && matchesStatus;
+  });
+
+  const filteredInactiveTeachers = allInactiveTeachers.filter(teacher => {
+    const query = (searchFilters.query || searchQuery).toLowerCase();
+    const matchesSearch = !query || (
+      teacher.name.toLowerCase().includes(query) ||
+      teacher.teacherId.toLowerCase().includes(query) ||
+      teacher.username.toLowerCase().includes(query) ||
+      teacher.subject.toLowerCase().includes(query)
+    );
+    const statusFilterValue = searchFilters.status || statusFilter;
+    const matchesStatus = !statusFilterValue || teacher.status === statusFilterValue;
+    return matchesSearch && matchesStatus;
+  });
 
   // Handle adding new teacher
   const handleAddTeacher = async (teacherData: any) => {
@@ -85,15 +247,20 @@ export default function TeachersPage() {
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Teachers</h1>
-        <button 
-          onClick={() => setIsAddModalOpen(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-        >
-          + Add Teacher
-        </button>
+    <div className="page-container">
+      <div className="page-header">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="page-title">Teachers</h1>
+            <p className="page-subtitle">Manage teacher information and status</p>
+          </div>
+          <button 
+            onClick={() => setIsAddModalOpen(true)}
+            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
+          >
+            + Add Teacher
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -122,51 +289,101 @@ export default function TeachersPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow">
-        <div className="p-4">
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Search teachers..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+      <div className="content-section">
+        {/* Advanced Search */}
+        <AdvancedSearch
+          onSearch={handleSearch}
+          onSaveFilter={handleSaveFilter}
+          savedFilters={savedFilters}
+          onLoadFilter={handleLoadFilter}
+          placeholder="Search by name, username, subject, or ID..."
+          showQuickFilters={true}
+          quickFilterOptions={quickFilterOptions}
+        />
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full">
-              <thead className="bg-gray-50">
+        {/* Bulk Actions */}
+        <BulkActions
+          items={[...filteredActiveTeachers, ...filteredInactiveTeachers]}
+          selectedItems={selectedTeachers}
+          onSelectAll={handleSelectAll}
+          onDeselectAll={handleDeselectAll}
+          onBulkDelete={handleBulkDelete}
+          onBulkUpdate={handleBulkUpdate}
+          getId={(teacher) => teacher._id}
+          getLabel={(teacher) => teacher.name}
+        />
+
+        <div className="table-container">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
+            Active Teachers ({filteredActiveTeachers.length})
+          </h2>
+          <table className="data-table">
+            <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Profile</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Teacher ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Username</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Subject</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  <th className="w-12">
+                    <input
+                      type="checkbox"
+                      checked={selectedTeachers.size === filteredActiveTeachers.length && filteredActiveTeachers.length > 0}
+                      onChange={() => {
+                        const newSelected = new Set(selectedTeachers);
+                        if (selectedTeachers.size === filteredActiveTeachers.length) {
+                          filteredActiveTeachers.forEach(t => newSelected.delete(t._id));
+                        } else {
+                          filteredActiveTeachers.forEach(t => newSelected.add(t._id));
+                        }
+                        setSelectedTeachers(newSelected);
+                      }}
+                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                    />
+                  </th>
+                  <th>Profile</th>
+                  <th>Teacher ID</th>
+                  <th>Username</th>
+                  <th>Name</th>
+                  <th>Role</th>
+                  <th>Subject</th>
+                  <th>Status</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
                       <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mr-3"></div>
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-3"></div>
                         Loading teachers...
                       </div>
                     </td>
                   </tr>
-                ) : teachers.length === 0 ? (
+                ) : filteredActiveTeachers.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-6 py-8 text-center text-gray-500">
-                      No teachers found
+                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                      No active teachers found
                     </td>
                   </tr>
                 ) : (
-                  teachers.map((teacher) => (
-                    <tr key={teacher._id} className="hover:bg-gray-50">
+                  filteredActiveTeachers.map((teacher) => {
+                    const isSelected = selectedTeachers.has(teacher._id);
+                    return (
+                    <tr key={teacher._id} className={`hover:bg-gray-50 ${isSelected ? 'bg-green-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const newSelected = new Set(selectedTeachers);
+                            if (e.target.checked) {
+                              newSelected.add(teacher._id);
+                            } else {
+                              newSelected.delete(teacher._id);
+                            }
+                            setSelectedTeachers(newSelected);
+                          }}
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center justify-center">
                           {teacher.profilePicture ? (
@@ -190,15 +407,33 @@ export default function TeachersPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.subject}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                          teacher.status === 'Active' 
-                            ? 'bg-green-100 text-green-800' 
-                            : teacher.status === 'Inactive'
-                            ? 'bg-yellow-100 text-yellow-800'
-                            : 'bg-red-100 text-red-800'
-                        }`}>
-                          {teacher.status}
-                        </span>
+                        <button
+                          onClick={() => {
+                            const newStatus = teacher.status === 'Active' ? 'Inactive' : 'Active';
+                            handleStatusUpdate(teacher._id, newStatus);
+                          }}
+                          disabled={statusUpdating === teacher._id}
+                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            teacher.status === 'Active' 
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                              : teacher.status === 'Inactive'
+                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                              : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          }`}
+                          title={`Click to mark teacher as ${teacher.status === 'Active' ? 'Inactive' : 'Active'}`}
+                        >
+                          {statusUpdating === teacher._id ? (
+                            <span className="flex items-center gap-1">
+                              <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Updating...
+                            </span>
+                          ) : (
+                            teacher.status
+                          )}
+                        </button>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex space-x-2">
@@ -212,7 +447,7 @@ export default function TeachersPage() {
                             View
                           </button>
                           <button 
-                            className="bg-blue-600 text-white px-3 py-1 rounded-md hover:bg-blue-700 transition-colors"
+                            className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors"
                             onClick={() => {
                               setSelectedTeacher(teacher);
                               setIsEditModalOpen(true);
@@ -223,13 +458,153 @@ export default function TeachersPage() {
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
           </div>
         </div>
-      </div>
+
+        {/* Inactive Teachers Section */}
+        {filteredInactiveTeachers.length > 0 && (
+          <div className="content-section mt-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
+              Inactive Teachers ({filteredInactiveTeachers.length})
+            </h2>
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th className="w-12">
+                      <input
+                        type="checkbox"
+                        checked={filteredInactiveTeachers.every(t => selectedTeachers.has(t._id)) && filteredInactiveTeachers.length > 0}
+                        onChange={() => {
+                          const newSelected = new Set(selectedTeachers);
+                          if (filteredInactiveTeachers.every(t => selectedTeachers.has(t._id))) {
+                            filteredInactiveTeachers.forEach(t => newSelected.delete(t._id));
+                          } else {
+                            filteredInactiveTeachers.forEach(t => newSelected.add(t._id));
+                          }
+                          setSelectedTeachers(newSelected);
+                        }}
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                    </th>
+                    <th>Profile</th>
+                    <th>Teacher ID</th>
+                    <th>Username</th>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Subject</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredInactiveTeachers.map((teacher) => {
+                    const isSelected = selectedTeachers.has(teacher._id);
+                    return (
+                    <tr key={teacher._id} className={`hover:bg-gray-50 opacity-75 ${isSelected ? 'bg-green-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const newSelected = new Set(selectedTeachers);
+                            if (e.target.checked) {
+                              newSelected.add(teacher._id);
+                            } else {
+                              newSelected.delete(teacher._id);
+                            }
+                            setSelectedTeachers(newSelected);
+                          }}
+                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center justify-center">
+                          {teacher.profilePicture ? (
+                            <img
+                              src={teacher.profilePicture}
+                              alt={`${teacher.name}'s profile`}
+                              className="h-10 w-10 rounded-full object-cover border-2 border-gray-200 grayscale"
+                            />
+                          ) : (
+                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
+                              <span className="text-sm font-bold text-gray-600">
+                                {teacher.name.split(' ').map((name: string) => name[0]).join('')}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.teacherId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.subject}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <button
+                          onClick={() => {
+                            const newStatus = teacher.status === 'Active' ? 'Inactive' : 'Active';
+                            handleStatusUpdate(teacher._id, newStatus);
+                          }}
+                          disabled={statusUpdating === teacher._id}
+                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${
+                            teacher.status === 'Active' 
+                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                              : teacher.status === 'Inactive'
+                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
+                              : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          }`}
+                          title={`Click to mark teacher as ${teacher.status === 'Active' ? 'Inactive' : 'Active'}`}
+                        >
+                          {statusUpdating === teacher._id ? (
+                            <span className="flex items-center gap-1">
+                              <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Updating...
+                            </span>
+                          ) : (
+                            teacher.status
+                          )}
+                        </button>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <div className="flex space-x-2">
+                          <button 
+                            className="bg-gray-900 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors"
+                            onClick={() => {
+                              setSelectedTeacher(teacher);
+                              setIsViewModalOpen(true);
+                            }}
+                          >
+                            View
+                          </button>
+                          <button 
+                            className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors"
+                            onClick={() => {
+                              setSelectedTeacher(teacher);
+                              setIsEditModalOpen(true);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
       <ViewTeacherModal 
         isOpen={isViewModalOpen}

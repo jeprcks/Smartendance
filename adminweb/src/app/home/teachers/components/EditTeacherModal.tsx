@@ -21,6 +21,7 @@ interface EditTeacherModalProps {
     password?: string;
     plainPassword?: string;
     profilePicture?: string;
+    status?: string;
     address?: {
       street?: string;
       city?: string;
@@ -45,6 +46,7 @@ interface TeacherFormData {
   zipCode?: string;
   password: string;
   plainPassword: string;
+  status: string;
 }
 
 interface ValidationErrors {
@@ -78,7 +80,8 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
     province: '',
     zipCode: '',
     password: '',
-    plainPassword: ''
+    plainPassword: '',
+    status: ''
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
@@ -102,7 +105,8 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
         province: teacher.address?.province || '',
         zipCode: teacher.address?.zipCode || '',
         password: '',
-        plainPassword: teacher.plainPassword || 'N/A'
+        plainPassword: teacher.plainPassword || 'N/A',
+        status: teacher.status || 'Active'
       });
     }
   }, [teacher]);
@@ -184,8 +188,8 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
         subject: formData.subject,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        gender: formData.gender,
         birthDate: formData.birthDate,
+        status: formData.status,
         address: {
           street: formData.address,
           city: formData.city,
@@ -193,6 +197,11 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
           zipCode: formData.zipCode
         }
       };
+
+      // Only include gender if it's provided (not blank)
+      if (formData.gender && formData.gender.trim() !== '') {
+        dataToSubmit.gender = formData.gender;
+      }
 
       // Only include photo if it was changed (starts with data: for base64)
       if (formData.photo && formData.photo.startsWith('data:')) {
@@ -346,7 +355,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="username"
                   required
                   placeholder="Enter username"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.username}
@@ -375,7 +384,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="email"
                   required
                   placeholder="Enter email address"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.email}
@@ -391,7 +400,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   type="password"
                   name="password"
                   placeholder="Leave blank to keep current password"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.password}
@@ -423,7 +432,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="name"
                   required
                   placeholder="Enter full name"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.name}
@@ -441,7 +450,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="subject"
                   required
                   placeholder="Enter subject"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.subject ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.subject}
@@ -455,7 +464,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 </label>
                 <select
                   name="gender"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.gender ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.gender}
@@ -467,6 +476,21 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   <option value="Other">Other</option>
                 </select>
                 <FieldError error={errors.gender} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Status
+                </label>
+                <select
+                  name="status"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  value={formData.status}
+                  onChange={handleChange}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+                <p className="mt-1 text-xs text-gray-500">Mark as Inactive if the teacher is no longer in school</p>
               </div>
             </div>
           </div>
@@ -484,7 +508,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="phoneNumber"
                   required
                   placeholder="Enter phone number"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.phoneNumber ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.phoneNumber}
@@ -506,7 +530,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <textarea
                   name="address"
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="Enter street address"
@@ -519,7 +543,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <input
                   type="text"
                   name="city"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.city}
                   onChange={handleChange}
                   placeholder="Enter city/municipality"
@@ -532,7 +556,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <input
                   type="text"
                   name="province"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.province}
                   onChange={handleChange}
                   placeholder="Enter province"
@@ -545,7 +569,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <input
                   type="text"
                   name="zipCode"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.zipCode ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.zipCode}
