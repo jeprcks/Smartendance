@@ -24,7 +24,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   late PageController _pageController;
-  final int _currentPage = 0;
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   bool _obscurePassword = true;
@@ -96,6 +95,10 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      print('=== ATTEMPTING TEACHER LOGIN ===');
+      print('Email/ID: ${_emailController.text}');
+      print('Password: ${'*' * _passwordController.text.length}');
+
       final response = await AuthService.teacherLogin(
         _emailController.text,
         _passwordController.text,
@@ -106,12 +109,23 @@ class _LoginPageState extends State<LoginPage> {
 
         print('=== LOGIN RESPONSE ===');
         print('Response: $response');
+        print('Response type: ${response.runtimeType}');
+
+        // Check if response has required fields
+        if (response['teacher'] == null) {
+          throw Exception('Invalid response: Teacher data not found');
+        }
+
+        if (response['token'] == null || response['token'].toString().isEmpty) {
+          throw Exception('Invalid response: Token not found');
+        }
 
         // Get user data from response
         final userData = response['teacher'];
         final token = response['token'];
 
         print('User Data: $userData');
+        print('Token: ${token.toString().substring(0, 20)}...');
 
         // Show success message
         ScaffoldMessenger.of(context).showSnackBar(
@@ -123,7 +137,10 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
 
-        final teacherId = userData['teacherId'] ?? userData['_id'] ?? '';
+        final teacherId = userData['teacherId'] ?? 
+                         userData['_id'] ?? 
+                         userData['id'] ?? 
+                         '';
         final teacherName =
             userData['name'] ??
             userData['fullName'] ??
@@ -133,12 +150,16 @@ class _LoginPageState extends State<LoginPage> {
         final subject = userData['subject'] ?? '';
         final role = userData['role'] ?? 'Teacher';
 
-        print('Calling teacher login with:');
+        print('Extracted teacher data:');
         print('  teacherId: $teacherId');
         print('  teacherName: $teacherName');
         print('  email: $email');
         print('  subject: $subject');
         print('  role: $role');
+
+        if (teacherId.isEmpty) {
+          throw Exception('Teacher ID is missing from response');
+        }
 
         // If onLoginSuccess callback is provided, use it (from AuthWrapper)
         if (widget.onLoginSuccess != null) {
@@ -163,21 +184,38 @@ class _LoginPageState extends State<LoginPage> {
         }
       }
     } catch (e) {
+      print('=== LOGIN ERROR ===');
+      print('Error: $e');
+      print('Error type: ${e.runtimeType}');
+      
       if (mounted) {
         setState(() => _isLoading = false);
+        
+        String errorMessage = 'Login failed';
+        if (e.toString().contains('SocketException') || 
+            e.toString().contains('Failed host lookup') ||
+            e.toString().contains('Connection refused')) {
+          errorMessage = 'Cannot connect to server. Please check:\n1. Server is running\n2. Network connection\n3. Server URL: http://192.168.0.151:4000';
+        } else if (e.toString().contains('401') || 
+                   e.toString().contains('Unauthorized')) {
+          errorMessage = 'Invalid email or password. Please try again.';
+        } else if (e.toString().contains('404')) {
+          errorMessage = 'Server endpoint not found. Please check server configuration.';
+        } else {
+          errorMessage = 'Login failed: ${e.toString()}';
+        }
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Login failed: $e'),
+            content: Text(errorMessage),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
     }
   }
 
-  String _getUserTypeLabel() {
-    return 'Teacher';
-  }
 
   Color _getUserTypeColor() {
     return const Color(0xFF10B981); // Emerald

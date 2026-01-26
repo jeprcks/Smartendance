@@ -1,19 +1,23 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class AuthService {
   // URL configuration based on platform
   static String get baseUrl {
-    if (Platform.isAndroid) {
+    if (kIsWeb) {
+      // Web platform: use the server IP address
+      return 'http://192.168.0.151:4000/api/auth';
+    } else if (Platform.isAndroid) {
       // Android: use your computer's IP address
       return 'http://192.168.0.151:4000/api/auth';
     } else if (Platform.isIOS) {
       // iOS: use your computer's IP address
       return 'http://192.168.0.151:4000/api/auth';
     } else {
-      // Fallback for other platforms
-      return 'http://localhost:4000/api/auth';
+      // Fallback for other platforms (desktop)
+      return 'http://192.168.0.151:4000/api/auth';
     }
   }
 
@@ -46,20 +50,56 @@ class AuthService {
     String password,
   ) async {
     try {
+      print('=== TEACHER LOGIN REQUEST ===');
+      print('URL: $baseUrl/teacher-login');
+      print('Email: $email');
+      
       final response = await http.post(
         Uri.parse('$baseUrl/teacher-login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'email': email, 'password': password}),
+      ).timeout(
+        const Duration(seconds: 10),
+        onTimeout: () {
+          throw Exception('Request timeout - Server not responding');
+        },
       );
 
+      print('Response status: ${response.statusCode}');
+      print('Response body: ${response.body}');
+
       if (response.statusCode == 200) {
-        return jsonDecode(response.body);
+        try {
+          final data = jsonDecode(response.body);
+          print('Login successful');
+          return data;
+        } catch (e) {
+          throw Exception('Invalid response format from server');
+        }
+      } else if (response.statusCode == 401) {
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['error'] ?? 'Invalid email or password');
+        } catch (e) {
+          throw Exception('Invalid email or password');
+        }
       } else {
-        final error = jsonDecode(response.body);
-        throw Exception(error['error'] ?? 'Teacher login failed');
+        try {
+          final error = jsonDecode(response.body);
+          throw Exception(error['error'] ?? 'Teacher login failed (Status: ${response.statusCode})');
+        } catch (e) {
+          throw Exception('Teacher login failed (Status: ${response.statusCode}): ${response.body}');
+        }
       }
     } catch (e) {
-      throw Exception('Error during teacher login: $e');
+      print('Login error: $e');
+      // Re-throw with more context
+      if (e.toString().contains('SocketException') || 
+          e.toString().contains('Failed host lookup') ||
+          e.toString().contains('Connection refused')) {
+        throw Exception('Cannot connect to server at $baseUrl. Please check:\n1. Server is running\n2. Network connection\n3. Server URL is correct');
+      }
+      throw e;
     }
   }
 
