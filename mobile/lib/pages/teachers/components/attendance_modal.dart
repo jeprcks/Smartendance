@@ -173,6 +173,18 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
               }
             }
           }
+          // Remove any pending updates for students with "Out" status
+          _statusUpdates.removeWhere((studentId, status) {
+            final scannedStatus = _scannedStatus[studentId] ?? 'Not Scanned';
+            if (scannedStatus == 'Out') {
+              print(
+                '⚠️ Removing pending update for student $studentId - status is "Out"',
+              );
+              return true;
+            }
+            return false;
+          });
+
           print(
             '✅ Loaded attendance data: ${_scannedAttendance.length} students',
           );
@@ -237,6 +249,15 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
       for (var entry in _statusUpdates.entries) {
         final studentId = entry.key;
         final newStatus = entry.value;
+
+        // Skip students with "Out" status - they cannot be edited
+        final scannedStatus = _scannedStatus[studentId] ?? 'Not Scanned';
+        if (scannedStatus == 'Out') {
+          print(
+            '⚠️ Skipping update for student $studentId - status is "Out" and cannot be edited',
+          );
+          continue;
+        }
 
         try {
           await TeacherService.updateStudentAttendance(
@@ -683,79 +704,117 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Override Status:',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey[700],
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Wrap(
-                      spacing: 6,
-                      runSpacing: 6,
-                      children: attendanceStatus.map((status) {
-                        final isSelected = selectedStatus == status;
-                        final statusColor = _getStatusColor(status);
-
-                        return GestureDetector(
-                          onTap: () {
-                            setState(() {
-                              if (status == scannedStatus) {
-                                _statusUpdates.remove(studentId);
-                              } else {
-                                _statusUpdates[studentId] = status;
-                              }
-                            });
-                          },
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
+                    // Check if status is "Out" - disable editing
+                    if (scannedStatus == 'Out') ...[
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[200],
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: Colors.grey[400]!,
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.lock_outline,
+                              size: 14,
+                              color: Colors.grey[600],
                             ),
-                            decoration: BoxDecoration(
-                              color: isSelected
-                                  ? statusColor.withOpacity(0.2)
-                                  : Colors.grey[100],
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected
-                                    ? statusColor
-                                    : Colors.grey[300]!,
-                                width: isSelected ? 2 : 1,
+                            const SizedBox(width: 6),
+                            Text(
+                              'Status cannot be edited (Out)',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
                               ),
                             ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                if (isSelected)
-                                  Padding(
-                                    padding: const EdgeInsets.only(right: 4),
-                                    child: Icon(
-                                      Icons.check,
-                                      size: 14,
-                                      color: statusColor,
+                          ],
+                        ),
+                      ),
+                    ] else ...[
+                      Text(
+                        'Override Status:',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: attendanceStatus.map((status) {
+                          final isSelected = selectedStatus == status;
+                          final statusColor = _getStatusColor(status);
+
+                          return GestureDetector(
+                            onTap: () {
+                              setState(() {
+                                if (status == scannedStatus) {
+                                  _statusUpdates.remove(studentId);
+                                } else {
+                                  _statusUpdates[studentId] = status;
+                                }
+                              });
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? statusColor.withOpacity(0.2)
+                                    : Colors.grey[100],
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                  color: isSelected
+                                      ? statusColor
+                                      : Colors.grey[300]!,
+                                  width: isSelected ? 2 : 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (isSelected)
+                                    Padding(
+                                      padding: const EdgeInsets.only(right: 4),
+                                      child: Icon(
+                                        Icons.check,
+                                        size: 14,
+                                        color: statusColor,
+                                      ),
+                                    ),
+                                  Text(
+                                    status,
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: isSelected
+                                          ? FontWeight.bold
+                                          : FontWeight.w600,
+                                      color: isSelected
+                                          ? statusColor
+                                          : Colors.grey[700],
                                     ),
                                   ),
-                                Text(
-                                  status,
-                                  style: TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: isSelected
-                                        ? FontWeight.bold
-                                        : FontWeight.w600,
-                                    color: isSelected
-                                        ? statusColor
-                                        : Colors.grey[700],
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }).toList(),
-                    ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
                   ],
                 )
               else

@@ -44,9 +44,6 @@ export default function AttendanceCharts({
             <span className="text-lg font-bold text-orange-700">{overallStats.cutting}</span>
           </div>
         </div>
-        <p className="text-xs text-gray-500 mt-4 text-center">
-          Install recharts to see interactive pie chart
-        </p>
       </div>
 
       {/* Grade Level Comparison - Will be Bar Chart */}
@@ -75,9 +72,6 @@ export default function AttendanceCharts({
             );
           })}
         </div>
-        <p className="text-xs text-gray-500 mt-4 text-center">
-          Install recharts to see interactive bar chart
-        </p>
       </div>
     </div>
   );

@@ -363,17 +363,62 @@ class StudentService {
         return {
           'alreadyCheckedOut': data['alreadyCheckedOut'] ?? false,
           'studentName': data['studentName'],
+          'checkInCount': data['checkInCount'] ?? 0,
           'error': null,
         };
       } else {
         // If endpoint doesn't exist or errors, allow the checkout
         // (graceful fallback)
-        return {'alreadyCheckedOut': false, 'error': null};
+        return {'alreadyCheckedOut': false, 'checkInCount': 0, 'error': null};
       }
     } catch (e) {
       print('❌ Checkout validation error: $e');
       // On error, allow the checkout to proceed
-      return {'alreadyCheckedOut': false, 'error': null};
+      return {'alreadyCheckedOut': false, 'checkInCount': 0, 'error': null};
+    }
+  }
+
+  // Get check-in count for today
+  Future<Map<String, dynamic>> getCheckInCount(String qrData) async {
+    if (workingUrl == null) {
+      workingUrl = await findWorkingUrl();
+      if (workingUrl == null) {
+        return {
+          'checkInCount': 0,
+          'error': 'No working server connection',
+        };
+      }
+    }
+
+    try {
+      print('🔍 Getting check-in count for QR: $qrData');
+
+      final response = await http
+          .post(
+            Uri.parse('$workingUrl/api/students/checkin-count'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'qrData': qrData}),
+          )
+          .timeout(const Duration(seconds: 10));
+
+      print('Check-In Count Response Status: ${response.statusCode}');
+      print('Check-In Count Response: ${response.body}');
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return {
+          'checkInCount': data['checkInCount'] ?? 0,
+          'studentName': data['studentName'],
+          'error': null,
+        };
+      } else {
+        // If endpoint doesn't exist, return 0 (graceful fallback)
+        return {'checkInCount': 0, 'error': null};
+      }
+    } catch (e) {
+      print('❌ Check-in count error: $e');
+      // On error, return 0
+      return {'checkInCount': 0, 'error': null};
     }
   }
 }

@@ -795,11 +795,14 @@ const validateCheckOut = async (req, res) => {
         });
 
         const hasNoCheckIn = !openCheckIn;
-        const hasOpenCheckOut = alreadyCheckedOut !== null; // Already has checkout record
+        // Only block checkout if there's NO open check-in AND already checked out
+        // If there's an open check-in, allow checkout (even after 2nd check-in)
+        const hasOpenCheckOut = hasNoCheckIn && alreadyCheckedOut !== null;
 
         console.log(`🔍 Check-out validation for ${studentId}:`);
         console.log(`  - Has open check-in: ${!hasNoCheckIn}`);
-        console.log(`  - Already has 'Out' record: ${hasOpenCheckOut}`);
+        console.log(`  - Previous 'Out' record exists: ${alreadyCheckedOut !== null}`);
+        console.log(`  - Will block checkout: ${hasOpenCheckOut}`);
         if (openCheckIn) {
             console.log(`  - Open In Record ID: ${openCheckIn._id}`);
             console.log(`  - Check-in Time: ${openCheckIn.checkInTime}`);
@@ -807,7 +810,7 @@ const validateCheckOut = async (req, res) => {
         if (alreadyCheckedOut) {
             console.log(`  - Previous Out Record ID: ${alreadyCheckedOut._id}`);
         }
-        console.log(`  - Status: ${hasOpenCheckOut ? 'BLOCKED (double checkout)' : hasNoCheckIn ? 'BLOCKED (no check-in)' : 'ALLOWED'}`);
+        console.log(`  - Status: ${hasOpenCheckOut ? 'BLOCKED (no check-in but already checked out)' : hasNoCheckIn ? 'BLOCKED (no check-in)' : 'ALLOWED (has open check-in)'}`);
 
         res.status(200).json({
             success: true,

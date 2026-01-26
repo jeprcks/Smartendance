@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mobile/services/teacherService.dart';
 import 'components/schedule_details.dart';
 import 'components/attendance_modal.dart';
+import 'components/background_logo.dart';
 
 // Color scheme for different shifts
 const Map<String, Color> shiftColors = {
@@ -36,6 +37,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
   String? _selectedDay;
   String? _selectedTime;
   String? _selectedShift;
+  String? _selectedSubject;
 
   // Days of week in order
   static const List<String> daysOfWeek = [
@@ -137,10 +139,12 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
       final day = schedule['day'] ?? '';
       final time = schedule['timeSlot'] ?? '';
       final shift = schedule['shift'] ?? '';
+      final subject = schedule['subject'] ?? '';
 
       if (_selectedDay != null && day != _selectedDay) return false;
       if (_selectedTime != null && time != _selectedTime) return false;
       if (_selectedShift != null && shift != _selectedShift) return false;
+      if (_selectedSubject != null && subject != _selectedSubject) return false;
 
       return true;
     }).toList();
@@ -176,216 +180,234 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
     return shifts.toList();
   }
 
+  // Get unique subjects
+  List<String> _getUniqueSubjects() {
+    final subjects = <String>{};
+    for (var schedule in _schedules) {
+      final subject = schedule['subject'] ?? '';
+      if (subject.isNotEmpty) subjects.add(subject);
+    }
+    return subjects.toList()..sort();
+  }
+
   Widget _buildFilterSection() {
     final uniqueDays = _getUniqueDays();
     final uniqueTimes = _getUniqueTimes();
     final uniqueShifts = _getUniqueShifts();
+    final uniqueSubjects = _getUniqueSubjects();
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!, width: 1),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Filter Title and Clear Button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.filter_list, size: 18, color: Colors.grey[700]),
+                  const SizedBox(width: 6),
+                  const Text(
+                    'Filters',
+                    style: TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
+                  ),
+                ],
+              ),
+              // Clear Filters Button
+              if (_selectedDay != null ||
+                  _selectedTime != null ||
+                  _selectedShift != null ||
+                  _selectedSubject != null)
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _selectedDay = null;
+                      _selectedTime = null;
+                      _selectedShift = null;
+                      _selectedSubject = null;
+                    });
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: Colors.red[50],
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.red[200]!, width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.clear, size: 14, color: Colors.red[700]),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Clear',
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.red[700],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(height: 1),
+          const SizedBox(height: 12),
+
+          // Subject Filter (First - Most Important)
+          _buildFilterRow(
+            label: 'Subject',
+            icon: Icons.book,
+            iconColor: Colors.purple,
+            items: uniqueSubjects,
+            selectedItem: _selectedSubject,
+            onSelected: (selected, item) {
+              setState(() {
+                _selectedSubject = selected ? item : null;
+              });
+            },
+            getLabel: (item) => item,
+            getColor: (item) => Colors.purple,
+          ),
+          const SizedBox(height: 12),
+
+          // Day Filter
+          _buildFilterRow(
+            label: 'Day',
+            icon: Icons.calendar_today,
+            iconColor: const Color(0xFF10B981),
+            items: uniqueDays,
+            selectedItem: _selectedDay,
+            onSelected: (selected, item) {
+              setState(() {
+                _selectedDay = selected ? item : null;
+              });
+            },
+            getLabel: (item) => item.substring(0, 3),
+            getColor: (item) => const Color(0xFF10B981),
+          ),
+          const SizedBox(height: 12),
+
+          // Time Filter
+          _buildFilterRow(
+            label: 'Time',
+            icon: Icons.access_time,
+            iconColor: const Color(0xFF3B82F6),
+            items: uniqueTimes,
+            selectedItem: _selectedTime,
+            onSelected: (selected, item) {
+              setState(() {
+                _selectedTime = selected ? item : null;
+              });
+            },
+            getLabel: (item) => item,
+            getColor: (item) => const Color(0xFF3B82F6),
+          ),
+          const SizedBox(height: 12),
+
+          // Shift Filter
+          _buildFilterRow(
+            label: 'Shift',
+            icon: Icons.layers,
+            iconColor: Colors.orange,
+            items: uniqueShifts,
+            selectedItem: _selectedShift,
+            onSelected: (selected, item) {
+              setState(() {
+                _selectedShift = selected ? item : null;
+              });
+            },
+            getLabel: (item) => item,
+            getColor: (item) => shiftColors[item] ?? const Color(0xFF10B981),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterRow({
+    required String label,
+    required IconData icon,
+    required Color iconColor,
+    required List<String> items,
+    required String? selectedItem,
+    required Function(bool, String) onSelected,
+    required String Function(String) getLabel,
+    required Color Function(String) getColor,
+  }) {
+    if (items.isEmpty) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Filter Title
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text(
-              'Filters',
+            Icon(icon, size: 14, color: iconColor),
+            const SizedBox(width: 6),
+            Text(
+              label,
               style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
               ),
             ),
-            // Clear Filters Button
-            if (_selectedDay != null ||
-                _selectedTime != null ||
-                _selectedShift != null)
-              InkWell(
-                onTap: () {
-                  setState(() {
-                    _selectedDay = null;
-                    _selectedTime = null;
-                    _selectedShift = null;
-                  });
-                },
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.clear, size: 16, color: Colors.red[600]),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Clear',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.red[600],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: items.map((item) {
+            final isSelected = selectedItem == item;
+            final itemColor = getColor(item);
+            final itemLabel = getLabel(item);
 
-        // Day Filter
-        Text(
-          'By Day',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: uniqueDays.length,
-            itemBuilder: (context, index) {
-              final day = uniqueDays[index];
-              final isSelected = _selectedDay == day;
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(
-                    day.substring(0, 3),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFF10B981),
-                    ),
-                  ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedDay = selected ? day : null;
-                    });
-                  },
-                  backgroundColor: Colors.grey[100],
-                  selectedColor: const Color(0xFF10B981),
-                  side: BorderSide(
-                    color: isSelected
-                        ? const Color(0xFF10B981)
-                        : Colors.grey[300]!,
-                    width: 1.5,
-                  ),
+            return FilterChip(
+              label: Text(
+                itemLabel,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? Colors.white : itemColor,
                 ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Time Filter
-        Text(
-          'By Time Slot',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: uniqueTimes.length,
-            itemBuilder: (context, index) {
-              final time = uniqueTimes[index];
-              final isSelected = _selectedTime == time;
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(
-                    time,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected
-                          ? Colors.white
-                          : const Color(0xFF3B82F6),
-                    ),
-                  ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedTime = selected ? time : null;
-                    });
-                  },
-                  backgroundColor: Colors.grey[100],
-                  selectedColor: const Color(0xFF3B82F6),
-                  side: BorderSide(
-                    color: isSelected
-                        ? const Color(0xFF3B82F6)
-                        : Colors.grey[300]!,
-                    width: 1.5,
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        // Shift Filter
-        Text(
-          'By Shift',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey[700],
-          ),
-        ),
-        const SizedBox(height: 8),
-        SizedBox(
-          height: 40,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            itemCount: uniqueShifts.length,
-            itemBuilder: (context, index) {
-              final shift = uniqueShifts[index];
-              final isSelected = _selectedShift == shift;
-              final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(
-                    shift,
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: isSelected ? Colors.white : shiftColor,
-                    ),
-                  ),
-                  selected: isSelected,
-                  onSelected: (selected) {
-                    setState(() {
-                      _selectedShift = selected ? shift : null;
-                    });
-                  },
-                  backgroundColor: Colors.grey[100],
-                  selectedColor: shiftColor,
-                  side: BorderSide(
-                    color: isSelected ? shiftColor : Colors.grey[300]!,
-                    width: 1.5,
-                  ),
-                ),
-              );
-            },
-          ),
+              ),
+              selected: isSelected,
+              onSelected: (selected) => onSelected(selected, item),
+              backgroundColor: Colors.grey[100],
+              selectedColor: itemColor,
+              side: BorderSide(
+                color: isSelected ? itemColor : Colors.grey[300]!,
+                width: 1.5,
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            );
+          }).toList(),
         ),
       ],
     );
@@ -478,93 +500,102 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
               ),
             )
           : SafeArea(
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Filter Section
-                      _buildFilterSection(),
-                      const SizedBox(height: 24),
+              child: Stack(
+                children: [
+                  // Background Logo
+                  const BackgroundLogo(),
+                  // Main Content
+                  SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Filter Section
+                          _buildFilterSection(),
+                          const SizedBox(height: 24),
 
-                      // Schedules Section
-                      const Text(
-                        'Class Schedules',
-                        style: TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-
-                      // Display filtered count
-                      if (_getFilteredSchedules().isNotEmpty)
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            'Showing ${_getFilteredSchedules().length} of ${_schedules.length} schedules',
+                          // Schedules Section
+                          const Text(
+                            'Class Schedules',
                             style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey[600],
-                              fontStyle: FontStyle.italic,
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.black87,
                             ),
                           ),
-                        ),
+                          const SizedBox(height: 12),
 
-                      if (_getFilteredSchedules().isEmpty)
-                        Center(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 32),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  Icons.filter_alt_off_outlined,
-                                  size: 48,
-                                  color: Colors.grey[300],
+                          // Display filtered count
+                          if (_getFilteredSchedules().isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: Text(
+                                'Showing ${_getFilteredSchedules().length} of ${_schedules.length} schedules',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                  fontStyle: FontStyle.italic,
                                 ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'No schedules match your filters',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    setState(() {
-                                      _selectedDay = null;
-                                      _selectedTime = null;
-                                    });
-                                  },
-                                  icon: const Icon(Icons.clear),
-                                  label: const Text('Clear Filters'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF10B981),
-                                    foregroundColor: Colors.white,
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                          ),
-                        )
-                      else
-                        ListView.builder(
-                          shrinkWrap: true,
-                          physics: const NeverScrollableScrollPhysics(),
-                          itemCount: _getFilteredSchedules().length,
-                          itemBuilder: (context, index) {
-                            final schedule = _getFilteredSchedules()[index];
-                            return _buildScheduleCard(schedule);
-                          },
-                        ),
-                      const SizedBox(height: 40),
-                    ],
+
+                          if (_getFilteredSchedules().isEmpty)
+                            Center(
+                              child: Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 32),
+                                child: Column(
+                                  children: [
+                                    Icon(
+                                      Icons.filter_alt_off_outlined,
+                                      size: 48,
+                                      color: Colors.grey[300],
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      'No schedules match your filters',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    ElevatedButton.icon(
+                                      onPressed: () {
+                                        setState(() {
+                                          _selectedDay = null;
+                                          _selectedTime = null;
+                                          _selectedShift = null;
+                                          _selectedSubject = null;
+                                        });
+                                      },
+                                      icon: const Icon(Icons.clear),
+                                      label: const Text('Clear Filters'),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: const Color(0xFF10B981),
+                                        foregroundColor: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            ListView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              itemCount: _getFilteredSchedules().length,
+                              itemBuilder: (context, index) {
+                                final schedule = _getFilteredSchedules()[index];
+                                return _buildScheduleCard(schedule);
+                              },
+                            ),
+                          const SizedBox(height: 40),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
+                ],
               ),
             ),
     );
