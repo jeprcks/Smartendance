@@ -80,22 +80,32 @@ export interface StudentAttendanceHistory {
 
 class HistoryService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}/api/history${endpoint}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+    try {
+      const url = `${API_BASE_URL}/api/history${endpoint}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({})) as { error?: string };
-      throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      // Handle network errors (API server not running, CORS, etc.)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('Network error: API server may not be running or CORS issue');
+        throw new Error('Network error: Unable to connect to server');
+      }
+      // Re-throw other errors
+      throw error;
     }
-
-    return response.json();
   }
 
   // Get history page data with filtering and pagination
@@ -107,19 +117,42 @@ class HistoryService {
     page?: number;
     limit?: number;
   } = {}): Promise<HistoryPageResponse> {
-    const searchParams = new URLSearchParams();
-    
-    if (params.search) searchParams.append('search', params.search);
-    if (params.status) searchParams.append('status', params.status);
-    if (params.startDate) searchParams.append('startDate', params.startDate);
-    if (params.endDate) searchParams.append('endDate', params.endDate);
-    if (params.page) searchParams.append('page', params.page.toString());
-    if (params.limit) searchParams.append('limit', params.limit.toString());
+    try {
+      const searchParams = new URLSearchParams();
+      
+      if (params.search) searchParams.append('search', params.search);
+      if (params.status) searchParams.append('status', params.status);
+      if (params.startDate) searchParams.append('startDate', params.startDate);
+      if (params.endDate) searchParams.append('endDate', params.endDate);
+      if (params.page) searchParams.append('page', params.page.toString());
+      if (params.limit) searchParams.append('limit', params.limit.toString());
 
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/history-page?${queryString}` : '/history-page';
-    
-    return this.makeRequest<HistoryPageResponse>(endpoint);
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/history-page?${queryString}` : '/history-page';
+      
+      return await this.makeRequest<HistoryPageResponse>(endpoint);
+    } catch (error) {
+      console.error('Error fetching history page data:', error);
+      // Return empty result instead of throwing
+      return {
+        success: false,
+        records: [],
+        stats: {
+          present: 0,
+          absent: 0,
+          late: 0,
+          cutting: 0,
+          total: 0,
+        },
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalRecords: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
   }
 
   // Get all attendance records
@@ -136,18 +169,34 @@ class HistoryService {
     shift?: string;
     search?: string;
   } = {}): Promise<{ success: boolean; records: AttendanceRecord[]; pagination: any }> {
-    const searchParams = new URLSearchParams();
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, value.toString());
-      }
-    });
+    try {
+      const searchParams = new URLSearchParams();
+      
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, value.toString());
+        }
+      });
 
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `?${queryString}` : '';
-    
-    return this.makeRequest<{ success: boolean; records: AttendanceRecord[]; pagination: any }>(endpoint);
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `?${queryString}` : '';
+      
+      return await this.makeRequest<{ success: boolean; records: AttendanceRecord[]; pagination: any }>(endpoint);
+    } catch (error) {
+      console.error('Error fetching all records:', error);
+      // Return empty result instead of throwing to allow graceful degradation
+      return {
+        success: false,
+        records: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 0,
+          totalRecords: 0,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
   }
 
   // Get single attendance record
@@ -163,18 +212,33 @@ class HistoryService {
     section?: string;
     shift?: string;
   } = {}): Promise<{ success: boolean; stats: AttendanceStats }> {
-    const searchParams = new URLSearchParams();
-    
-    Object.entries(params).forEach(([key, value]) => {
-      if (value !== undefined && value !== null && value !== '') {
-        searchParams.append(key, value.toString());
-      }
-    });
+    try {
+      const searchParams = new URLSearchParams();
+      
+      Object.entries(params).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          searchParams.append(key, value.toString());
+        }
+      });
 
-    const queryString = searchParams.toString();
-    const endpoint = queryString ? `/stats?${queryString}` : '/stats';
-    
-    return this.makeRequest<{ success: boolean; stats: AttendanceStats }>(endpoint);
+      const queryString = searchParams.toString();
+      const endpoint = queryString ? `/stats?${queryString}` : '/stats';
+      
+      return await this.makeRequest<{ success: boolean; stats: AttendanceStats }>(endpoint);
+    } catch (error) {
+      console.error('Error fetching attendance stats:', error);
+      // Return default stats instead of throwing
+      return {
+        success: false,
+        stats: {
+          present: 0,
+          absent: 0,
+          late: 0,
+          cutting: 0,
+          total: 0,
+        },
+      };
+    }
   }
 
   // Get student attendance history

@@ -443,7 +443,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   name="studentId"
                   required
                   placeholder="Enter student ID"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     validationErrors.some(err => err.field === 'studentId') 
                       ? 'border-red-300 bg-red-50' 
                       : 'border-gray-300'
@@ -467,7 +467,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   name="fullName"
                   required
                   placeholder="Enter full name"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.fullName}
                   onChange={handleChange}
                 />
@@ -482,7 +482,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   name="phoneNumber"
                   required
                   placeholder="Enter phone number"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.phoneNumber}
                   onChange={handleChange}
                 />
@@ -496,7 +496,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   type="date"
                   name="birthDate"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.birthDate}
                   onChange={handleChange}
                 />
@@ -516,7 +516,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   min="12"
                   max="25"
                   placeholder="Enter age"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.age}
                   onChange={handleChange}
                 />
@@ -529,7 +529,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                 <select
                   name="gradeLevel"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.gradeLevel}
                   onChange={handleChange}
                 >
@@ -551,7 +551,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   type="text"
                   name="section"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.section}
                   onChange={handleChange}
                   placeholder="Enter section (e.g., A, B, C)"
@@ -565,7 +565,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                 <select
                   name="gender"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.gender}
                   onChange={handleChange}
                 >
@@ -584,7 +584,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                 <select
                   name="shift"
                   required
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.shift}
                   onChange={handleChange}
                 >
@@ -611,7 +611,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <textarea
                     name="address"
                     rows={3}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     value={formData.address}
                     onChange={handleChange}
                     placeholder="Enter street address"
@@ -625,7 +625,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                     <input
                       type="text"
                       name="city"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       value={formData.city}
                       onChange={handleChange}
                       placeholder="Enter city/municipality"
@@ -638,7 +638,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                     <input
                       type="text"
                       name="province"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       value={formData.province}
                       onChange={handleChange}
                       placeholder="Enter province"
@@ -651,7 +651,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                     <input
                       type="text"
                       name="zipCode"
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                       value={formData.zipCode}
                       onChange={handleChange}
                       placeholder="Enter ZIP code"
@@ -672,7 +672,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <input
                     type="text"
                     name="parentName"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     value={formData.parentName}
                     onChange={handleChange}
                     placeholder="Enter parent/guardian name"
@@ -685,7 +685,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <input
                     type="tel"
                     name="parentContact"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     value={formData.parentContact}
                     onChange={handleChange}
                     placeholder="Enter contact number"
@@ -705,7 +705,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <input
                     type="text"
                     name="emergencyContactName"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     value={formData.emergencyContactName}
                     onChange={handleChange}
                     placeholder="Enter emergency contact name"
@@ -718,7 +718,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <input
                     type="tel"
                     name="emergencyContact"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     value={formData.emergencyContact}
                     onChange={handleChange}
                     placeholder="Enter emergency number"
@@ -731,7 +731,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <input
                     type="text"
                     name="relationship"
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                     value={formData.relationship}
                     onChange={handleChange}
                     placeholder="Enter relationship"
@@ -784,7 +784,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   }}
                   disabled={!formData.studentId}
                   className={`px-4 py-2 rounded-md text-sm ${formData.studentId
-                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                    ? 'bg-green-600 text-white hover:bg-green-700'
                     : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     } transition-colors`}
                 >
@@ -855,7 +855,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="px-6 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
+                className="px-6 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50 flex items-center"
               >
                 {isSubmitting ? (
                   <>
@@ -889,7 +889,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   <button
                     type="button"
                     onClick={handleConfirmedSubmit}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
                   >
                     Confirm
                   </button>

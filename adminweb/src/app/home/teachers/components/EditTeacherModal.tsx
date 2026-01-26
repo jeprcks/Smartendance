@@ -355,7 +355,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="username"
                   required
                   placeholder="Enter username"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.username}
@@ -384,7 +384,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="email"
                   required
                   placeholder="Enter email address"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.email}
@@ -400,7 +400,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   type="password"
                   name="password"
                   placeholder="Leave blank to keep current password"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.password}
@@ -432,7 +432,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="name"
                   required
                   placeholder="Enter full name"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.name}
@@ -450,7 +450,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="subject"
                   required
                   placeholder="Enter subject"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.subject ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.subject}
@@ -464,7 +464,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 </label>
                 <select
                   name="gender"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.gender ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.gender}
@@ -483,7 +483,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 </label>
                 <select
                   name="status"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.status}
                   onChange={handleChange}
                 >
@@ -508,7 +508,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   name="phoneNumber"
                   required
                   placeholder="Enter phone number"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.phoneNumber ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.phoneNumber}
@@ -530,7 +530,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <textarea
                   name="address"
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="Enter street address"
@@ -543,7 +543,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <input
                   type="text"
                   name="city"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.city}
                   onChange={handleChange}
                   placeholder="Enter city/municipality"
@@ -556,7 +556,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <input
                   type="text"
                   name="province"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
                   value={formData.province}
                   onChange={handleChange}
                   placeholder="Enter province"
@@ -569,7 +569,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <input
                   type="text"
                   name="zipCode"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
                     errors.zipCode ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
                   }`}
                   value={formData.zipCode}

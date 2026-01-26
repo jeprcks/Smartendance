@@ -1,103 +1,371 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+import { studentService } from '@/app/services/studentService';
+import { historyService, AttendanceRecord } from '@/app/services/historyService';
+import { teacherService } from '@/app/services/teacherService';
+import { scheduleService } from '@/app/services/scheduleService';
+import { format, formatDistanceToNow } from 'date-fns';
+import LoadingSkeleton from '@/app/components/loading/LoadingSkeleton';
+import { Users, CheckCircle, XCircle, BookOpen, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+
+interface DashboardStats {
+  totalStudents: number;
+  presentToday: number;
+  absentToday: number;
+  lateToday: number;
+  totalClasses: number;
+  totalTeachers: number;
+  attendanceRate: number;
+  onTimeRate: number;
+}
+
 export default function DashboardPage() {
-  const stats = [
-    { title: 'Total Students', value: 1234, icon: '👥' },
-    { title: 'Present Today', value: 1180, icon: '✅' },
-    { title: 'Absent Today', value: 54, icon: '❌' },
-    { title: 'Total Classes', value: 32, icon: '📚' },
+  const [stats, setStats] = useState<DashboardStats>({
+    totalStudents: 0,
+    presentToday: 0,
+    absentToday: 0,
+    lateToday: 0,
+    totalClasses: 0,
+    totalTeachers: 0,
+    attendanceRate: 0,
+    onTimeRate: 0,
+  });
+  const [recentActivity, setRecentActivity] = useState<AttendanceRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+
+  const fetchDashboardData = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      // Get today's date in YYYY-MM-DD format
+      const today = format(new Date(), 'yyyy-MM-dd');
+
+      // Fetch all data in parallel
+      const [students, attendanceStats, teacherStats, schedules] = await Promise.all([
+        studentService.getAllStudents().catch(() => []),
+        historyService.getStats({ startDate: today, endDate: today }).catch(() => ({ success: false, stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 } })),
+        teacherService.getTeacherStats().catch(() => ({ success: false, stats: { active: 0, inactive: 0, suspended: 0, total: 0 } })),
+        scheduleService.getAllSchedules({ isActive: true }).catch(() => []),
+      ]);
+
+      // Fetch recent activity
+      const recentRecords = await historyService.getHistoryPageData({
+        limit: 10,
+        page: 1,
+      }).catch(() => ({ success: false, records: [], stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 }, pagination: {} }));
+
+      // Calculate statistics
+      const totalStudents = Array.isArray(students) ? students.length : 0;
+      const attendanceData = attendanceStats.success ? attendanceStats.stats : { present: 0, absent: 0, late: 0, cutting: 0, total: 0 };
+      const presentToday = attendanceData.present || 0;
+      const absentToday = attendanceData.absent || 0;
+      const lateToday = attendanceData.late || 0;
+      const totalClasses = Array.isArray(schedules) ? schedules.length : 0;
+      const totalTeachers = teacherStats.success ? (teacherStats.stats?.total || 0) : 0;
+
+      // Calculate rates
+      const attendanceRate = totalStudents > 0 
+        ? Math.round((presentToday / totalStudents) * 100) 
+        : 0;
+      const onTimeRate = (presentToday + absentToday) > 0
+        ? Math.round((presentToday / (presentToday + absentToday + lateToday)) * 100)
+        : 0;
+
+      setStats({
+        totalStudents,
+        presentToday,
+        absentToday,
+        lateToday,
+        totalClasses,
+        totalTeachers,
+        attendanceRate,
+        onTimeRate,
+      });
+
+      setRecentActivity(recentRecords.records || []);
+      setLastUpdated(new Date());
+    } catch (err) {
+      console.error('Error fetching dashboard data:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+    // Refresh data every 30 seconds
+    const interval = setInterval(fetchDashboardData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const statCards = [
+    { 
+      title: 'Total Students', 
+      value: stats.totalStudents, 
+      icon: Users, 
+      color: 'bg-green-500',
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-700'
+    },
+    { 
+      title: 'Present Today', 
+      value: stats.presentToday, 
+      icon: CheckCircle, 
+      color: 'bg-green-500',
+      bgColor: 'bg-green-50',
+      textColor: 'text-green-700'
+    },
+    { 
+      title: 'Absent Today', 
+      value: stats.absentToday, 
+      icon: XCircle, 
+      color: 'bg-red-500',
+      bgColor: 'bg-red-50',
+      textColor: 'text-red-700'
+    },
+    { 
+      title: 'Late Today', 
+      value: stats.lateToday, 
+      icon: Clock, 
+      color: 'bg-yellow-500',
+      bgColor: 'bg-yellow-50',
+      textColor: 'text-yellow-700'
+    },
+    { 
+      title: 'Total Classes', 
+      value: stats.totalClasses, 
+      icon: BookOpen, 
+      color: 'bg-purple-500',
+      bgColor: 'bg-purple-50',
+      textColor: 'text-purple-700'
+    },
+    { 
+      title: 'Attendance Rate', 
+      value: `${stats.attendanceRate}%`, 
+      icon: TrendingUp, 
+      color: 'bg-indigo-500',
+      bgColor: 'bg-indigo-50',
+      textColor: 'text-indigo-700'
+    },
   ];
+
+  const getStatusBadge = (status: string) => {
+    const statusMap: Record<string, { bg: string; text: string }> = {
+      'Present': { bg: 'bg-green-100', text: 'text-green-700' },
+      'Late': { bg: 'bg-yellow-100', text: 'text-yellow-700' },
+      'Absent': { bg: 'bg-red-100', text: 'text-red-700' },
+      'Cutting': { bg: 'bg-orange-100', text: 'text-orange-700' },
+      'Out': { bg: 'bg-gray-100', text: 'text-gray-700' },
+    };
+    const colors = statusMap[status] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+    return (
+      <span className={`px-2 py-1 ${colors.bg} ${colors.text} rounded text-sm font-semibold`}>
+        {status}
+      </span>
+    );
+  };
+
+  const getTypeBadge = (record: AttendanceRecord) => {
+    if (record.statusHistory && record.statusHistory.length > 0) {
+      return (
+        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-green-50 text-green-700 ring-green-200/50">
+          Teacher ({record.statusHistory[record.statusHistory.length - 1].changedBy || 'Unknown'})
+        </span>
+      );
+    } else if (record.attendanceType === 'In') {
+      return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-green-50 text-green-700 ring-green-200/50">In</span>;
+    } else if (record.attendanceType === 'Out') {
+      return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-purple-50 text-purple-700 ring-purple-200/50">Out</span>;
+    }
+    return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-gray-50 text-gray-700 ring-gray-200/50">N/A</span>;
+  };
+
+  if (isLoading && stats.totalStudents === 0) {
+    return (
+      <div className="page-container">
+        <div className="page-header">
+          <h1 className="page-title">Dashboard</h1>
+          <p className="page-subtitle">Overview of school attendance statistics</p>
+        </div>
+        <LoadingSkeleton type="table" count={6} />
+      </div>
+    );
+  }
 
   return (
     <div className="page-container">
       <div className="page-header">
-        <h1 className="page-title">Dashboard</h1>
-        <p className="page-subtitle">Overview of school attendance statistics</p>
-      </div>
-
-      {/* Bar Chart Section */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">School Statistics</h2>
-        <div className="overflow-x-auto">
-          <div style={{ minWidth: '600px', height: '400px' }} className="flex items-end justify-around gap-6 p-4">
-            {stats.map((stat, index) => (
-              <div key={index} className="flex flex-col items-center flex-1">
-                {/* Bar */}
-                <div className="flex flex-col items-center w-full">
-                  <div className="flex items-end justify-center h-80 mb-4">
-                    <div
-                      style={{
-                        height: `${(stat.value / 1234) * 100}%`,
-                        width: '60px',
-                      }}
-                      className={`rounded-t-lg transition-all duration-300 hover:opacity-80 cursor-pointer ${
-                        index === 0
-                          ? 'bg-blue-500'
-                          : index === 1
-                          ? 'bg-green-500'
-                          : index === 2
-                          ? 'bg-red-500'
-                          : 'bg-purple-500'
-                      }`}
-                      title={`${stat.title}: ${stat.value}`}
-                    />
-                  </div>
-                  {/* Label */}
-                  <div className="text-center">
-                    <div className="text-2xl mb-2">{stat.icon}</div>
-                    <p className="text-sm font-semibold text-gray-700 mb-2">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value.toLocaleString()}</p>
-                  </div>
-                </div>
-              </div>
-            ))}
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="page-title">Dashboard</h1>
+            <p className="page-subtitle">Overview of school attendance statistics</p>
+          </div>
+          <div className="text-sm text-gray-500">
+            Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+            <button
+              onClick={fetchDashboardData}
+              className="ml-2 text-primary hover:text-primary-dark underline"
+              disabled={isLoading}
+            >
+              {isLoading ? 'Refreshing...' : 'Refresh'}
+            </button>
           </div>
         </div>
       </div>
 
-      <div className="content-section">
-        <h2 className="text-xl font-semibold mb-4 text-primary-dark">Recent Activity</h2>
-        <div className="table-container">
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Time</th>
-                <th>Student</th>
-                <th>Class</th>
-                <th>Type</th>
-                <th>Duration</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td>09:00 AM</td>
-                <td>John Doe</td>
-                <td>Mathematics</td>
-                <td><span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-semibold">IN</span></td>
-                <td>-</td>
-                <td><span className="text-green-600">Present</span></td>
-              </tr>
-              <tr>
-                <td>04:45 PM</td>
-                <td>John Doe</td>
-                <td>Mathematics</td>
-                <td><span className="px-2 py-1 bg-red-100 text-red-700 rounded text-sm font-semibold">OUT</span></td>
-                <td>480 min</td>
-                <td><span className="text-green-600">Present</span></td>
-              </tr>
-              <tr>
-                <td>08:45 AM</td>
-                <td>Jane Smith</td>
-                <td>Physics</td>
-                <td><span className="px-2 py-1 bg-green-100 text-green-700 rounded text-sm font-semibold">IN</span></td>
-                <td>-</td>
-                <td><span className="text-yellow-600">Late</span></td>
-              </tr>
-              {/* Add more rows as needed */}
-            </tbody>
-          </table>
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
+          <AlertCircle className="text-red-600" size={20} />
+          <p className="text-red-700">{error}</p>
+          <button
+            onClick={fetchDashboardData}
+            className="ml-auto text-red-700 hover:text-red-900 underline text-sm"
+          >
+            Retry
+          </button>
         </div>
+      )}
+
+      {/* Stat Cards Grid */}
+      <div className="dashboard-grid mb-8">
+        {statCards.map((stat, index) => {
+          const IconComponent = stat.icon;
+          const numericValues = statCards
+            .map(s => typeof s.value === 'number' ? s.value : 0)
+            .filter(v => v > 0);
+          const maxValue = numericValues.length > 0 ? Math.max(...numericValues) : 1;
+          const numericValue = typeof stat.value === 'number' ? stat.value : 0;
+          const barHeight = maxValue > 0 
+            ? `${(numericValue / maxValue) * 100}%` 
+            : '0%';
+
+          return (
+            <div key={index} className="stat-card">
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 ${stat.bgColor} rounded-lg`}>
+                  <IconComponent className={`${stat.textColor}`} size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                  <p className={`text-3xl font-bold ${stat.textColor}`}>
+                    {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
+                  </p>
+                </div>
+              </div>
+              {/* Mini progress bar */}
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`${stat.color} h-2 rounded-full transition-all duration-500`}
+                  style={{ width: barHeight }}
+                />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Bar Chart Section */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 mb-8">
+        <h2 className="text-xl font-semibold text-gray-900 mb-6">Today's Statistics</h2>
+        <div className="overflow-x-auto">
+          <div style={{ minWidth: '600px', height: '400px' }} className="flex items-end justify-around gap-6 p-4">
+            {statCards.slice(0, 5).map((stat, index) => {
+              const numericValues = statCards
+                .slice(0, 5)
+                .map(s => typeof s.value === 'number' ? s.value : 0)
+                .filter(v => v > 0);
+              const maxValue = numericValues.length > 0 ? Math.max(...numericValues) : 1;
+              const numericValue = typeof stat.value === 'number' ? stat.value : 0;
+              const barHeight = maxValue > 0 
+                ? `${(numericValue / maxValue) * 100}%` 
+                : '0%';
+              
+              return (
+                <div key={index} className="flex flex-col items-center flex-1">
+                  <div className="flex items-end justify-center h-80 mb-4">
+                    <div
+                      style={{
+                        height: barHeight,
+                        width: '60px',
+                      }}
+                      className={`${stat.color} rounded-t-lg transition-all duration-300 hover:opacity-80 cursor-pointer`}
+                      title={`${stat.title}: ${typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}`}
+                    />
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm font-semibold text-gray-700 mb-2">{stat.title}</p>
+                    <p className="text-2xl font-bold text-gray-900">
+                      {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity */}
+      <div className="content-section">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold text-primary-dark">Recent Activity</h2>
+          {recentActivity.length > 0 && (
+            <span className="text-sm text-gray-500">
+              Showing {recentActivity.length} recent records
+            </span>
+          )}
+        </div>
+        {isLoading ? (
+          <LoadingSkeleton type="table" count={5} />
+        ) : recentActivity.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <p>No recent activity to display</p>
+            <p className="text-sm mt-2">Attendance records will appear here as students check in/out</p>
+          </div>
+        ) : (
+          <div className="table-container">
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Time</th>
+                  <th>Student</th>
+                  <th>Subject/Class</th>
+                  <th>Type</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentActivity.map((record) => (
+                  <tr key={record._id}>
+                    <td>
+                      {format(new Date(record.scanTime), 'hh:mm a')}
+                      <br />
+                      <span className="text-xs text-gray-500">
+                        {formatDistanceToNow(new Date(record.scanTime), { addSuffix: true })}
+                      </span>
+                    </td>
+                    <td className="font-medium">{record.studentName}</td>
+                    <td>
+                      {record.subject || 'N/A'}
+                      {record.gradeLevel && (
+                        <span className="text-xs text-gray-500 block">
+                          {record.gradeLevel} - {record.section}
+                        </span>
+                      )}
+                    </td>
+                    <td>{getTypeBadge(record)}</td>
+                    <td>{getStatusBadge(record.status)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

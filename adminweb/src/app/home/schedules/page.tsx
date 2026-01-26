@@ -9,6 +9,7 @@ export default function SchedulesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedGradeLevel, setSelectedGradeLevel] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
+  const [selectedShift, setSelectedShift] = useState('');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [selectedSchedule, setSelectedSchedule] = useState<Schedule | null>(null);
@@ -36,18 +37,29 @@ export default function SchedulesPage() {
     }
   };
 
-  const filteredSchedules = schedules.filter(schedule =>
-    (searchQuery === '' || schedule.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      schedule.teacher.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      schedule.gradeLevel.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      schedule.section.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (selectedGradeLevel === '' || schedule.gradeLevel === selectedGradeLevel) &&
-    (selectedSection === '' || schedule.section === selectedSection)
-  );
+  const filteredSchedules = schedules.filter(schedule => {
+    const query = searchQuery.toLowerCase();
+    const matchesSearch =
+      searchQuery === '' ||
+      schedule.subject.toLowerCase().includes(query) ||
+      schedule.teacher.toLowerCase().includes(query) ||
+      schedule.gradeLevel.toLowerCase().includes(query) ||
+      schedule.section.toLowerCase().includes(query) ||
+      (schedule.shift ?? '').toLowerCase().includes(query);
+
+    const matchesGrade = selectedGradeLevel === '' || schedule.gradeLevel === selectedGradeLevel;
+    const matchesSection = selectedSection === '' || schedule.section === selectedSection;
+    const matchesShift = selectedShift === '' || schedule.shift === selectedShift;
+
+    return matchesSearch && matchesGrade && matchesSection && matchesShift;
+  });
 
   // Get unique grade levels and sections for filter dropdowns
   const uniqueGradeLevels = Array.from(new Set(schedules.map(s => s.gradeLevel))).sort();
   const uniqueSections = Array.from(new Set(schedules.map(s => s.section))).sort();
+  const uniqueShifts = Array.from(
+    new Set(schedules.map(s => s.shift).filter((shift): shift is string => !!shift))
+  ).sort();
 
   return (
     <div className="min-h-screen bg-green-50/30 p-8">
@@ -98,7 +110,7 @@ export default function SchedulesPage() {
                       />
                     </div>
                   </div>
-                  <div className="w-48">
+                  <div className="w-40 lg:w-48">
                     <label className="block text-sm font-medium text-gray-600 mb-1.5">Grade Level</label>
                     <select
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
@@ -111,7 +123,7 @@ export default function SchedulesPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="w-48">
+                  <div className="w-40 lg:w-48">
                     <label className="block text-sm font-medium text-gray-600 mb-1.5">Section</label>
                     <select
                       className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
@@ -124,12 +136,26 @@ export default function SchedulesPage() {
                       ))}
                     </select>
                   </div>
-                  {(searchQuery || selectedGradeLevel || selectedSection) && (
+                  <div className="w-32 lg:w-40">
+                    <label className="block text-sm font-medium text-gray-600 mb-1.5">Shift</label>
+                    <select
+                      className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
+                      value={selectedShift}
+                      onChange={(e) => setSelectedShift(e.target.value)}
+                    >
+                      <option value="">All Shifts</option>
+                      {uniqueShifts.map((shift) => (
+                        <option key={shift} value={shift}>{shift}</option>
+                      ))}
+                    </select>
+                  </div>
+                  {(searchQuery || selectedGradeLevel || selectedSection || selectedShift) && (
                     <button
                       onClick={() => {
                         setSearchQuery('');
                         setSelectedGradeLevel('');
                         setSelectedSection('');
+                        setSelectedShift('');
                       }}
                       className="px-4 py-3 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors duration-200 font-medium whitespace-nowrap"
                     >
@@ -181,7 +207,7 @@ export default function SchedulesPage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200/50">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-green-200/50">
                             {schedule.shift}
                           </span>
                         </td>

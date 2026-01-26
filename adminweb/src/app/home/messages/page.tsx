@@ -316,11 +316,11 @@ export default function MessagesPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {contacts.contact ? (
                             <div className="flex items-center space-x-2">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200/50">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-green-200/50">
                                 {contacts.contact}
                               </span>
                               <button
-                                className="inline-flex items-center p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                className="inline-flex items-center p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-all"
                                 title="Copy contact number"
                                 onClick={() => {
                                   navigator.clipboard.writeText(contacts.contact || '');
@@ -426,14 +426,14 @@ export default function MessagesPage() {
                       onClick={() => setSelectedContactType('contact')}
                       className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                         selectedContactType === 'contact'
-                          ? 'border-blue-500 bg-blue-50'
+                          ? 'border-green-500 bg-green-50'
                           : 'border-gray-200 bg-white hover:border-gray-300'
                       }`}
                     >
                       <div className="flex items-center">
                         <div className={`h-4 w-4 rounded border-2 mr-3 flex items-center justify-center ${
                           selectedContactType === 'contact'
-                            ? 'border-blue-500 bg-blue-500'
+                            ? 'border-green-500 bg-green-500'
                             : 'border-gray-300'
                         }`}>
                           {selectedContactType === 'contact' && (
@@ -444,7 +444,7 @@ export default function MessagesPage() {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 text-sm">Contact Number</p>
-                          <p className="text-sm text-blue-600 font-semibold">{getContactNumbers(selectedStudent).contact}</p>
+                          <p className="text-sm text-green-600 font-semibold">{getContactNumbers(selectedStudent).contact}</p>
                         </div>
                       </div>
                     </button>
@@ -561,14 +561,14 @@ export default function MessagesPage() {
                     onClick={() => setSendAllContactType('contact')}
                     className={`w-full p-3 rounded-lg border-2 transition-all text-left ${
                       sendAllContactType === 'contact'
-                        ? 'border-blue-500 bg-blue-50'
+                        ? 'border-green-500 bg-green-50'
                         : 'border-gray-200 bg-white hover:border-gray-300'
                     }`}
                   >
                     <div className="flex items-center">
                       <div className={`h-4 w-4 rounded border-2 mr-3 flex items-center justify-center ${
                         sendAllContactType === 'contact'
-                          ? 'border-blue-500 bg-blue-500'
+                          ? 'border-green-500 bg-green-500'
                           : 'border-gray-300'
                       }`}>
                         {sendAllContactType === 'contact' && (

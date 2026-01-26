@@ -1,0 +1,287 @@
+'use client';
+
+import { useEffect, useState } from 'react';
+import { notificationService, Notification, NotificationStats } from '@/app/services/notificationService';
+import { format, formatDistanceToNow } from 'date-fns';
+import LoadingSkeleton from '@/app/components/loading/LoadingSkeleton';
+import { Bell, AlertTriangle, Clock, XCircle, Scissors, RefreshCw } from 'lucide-react';
+import Link from 'next/link';
+
+export default function NotificationsPage() {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [stats, setStats] = useState<NotificationStats>({
+    total: 0,
+    late: 0,
+    absent: 0,
+    cutting: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'all' | 'late' | 'absent' | 'cutting'>('all');
+
+  const fetchNotifications = async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+      const result = await notificationService.getNotifications(30);
+      
+      if (result.success) {
+        setNotifications(result.notifications);
+        setStats(result.stats);
+      } else {
+        setError('Failed to load notifications');
+      }
+    } catch (err) {
+      console.error('Error fetching notifications:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load notifications');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    // Refresh every 5 minutes
+    const interval = setInterval(fetchNotifications, 300000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const filteredNotifications = filter === 'all' 
+    ? notifications 
+    : notifications.filter(n => n.type === filter);
+
+  const getNotificationIcon = (type: string) => {
+    switch (type) {
+      case 'late':
+        return <Clock className="text-yellow-600" size={20} />;
+      case 'absent':
+        return <XCircle className="text-red-600" size={20} />;
+      case 'cutting':
+        return <Scissors className="text-orange-600" size={20} />;
+      default:
+        return <Bell className="text-gray-600" size={20} />;
+    }
+  };
+
+  const getNotificationColor = (type: string, severity: string) => {
+    if (severity === 'critical') {
+      return 'border-red-500 bg-red-50';
+    }
+    switch (type) {
+      case 'late':
+        return 'border-yellow-500 bg-yellow-50';
+      case 'absent':
+        return 'border-red-500 bg-red-50';
+      case 'cutting':
+        return 'border-orange-500 bg-orange-50';
+      default:
+        return 'border-gray-500 bg-gray-50';
+    }
+  };
+
+  const getStatusBadge = (type: string) => {
+    const badges = {
+      late: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Late' },
+      absent: { bg: 'bg-red-100', text: 'text-red-800', label: 'Absent' },
+      cutting: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Cutting' },
+    };
+    const badge = badges[type as keyof typeof badges] || badges.late;
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
+        {badge.label}
+      </span>
+    );
+  };
+
+  return (
+    <div className="page-container">
+      <div className="page-header">
+        <div className="flex justify-between items-start">
+          <div>
+            <h1 className="page-title">Notifications</h1>
+            <p className="page-subtitle">Students with 3+ consecutive days of late, absent, or cutting</p>
+          </div>
+          <button
+            onClick={fetchNotifications}
+            disabled={isLoading}
+            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={isLoading ? 'animate-spin' : ''} size={16} />
+            Refresh
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="text-red-600" size={20} />
+            <p className="text-red-700">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Stats Cards */}
+      <div className="dashboard-grid mb-8">
+        <div className="stat-card">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-green-50 rounded-lg">
+              <Bell className="text-green-700" size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 mb-1">Total Notifications</p>
+              <p className="text-3xl font-bold text-green-700">{stats.total}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-yellow-50 rounded-lg">
+              <Clock className="text-yellow-700" size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 mb-1">Consecutive Late</p>
+              <p className="text-3xl font-bold text-yellow-700">{stats.late}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-red-50 rounded-lg">
+              <XCircle className="text-red-700" size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 mb-1">Consecutive Absent</p>
+              <p className="text-3xl font-bold text-red-700">{stats.absent}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-orange-50 rounded-lg">
+              <Scissors className="text-orange-700" size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-600 mb-1">Consecutive Cutting</p>
+              <p className="text-3xl font-bold text-orange-700">{stats.cutting}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Filter Buttons */}
+      <div className="mb-6 flex gap-2">
+        <button
+          onClick={() => setFilter('all')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'all'
+              ? 'bg-primary text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          All ({stats.total})
+        </button>
+        <button
+          onClick={() => setFilter('late')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'late'
+              ? 'bg-yellow-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Late ({stats.late})
+        </button>
+        <button
+          onClick={() => setFilter('absent')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'absent'
+              ? 'bg-red-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Absent ({stats.absent})
+        </button>
+        <button
+          onClick={() => setFilter('cutting')}
+          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+            filter === 'cutting'
+              ? 'bg-orange-500 text-white'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+          }`}
+        >
+          Cutting ({stats.cutting})
+        </button>
+      </div>
+
+      {/* Notifications List */}
+      <div className="content-section">
+        {isLoading ? (
+          <LoadingSkeleton type="card" count={5} />
+        ) : filteredNotifications.length === 0 ? (
+          <div className="text-center py-12 text-gray-500">
+            <Bell className="mx-auto mb-4 text-gray-400" size={48} />
+            <p className="text-lg font-medium">No notifications</p>
+            <p className="text-sm mt-2">
+              {filter === 'all'
+                ? 'No students with 3+ consecutive days of late, absent, or cutting'
+                : `No students with 3+ consecutive days of ${filter}`}
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredNotifications.map((notification) => (
+              <div
+                key={notification.id}
+                className={`p-6 rounded-lg border-l-4 ${getNotificationColor(notification.type, notification.severity)} shadow-sm hover:shadow-md transition-shadow`}
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4 flex-1">
+                    <div className="mt-1">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-lg font-semibold text-gray-900">
+                          {notification.studentName}
+                        </h3>
+                        {getStatusBadge(notification.type)}
+                        {notification.severity === 'critical' && (
+                          <span className="px-2 py-1 bg-red-600 text-white rounded-full text-xs font-semibold">
+                            Critical
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-gray-700 mb-2">{notification.message}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <span>
+                          {notification.gradeLevel} - {notification.section}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {notification.consecutiveCount} consecutive {notification.consecutiveCount === 1 ? 'day' : 'days'}
+                        </span>
+                        <span>•</span>
+                        <span>
+                          Last: {format(new Date(notification.lastOccurrence), 'MMM dd, yyyy')} ({formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })})
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  <Link
+                    href={`/home/history?studentId=${notification.studentId}`}
+                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+                  >
+                    View History
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

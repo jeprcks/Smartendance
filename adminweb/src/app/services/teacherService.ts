@@ -68,22 +68,32 @@ export interface TeachersResponse {
 
 class TeacherService {
   private async makeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
-    const url = `${API_BASE_URL}/api/teachers${endpoint}`;
-    
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json',
-        ...options.headers,
-      },
-      ...options,
-    });
+    try {
+      const url = `${API_BASE_URL}/api/teachers${endpoint}`;
+      
+      const response = await fetch(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          ...options.headers,
+        },
+        ...options,
+      });
 
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({})) as { error?: string };
-      throw new Error(errorData.error ?? `HTTP error! status: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as { error?: string };
+        throw new Error(errorData.error ?? `HTTP error! status: ${response.status}`);
+      }
+
+      return response.json();
+    } catch (error) {
+      // Handle network errors (API server not running, CORS, etc.)
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('Network error: API server may not be running or CORS issue');
+        throw new Error('Network error: Unable to connect to server');
+      }
+      // Re-throw other errors
+      throw error;
     }
-
-    return response.json();
   }
 
   // Get all teachers with filtering and pagination
@@ -185,7 +195,21 @@ class TeacherService {
 
   // Get teacher statistics
   async getTeacherStats(): Promise<{ success: boolean; stats: TeacherStats }> {
-    return this.makeRequest<{ success: boolean; stats: TeacherStats }>('/stats');
+    try {
+      return await this.makeRequest<{ success: boolean; stats: TeacherStats }>('/stats');
+    } catch (error) {
+      console.error('Error fetching teacher stats:', error);
+      // Return default stats instead of throwing
+      return {
+        success: false,
+        stats: {
+          active: 0,
+          inactive: 0,
+          suspended: 0,
+          total: 0,
+        },
+      };
+    }
   }
 
   // Search teachers

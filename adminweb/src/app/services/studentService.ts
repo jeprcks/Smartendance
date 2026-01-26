@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:4000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000';
 
 export interface Student {
   _id: string;
@@ -128,13 +128,27 @@ export const studentService = {
 
   async getAllStudents(): Promise<Student[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students`);
+      const response = await fetch(`${API_BASE_URL}/api/students`, {
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch students');
+        const errorData = await response.json().catch(() => ({})) as { error?: string; message?: string };
+        throw new Error(errorData.error || errorData.message || `Failed to fetch students: ${response.status}`);
       }
-      return await response.json();
+      
+      const data = await response.json();
+      // Handle both array response and wrapped response
+      return Array.isArray(data) ? data : (data.students || data.data || []);
     } catch (error) {
       console.error('Error fetching students:', error);
+      // Return empty array instead of throwing to allow dashboard to continue
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        console.warn('Network error: API server may not be running');
+        return [];
+      }
       throw error;
     }
   },
