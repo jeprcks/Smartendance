@@ -95,22 +95,25 @@ export default function NotificationsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="page-title">Notifications</h1>
-            <p className="page-subtitle">Students with 3+ consecutive days of late, absent, or cutting</p>
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <div className="dashboard-header-content">
+            <h1>Notifications</h1>
+            <p>Students with 3+ consecutive days of late, absent, or cutting</p>
           </div>
-          <button
-            onClick={fetchNotifications}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors disabled:opacity-50"
-          >
-            <RefreshCw className={isLoading ? 'animate-spin' : ''} size={16} />
-            Refresh
-          </button>
+          <div className="dashboard-header-refresh-box">
+            <button
+              type="button"
+              onClick={fetchNotifications}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2"
+            >
+              <RefreshCw className={isLoading ? 'animate-spin' : ''} size={16} />
+              Refresh
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
@@ -129,7 +132,7 @@ export default function NotificationsPage() {
               <Bell className="text-green-700" size={24} />
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600 mb-1">Total Notifications</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Notifications</p>
               <p className="text-3xl font-bold text-green-700">{stats.total}</p>
             </div>
           </div>
@@ -141,7 +144,7 @@ export default function NotificationsPage() {
               <Clock className="text-yellow-700" size={24} />
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600 mb-1">Consecutive Late</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Late</p>
               <p className="text-3xl font-bold text-yellow-700">{stats.late}</p>
             </div>
           </div>
@@ -153,7 +156,7 @@ export default function NotificationsPage() {
               <XCircle className="text-red-700" size={24} />
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600 mb-1">Consecutive Absent</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Absent</p>
               <p className="text-3xl font-bold text-red-700">{stats.absent}</p>
             </div>
           </div>
@@ -165,7 +168,7 @@ export default function NotificationsPage() {
               <Scissors className="text-orange-700" size={24} />
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-600 mb-1">Consecutive Cutting</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Cutting</p>
               <p className="text-3xl font-bold text-orange-700">{stats.cutting}</p>
             </div>
           </div>
@@ -173,43 +176,47 @@ export default function NotificationsPage() {
       </div>
 
       {/* Filter Buttons */}
-      <div className="mb-6 flex gap-2">
+      <div className="mb-6 flex flex-wrap gap-2">
         <button
+          type="button"
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'all'
-              ? 'bg-primary text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
           }`}
         >
           All ({stats.total})
         </button>
         <button
+          type="button"
           onClick={() => setFilter('late')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'late'
-              ? 'bg-yellow-500 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-yellow-500 text-white hover:bg-yellow-600'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
           }`}
         >
           Late ({stats.late})
         </button>
         <button
+          type="button"
           onClick={() => setFilter('absent')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'absent'
-              ? 'bg-red-500 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-red-500 text-white hover:bg-red-600'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
           }`}
         >
           Absent ({stats.absent})
         </button>
         <button
+          type="button"
           onClick={() => setFilter('cutting')}
-          className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'cutting'
-              ? 'bg-orange-500 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              ? 'bg-orange-500 text-white hover:bg-orange-600'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
           }`}
         >
           Cutting ({stats.cutting})
@@ -221,9 +228,9 @@ export default function NotificationsPage() {
         {isLoading ? (
           <LoadingSkeleton type="card" count={5} />
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <Bell className="mx-auto mb-4 text-gray-400" size={48} />
-            <p className="text-lg font-medium">No notifications</p>
+          <div className="text-center py-12 text-[var(--muted-foreground)]">
+            <Bell className="mx-auto mb-4 text-[var(--muted-foreground)]" size={48} />
+            <p className="text-lg font-medium text-[var(--foreground)]">No notifications</p>
             <p className="text-sm mt-2">
               {filter === 'all'
                 ? 'No students with 3+ consecutive days of late, absent, or cutting'
@@ -235,16 +242,16 @@ export default function NotificationsPage() {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-6 rounded-lg border-l-4 ${getNotificationColor(notification.type, notification.severity)} shadow-sm hover:shadow-md transition-shadow`}
+                className={`p-6 rounded-[var(--radius)] border-l-4 ${getNotificationColor(notification.type, notification.severity)} shadow-sm hover:shadow-md transition-shadow border border-[var(--border)]`}
               >
-                <div className="flex items-start justify-between">
-                  <div className="flex items-start gap-4 flex-1">
-                    <div className="mt-1">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex items-start gap-4 flex-1 min-w-0">
+                    <div className="mt-1 flex-shrink-0">
                       {getNotificationIcon(notification.type)}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-3 mb-2 flex-wrap">
+                        <h3 className="text-lg font-semibold text-[var(--foreground)]">
                           {notification.studentName}
                         </h3>
                         {getStatusBadge(notification.type)}
@@ -254,8 +261,8 @@ export default function NotificationsPage() {
                           </span>
                         )}
                       </div>
-                      <p className="text-gray-700 mb-2">{notification.message}</p>
-                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                      <p className="text-[var(--foreground)]/90 mb-2">{notification.message}</p>
+                      <div className="flex items-center gap-4 text-sm text-[var(--muted-foreground)] flex-wrap">
                         <span>
                           {notification.gradeLevel} - {notification.section}
                         </span>
@@ -272,7 +279,7 @@ export default function NotificationsPage() {
                   </div>
                   <Link
                     href={`/home/history?studentId=${notification.studentId}`}
-                    className="px-4 py-2 bg-primary text-white rounded-lg hover:bg-primary-dark transition-colors text-sm font-medium"
+                    className="px-4 py-2 bg-[var(--primary)] text-white rounded-[var(--radius)] hover:bg-[var(--primary-dark)] transition-colors text-sm font-medium inline-flex flex-shrink-0"
                   >
                     View History
                   </Link>

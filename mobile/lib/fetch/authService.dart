@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 
 class AuthService {
   // URL configuration based on platform
@@ -50,28 +50,30 @@ class AuthService {
     String password,
   ) async {
     try {
-      print('=== TEACHER LOGIN REQUEST ===');
-      print('URL: $baseUrl/teacher-login');
-      print('Email: $email');
-      
-      final response = await http.post(
-        Uri.parse('$baseUrl/teacher-login'),
-        headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({'email': email, 'password': password}),
-      ).timeout(
-        const Duration(seconds: 10),
-        onTimeout: () {
-          throw Exception('Request timeout - Server not responding');
-        },
-      );
+      debugPrint('=== TEACHER LOGIN REQUEST ===');
+      debugPrint('URL: $baseUrl/teacher-login');
+      debugPrint('Email: $email');
 
-      print('Response status: ${response.statusCode}');
-      print('Response body: ${response.body}');
+      final response = await http
+          .post(
+            Uri.parse('$baseUrl/teacher-login'),
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'email': email, 'password': password}),
+          )
+          .timeout(
+            const Duration(seconds: 10),
+            onTimeout: () {
+              throw Exception('Request timeout - Server not responding');
+            },
+          );
+
+      debugPrint('Response status: ${response.statusCode}');
+      debugPrint('Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         try {
           final data = jsonDecode(response.body);
-          print('Login successful');
+          debugPrint('Login successful');
           return data;
         } catch (e) {
           throw Exception('Invalid response format from server');
@@ -86,20 +88,27 @@ class AuthService {
       } else {
         try {
           final error = jsonDecode(response.body);
-          throw Exception(error['error'] ?? 'Teacher login failed (Status: ${response.statusCode})');
+          throw Exception(
+            error['error'] ??
+                'Teacher login failed (Status: ${response.statusCode})',
+          );
         } catch (e) {
-          throw Exception('Teacher login failed (Status: ${response.statusCode}): ${response.body}');
+          throw Exception(
+            'Teacher login failed (Status: ${response.statusCode}): ${response.body}',
+          );
         }
       }
     } catch (e) {
-      print('Login error: $e');
+      debugPrint('Login error: $e');
       // Re-throw with more context
-      if (e.toString().contains('SocketException') || 
+      if (e.toString().contains('SocketException') ||
           e.toString().contains('Failed host lookup') ||
           e.toString().contains('Connection refused')) {
-        throw Exception('Cannot connect to server at $baseUrl. Please check:\n1. Server is running\n2. Network connection\n3. Server URL is correct');
+        throw Exception(
+          'Cannot connect to server at $baseUrl. Please check:\n1. Server is running\n2. Network connection\n3. Server URL is correct',
+        );
       }
-      throw e;
+      rethrow;
     }
   }
 

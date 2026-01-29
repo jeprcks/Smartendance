@@ -165,12 +165,12 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
       });
     }
 
-    // Age validation
+    // Age validation (allow any numeric value, no limits)
     const age = parseInt(formData.age);
-    if (isNaN(age) || age < 12 || age > 25) {
+    if (isNaN(age)) {
       errors.push({
         field: 'age',
-        message: 'Age must be between 12 and 25'
+        message: 'Please enter a valid age'
       });
     }
 

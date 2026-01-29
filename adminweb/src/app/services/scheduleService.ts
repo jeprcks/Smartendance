@@ -8,7 +8,12 @@ export interface Schedule {
   teacher: string;
   timeSlot: string;
   room: string;
-  day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
+  /**
+   * Legacy single-day support (for existing records) plus multi-day array.
+   * Prefer using `days` for new data.
+   */
+  day?: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday';
+  days?: ('Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')[];
   shift: 'Morning' | 'Afternoon';
   isActive?: boolean;
   createdAt?: string;
@@ -32,7 +37,11 @@ export const scheduleService = {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(scheduleData),
+        body: JSON.stringify({
+          ...scheduleData,
+          // send both for backward compatibility with single-day backend
+          day: scheduleData.days && scheduleData.days.length > 0 ? scheduleData.days[0] : scheduleData.day,
+        }),
       });
 
       const data: ScheduleResponse = await response.json();

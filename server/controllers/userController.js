@@ -22,7 +22,6 @@ const createAdminUser = async () => {
 };
 
 // Call this when your server starts
-createAdminUser();
 
 module.exports = {
     createAdminUser

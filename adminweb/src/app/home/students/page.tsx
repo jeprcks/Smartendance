@@ -6,12 +6,12 @@ import ViewStudentModal from './components/ViewStudentModal';
 import PrintQRCodeModal from './components/PrintQRCodeModal';
 import EditStudentModal from './components/EditStudentModal';
 import StudentScheduleModal from './components/StudentScheduleModal';
-import StatusCounter from './components/StatusCounter';
 import AdvancedSearch, { SearchFilters } from '@/app/components/search/AdvancedSearch';
 import BulkActions from '@/app/components/bulk/BulkActions';
 import { studentService, Student } from '@/app/services/studentService';
 import { exportStudentsToPDF } from './components/exportToPDF';
 import toast from 'react-hot-toast';
+import { Users, UserCircle, UserCircle2 } from 'lucide-react';
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -262,34 +262,74 @@ export default function StudentsPage() {
   const totalMale = students.filter(student => student.gender === 'Male').length;
   const totalFemale = students.filter(student => student.gender === 'Female').length;
 
+  const studentStatCards = [
+    { title: 'Total Students', value: students.length, icon: Users, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+    { title: 'Male Students', value: totalMale, icon: UserCircle, color: 'bg-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
+    { title: 'Female Students', value: totalFemale, icon: UserCircle2, color: 'bg-pink-500', bgColor: 'bg-pink-50', textColor: 'text-pink-700' },
+  ];
+
   return (
-    <div className="min-h-screen bg-green-50/30 p-8">
-      <StatusCounter 
-        totalStudents={students.length}
-        totalMale={totalMale}
-        totalFemale={totalFemale}
+    <div className="page-container">
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <div className="dashboard-header-content">
+            <h1>Students</h1>
+            <p>Manage student records and enrollment</p>
+          </div>
+          <div className="dashboard-header-refresh-box">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              type="button"
+              className="inline-flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add Student
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <AddStudentModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onAdd={handleAddStudent}
       />
-      <div className="flex justify-between items-center mb-8">
-        <div className="flex items-center space-x-4">
-          <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Students</h1>
-        </div>
-        <div className="flex items-center space-x-3">
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center px-5 py-2.5 bg-green-600 text-sm font-semibold text-white rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-300 transform hover:scale-105 active:scale-95 shadow-md hover:shadow-lg"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add Student
-          </button>
-        </div>
-        
-        <AddStudentModal 
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          onAdd={handleAddStudent}
-        />
+
+      {/* Stats cards – same style as dashboard */}
+      <div className="dashboard-grid mb-8">
+        {studentStatCards.map((stat, index) => {
+          const IconComponent = stat.icon;
+          const maxVal = Math.max(students.length, 1);
+          const numericValue = stat.value;
+          const barHeight = `${(numericValue / maxVal) * 100}%`;
+          return (
+            <div
+              key={stat.title}
+              className="stat-card"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 ${stat.bgColor} rounded-lg`}>
+                  <IconComponent className={stat.textColor} size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                  <p className={`text-3xl font-bold ${stat.textColor}`}>
+                    {stat.value.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`${stat.color} h-2 rounded-full transition-all duration-500`}
+                  style={{ width: barHeight }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">

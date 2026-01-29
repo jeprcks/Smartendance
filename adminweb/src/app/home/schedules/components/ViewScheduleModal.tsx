@@ -15,7 +15,8 @@ interface ViewScheduleModalProps {
     teacher: string;
     timeSlot: string;
     room: string;
-    day: string;
+    day?: string;
+    days?: string[];
     shift: string;
   } | null;
 }
@@ -99,8 +100,17 @@ export default function ViewScheduleModal({ isOpen, onClose, schedule }: ViewSch
               <p className="text-base font-medium text-gray-900">{schedule.room}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Day</p>
-              <p className="text-base font-medium text-gray-900">{schedule.day}</p>
+              <p className="text-sm text-gray-500 mb-1">Days</p>
+              <div className="flex flex-wrap gap-2">
+                {(Array.isArray(schedule.days) ? schedule.days : schedule.day ? [schedule.day] : []).map((day) => (
+                  <span
+                    key={day}
+                    className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 ring-1 ring-green-200/50"
+                  >
+                    {day}
+                  </span>
+                ))}
+              </div>
             </div>
             <div>
               <p className="text-sm text-gray-500 mb-1">Time Slot</p>

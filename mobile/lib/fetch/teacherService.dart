@@ -1,7 +1,7 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
 
 class TeacherService {
   // URL configuration based on platform
@@ -94,7 +94,7 @@ class TeacherService {
         throw Exception(error['error'] ?? 'Failed to fetch attendance records');
       }
     } catch (e) {
-      print('TeacherService Error fetching attendance records: $e');
+      debugPrint('TeacherService Error fetching attendance records: $e');
       // Return empty records on error instead of throwing
       return {'records': [], 'pagination': {}};
     }
@@ -136,14 +136,14 @@ class TeacherService {
         return data is List ? data : [data];
       } else if (response.statusCode == 400) {
         // If parameters are invalid, return empty list
-        print('Invalid parameters for class students');
+        debugPrint('Invalid parameters for class students');
         return [];
       } else {
         final error = jsonDecode(response.body);
         throw Exception(error['error'] ?? 'Failed to fetch students');
       }
     } catch (e) {
-      print('Error fetching students for teacher schedule: $e');
+      debugPrint('Error fetching students for teacher schedule: $e');
       throw Exception('Error fetching students: $e');
     }
   }
@@ -198,7 +198,7 @@ class TeacherService {
         throw Exception(error['error'] ?? 'Failed to fetch statistics');
       }
     } catch (e) {
-      print('TeacherService Error fetching statistics: $e');
+      debugPrint('TeacherService Error fetching statistics: $e');
       // Return default stats on error instead of throwing
       return {'present': 0, 'absent': 0, 'late': 0, 'cutting': 0, 'total': 0};
     }
@@ -257,8 +257,8 @@ class TeacherService {
         '$baseUrl/schedules',
       ).replace(queryParameters: queryParams);
 
-      print('🔄 Fetching schedules from: $uri');
-      print('📋 Query params: $queryParams');
+      debugPrint('🔄 Fetching schedules from: $uri');
+      debugPrint('📋 Query params: $queryParams');
 
       final response = await http
           .get(
@@ -275,14 +275,16 @@ class TeacherService {
             ),
           );
 
-      print('📊 Response status: ${response.statusCode}');
-      print('📊 Response body: ${response.body}');
+      debugPrint('📊 Response status: ${response.statusCode}');
+      debugPrint('📊 Response body: ${response.body}');
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final schedules = data['schedules'] ?? data;
         final result = schedules is List ? schedules : [schedules];
-        print('✅ Schedules fetched successfully: ${result.length} schedules');
+        debugPrint(
+          '✅ Schedules fetched successfully: ${result.length} schedules',
+        );
         return result;
       } else if (response.statusCode == 401) {
         throw Exception('Unauthorized - Invalid or expired token');
@@ -300,7 +302,7 @@ class TeacherService {
         }
       }
     } catch (e) {
-      print('❌ TeacherService Error fetching schedule: $e');
+      debugPrint('❌ TeacherService Error fetching schedule: $e');
       rethrow; // Rethrow to let caller handle
     }
   }
@@ -343,7 +345,9 @@ class TeacherService {
         );
       }
     } catch (e) {
-      print('TeacherService Error fetching schedule attendance records: $e');
+      debugPrint(
+        'TeacherService Error fetching schedule attendance records: $e',
+      );
       // Return empty list on error
       return [];
     }
