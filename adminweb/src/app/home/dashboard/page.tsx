@@ -8,6 +8,19 @@ import { scheduleService } from '@/app/services/scheduleService';
 import { format, formatDistanceToNow } from 'date-fns';
 import LoadingSkeleton from '@/app/components/loading/LoadingSkeleton';
 import { Users, CheckCircle, XCircle, BookOpen, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
 
 interface DashboardStats {
   totalStudents: number;
@@ -199,24 +212,24 @@ export default function DashboardPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="page-title">Dashboard</h1>
-            <p className="page-subtitle">Overview of school attendance statistics</p>
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <div className="dashboard-header-content">
+            <h1>Dashboard</h1>
+            <p>Overview of school attendance statistics</p>
           </div>
-          <div className="text-sm text-gray-500">
-            Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}
+          <div className="dashboard-header-refresh-box">
+            <span>Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             <button
               onClick={fetchDashboardData}
-              className="ml-2 text-primary hover:text-primary-dark underline"
               disabled={isLoading}
+              type="button"
             >
               {isLoading ? 'Refreshing...' : 'Refresh'}
             </button>
           </div>
         </div>
-      </div>
+      </header>
 
       {error && (
         <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
@@ -245,7 +258,11 @@ export default function DashboardPage() {
             : '0%';
 
           return (
-            <div key={index} className="stat-card">
+            <div
+              key={index}
+              className="stat-card"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
               <div className="flex items-start justify-between mb-4">
                 <div className={`p-3 ${stat.bgColor} rounded-lg`}>
                   <IconComponent className={`${stat.textColor}`} size={24} />
@@ -269,49 +286,87 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Bar Chart Section */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 mb-8">
-        <h2 className="text-xl font-semibold text-gray-900 mb-6">Today's Statistics</h2>
-        <div className="overflow-x-auto">
-          <div style={{ minWidth: '600px', height: '400px' }} className="flex items-end justify-around gap-6 p-4">
-            {statCards.slice(0, 5).map((stat, index) => {
-              const numericValues = statCards
-                .slice(0, 5)
-                .map(s => typeof s.value === 'number' ? s.value : 0)
-                .filter(v => v > 0);
-              const maxValue = numericValues.length > 0 ? Math.max(...numericValues) : 1;
-              const numericValue = typeof stat.value === 'number' ? stat.value : 0;
-              const barHeight = maxValue > 0 
-                ? `${(numericValue / maxValue) * 100}%` 
-                : '0%';
-              
-              return (
-                <div key={index} className="flex flex-col items-center flex-1">
-                  <div className="flex items-end justify-center h-80 mb-4">
-                    <div
-                      style={{
-                        height: barHeight,
-                        width: '60px',
-                      }}
-                      className={`${stat.color} rounded-t-lg transition-all duration-300 hover:opacity-80 cursor-pointer`}
-                      title={`${stat.title}: ${typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}`}
-                    />
-                  </div>
-                  <div className="text-center">
-                    <p className="text-sm font-semibold text-gray-700 mb-2">{stat.title}</p>
-                    <p className="text-2xl font-bold text-gray-900">
-                      {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+      {/* Charts Section - Recharts */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        {/* Bar Chart - Today's counts */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '400ms' }}>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Today&apos;s Statistics</h2>
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={[
+                  { name: 'Students', value: stats.totalStudents, fill: '#2e7d32' },
+                  { name: 'Present', value: stats.presentToday, fill: '#43a047' },
+                  { name: 'Absent', value: stats.absentToday, fill: '#e53935' },
+                  { name: 'Late', value: stats.lateToday, fill: '#fbbf24' },
+                  { name: 'Classes', value: stats.totalClasses, fill: '#7c4dff' },
+                ]}
+                margin={{ top: 12, right: 12, left: 0, bottom: 0 }}
+              >
+                <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                <XAxis dataKey="name" tick={{ fontSize: 12 }} stroke="#6b7280" />
+                <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
+                <Tooltip
+                  contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                  formatter={(value: number) => [value.toLocaleString(), 'Count']}
+                />
+                <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={600} animationEasing="ease-out" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Pie Chart - Attendance distribution */}
+        <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '500ms' }}>
+          <h2 className="text-xl font-semibold text-gray-900 mb-6">Today&apos;s Attendance Distribution</h2>
+          <div className="h-80">
+            {stats.presentToday + stats.absentToday + stats.lateToday === 0 ? (
+              <div className="flex items-center justify-center h-full text-gray-500">
+                No attendance data yet today
+              </div>
+            ) : (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Present', value: stats.presentToday, color: '#43a047' },
+                      { name: 'Absent', value: stats.absentToday, color: '#e53935' },
+                      { name: 'Late', value: stats.lateToday, color: '#fbbf24' },
+                    ].filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    animationDuration={600}
+                    animationEasing="ease-out"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {[
+                      { name: 'Present', value: stats.presentToday, color: '#43a047' },
+                      { name: 'Absent', value: stats.absentToday, color: '#e53935' },
+                      { name: 'Late', value: stats.lateToday, color: '#fbbf24' },
+                    ]
+                      .filter(d => d.value > 0)
+                      .map((entry, i) => (
+                        <Cell key={`cell-${i}`} fill={entry.color} />
+                      ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
+                    formatter={(value: number) => [value.toLocaleString(), 'Count']}
+                  />
+                  <Legend />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>
 
       {/* Recent Activity */}
-      <div className="content-section">
+      <div className="content-section dashboard-section-animate" style={{ animationDelay: '550ms' }}>
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-semibold text-primary-dark">Recent Activity</h2>
           {recentActivity.length > 0 && (

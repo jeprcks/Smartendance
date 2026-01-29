@@ -1,5 +1,6 @@
 'use client';
 
+import React from 'react';
 import { useState, useEffect, useCallback } from 'react';
 import { historyService, AttendanceRecord } from '@/app/services/historyService';
 import { studentService } from '@/app/services/studentService';
@@ -36,6 +37,15 @@ interface GradeLevelStats {
   late: number;
   cutting: number;
   attendanceRate: number;
+  sections?: {
+    section: string;
+    totalStudents: number;
+    present: number;
+    absent: number;
+    late: number;
+    cutting: number;
+    attendanceRate: number;
+  }[];
 }
 
 export default function ReportsPage() {
@@ -169,47 +179,84 @@ export default function ReportsPage() {
         a.date.localeCompare(b.date)
       ));
 
-      // Calculate grade-level stats
-      const gradeMap = new Map<string, GradeLevelStats>();
-      
-      fetchedRecords.forEach(record => {
-        const grade = record.gradeLevel || 'Unknown';
-        if (!gradeMap.has(grade)) {
-          gradeMap.set(grade, {
-            gradeLevel: grade,
-            totalStudents: 0,
-            present: 0,
-            absent: 0,
-            late: 0,
-            cutting: 0,
-            attendanceRate: 0,
-          });
-        }
-        const gradeStat = gradeMap.get(grade)!;
-        if (record.status === 'Present') gradeStat.present++;
-        else if (record.status === 'Absent') gradeStat.absent++;
-        else if (record.status === 'Late') gradeStat.late++;
-        else if (record.status === 'Cutting') gradeStat.cutting++;
-      });
+      // Calculate grade-level and section stats
+      // Build maps: grade -> section -> stats
+      const gradeMap = new Map<string, Map<string, {
+        totalStudents: number;
+        present: number;
+        absent: number;
+        late: number;
+        cutting: number;
+      }>>();
 
-      // Count students per grade
+      // Initialize from students list to capture totalStudents per section
       students.forEach((student: any) => {
         const grade = student.gradeLevel || 'Unknown';
-        if (gradeMap.has(grade)) {
-          gradeMap.get(grade)!.totalStudents++;
+        const sectionVal = student.section || 'Unknown';
+        if (!gradeMap.has(grade)) gradeMap.set(grade, new Map());
+        const secMap = gradeMap.get(grade)!;
+        if (!secMap.has(sectionVal)) {
+          secMap.set(sectionVal, { totalStudents: 0, present: 0, absent: 0, late: 0, cutting: 0 });
         }
+        secMap.get(sectionVal)!.totalStudents++;
       });
 
-      // Calculate attendance rates per grade
-      gradeMap.forEach(gradeStat => {
-        gradeStat.attendanceRate = gradeStat.totalStudents > 0
-          ? Math.round((gradeStat.present / gradeStat.totalStudents) * 100)
-          : 0;
+      // Tally statuses from fetchedRecords into section stats
+      fetchedRecords.forEach(record => {
+        const grade = record.gradeLevel || 'Unknown';
+        const sectionVal = record.section || 'Unknown';
+        if (!gradeMap.has(grade)) gradeMap.set(grade, new Map());
+        const secMap = gradeMap.get(grade)!;
+        if (!secMap.has(sectionVal)) {
+          secMap.set(sectionVal, { totalStudents: 0, present: 0, absent: 0, late: 0, cutting: 0 });
+        }
+        const stats = secMap.get(sectionVal)!;
+        if (record.status === 'Present') stats.present++;
+        else if (record.status === 'Absent') stats.absent++;
+        else if (record.status === 'Late') stats.late++;
+        else if (record.status === 'Cutting') stats.cutting++;
       });
 
-      setGradeLevelStats(Array.from(gradeMap.values()).sort((a, b) => 
-        a.gradeLevel.localeCompare(b.gradeLevel)
-      ));
+      // Convert to GradeLevelStats with section list
+      const gradeStatsArr: GradeLevelStats[] = [];
+      gradeMap.forEach((secMap, grade) => {
+        let gradeTotalStudents = 0;
+        let gradePresent = 0;
+        let gradeAbsent = 0;
+        let gradeLate = 0;
+        let gradeCutting = 0;
+        const sections: GradeLevelStats['sections'] = [];
+        secMap.forEach((s, sectionName) => {
+          const attendanceRate = s.totalStudents > 0 ? Math.round((s.present / s.totalStudents) * 100) : 0;
+          sections.push({
+            section: sectionName,
+            totalStudents: s.totalStudents,
+            present: s.present,
+            absent: s.absent,
+            late: s.late,
+            cutting: s.cutting,
+            attendanceRate
+          });
+          gradeTotalStudents += s.totalStudents;
+          gradePresent += s.present;
+          gradeAbsent += s.absent;
+          gradeLate += s.late;
+          gradeCutting += s.cutting;
+        });
+        const gradeAttendanceRate = gradeTotalStudents > 0 ? Math.round((gradePresent / gradeTotalStudents) * 100) : 0;
+        gradeStatsArr.push({
+          gradeLevel: grade,
+          totalStudents: gradeTotalStudents,
+          present: gradePresent,
+          absent: gradeAbsent,
+          late: gradeLate,
+          cutting: gradeCutting,
+          attendanceRate: gradeAttendanceRate,
+          sections
+        });
+      });
+
+      setGradeLevelStats(gradeStatsArr.sort((a, b) => a.gradeLevel.localeCompare(b.gradeLevel)));
 
     } catch (error) {
       console.error('Error fetching report data:', error);
@@ -294,6 +341,7 @@ export default function ReportsPage() {
             pdf.addPage();
             yPosition = 20;
           }
+          // Grade row
           pdf.text(stat.gradeLevel, margin, yPosition);
           pdf.text(stat.totalStudents.toString(), margin + 30, yPosition);
           pdf.text(stat.present.toString(), margin + 50, yPosition);
@@ -301,6 +349,26 @@ export default function ReportsPage() {
           pdf.text(stat.late.toString(), margin + 80, yPosition);
           pdf.text(`${stat.attendanceRate}%`, margin + 95, yPosition);
           yPosition += 6;
+
+          // Sections (indented)
+          if (Array.isArray(stat.sections) && stat.sections.length > 0) {
+            pdf.setFontSize(9);
+            stat.sections.forEach(sectionStat => {
+              if (yPosition > 270) {
+                pdf.addPage();
+                yPosition = 20;
+              }
+              // Indent section line
+              pdf.text(`- ${sectionStat.section}`, margin + 6, yPosition);
+              pdf.text(sectionStat.totalStudents.toString(), margin + 30, yPosition);
+              pdf.text(sectionStat.present.toString(), margin + 50, yPosition);
+              pdf.text(sectionStat.absent.toString(), margin + 65, yPosition);
+              pdf.text(sectionStat.late.toString(), margin + 80, yPosition);
+              pdf.text(`${sectionStat.attendanceRate}%`, margin + 95, yPosition);
+              yPosition += 6;
+            });
+            pdf.setFontSize(10);
+          }
         });
         yPosition += 10;
       }
@@ -371,33 +439,36 @@ export default function ReportsPage() {
 
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="flex justify-between items-start">
-          <div>
-            <h1 className="page-title">Reports & Analytics</h1>
-            <p className="page-subtitle">Comprehensive attendance reports and analytics</p>
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <div className="dashboard-header-content">
+            <h1>Reports</h1>
+            <p>Comprehensive attendance reports and analytics</p>
           </div>
-          <button
-            onClick={generatePDFReport}
-            disabled={isLoading}
-            className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
-          >
-            <Download size={18} />
-            Generate PDF Report
-          </button>
+          <div className="dashboard-header-refresh-box">
+            <button
+              type="button"
+              onClick={generatePDFReport}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2"
+            >
+              <Download size={18} />
+              Generate PDF Report
+            </button>
+          </div>
         </div>
-      </div>
+      </header>
 
       {/* Report Filters */}
       <div className="content-section mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Report Filters</h2>
+        <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4">Report Filters</h2>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Report Type</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Report Type</label>
             <select
               value={filters.reportType}
               onChange={(e) => handleReportTypeChange(e.target.value as any)}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
             >
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -407,28 +478,29 @@ export default function ReportsPage() {
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Start Date</label>
             <input
               type="date"
               value={filters.startDate}
               onChange={(e) => setFilters({ ...filters, startDate: e.target.value, reportType: 'custom' })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">End Date</label>
             <input
               type="date"
               value={filters.endDate}
               onChange={(e) => setFilters({ ...filters, endDate: e.target.value, reportType: 'custom' })}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
             />
           </div>
           <div className="flex items-end">
             <button
+              type="button"
               onClick={fetchReportData}
               disabled={isLoading}
-              className="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+              className="w-full px-4 py-2 bg-[var(--primary)] text-white rounded-[var(--radius)] hover:bg-[var(--primary-dark)] transition-colors disabled:opacity-50 font-medium"
             >
               {isLoading ? 'Loading...' : 'Apply Filters'}
             </button>
@@ -448,7 +520,7 @@ export default function ReportsPage() {
                   <Users className="text-green-700" size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">Total Students</p>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Students</p>
                   <p className="text-3xl font-bold text-green-700">{overallStats.totalStudents}</p>
                 </div>
               </div>
@@ -459,7 +531,7 @@ export default function ReportsPage() {
                   <FileText className="text-blue-700" size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">Total Records</p>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Records</p>
                   <p className="text-3xl font-bold text-blue-700">{overallStats.totalRecords}</p>
                 </div>
               </div>
@@ -470,7 +542,7 @@ export default function ReportsPage() {
                   <TrendingUp className="text-green-700" size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">Attendance Rate</p>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">Attendance Rate</p>
                   <p className="text-3xl font-bold text-green-700">{overallStats.attendanceRate}%</p>
                 </div>
               </div>
@@ -481,7 +553,7 @@ export default function ReportsPage() {
                   <AlertCircle className="text-yellow-700" size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">Absent</p>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">Absent</p>
                   <p className="text-3xl font-bold text-yellow-700">{overallStats.absent}</p>
                 </div>
               </div>
@@ -505,8 +577,8 @@ export default function ReportsPage() {
           {/* Grade Level Statistics */}
           {gradeLevelStats.length > 0 && (
             <div className="content-section mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <BarChart3 size={20} />
+              <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
+                <BarChart3 size={20} className="text-[var(--primary)]" />
                 Grade Level Breakdown
               </h2>
               <div className="table-container">
@@ -524,19 +596,36 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     {gradeLevelStats.map((stat, index) => (
-                      <tr key={index}>
-                        <td className="font-medium">{stat.gradeLevel}</td>
-                        <td>{stat.totalStudents}</td>
-                        <td className="text-green-700 font-semibold">{stat.present}</td>
-                        <td className="text-red-700 font-semibold">{stat.absent}</td>
-                        <td className="text-yellow-700 font-semibold">{stat.late}</td>
-                        <td className="text-orange-700 font-semibold">{stat.cutting}</td>
-                        <td>
-                          <span className={`font-semibold ${stat.attendanceRate >= 90 ? 'text-green-700' : stat.attendanceRate >= 70 ? 'text-yellow-700' : 'text-red-700'}`}>
-                            {stat.attendanceRate}%
-                          </span>
-                        </td>
-                      </tr>
+                      <React.Fragment key={index}>
+                        <tr className="bg-[var(--muted)]/50 hover:bg-[var(--secondary)] transition-colors duration-200">
+                          <td className="font-medium">{stat.gradeLevel}</td>
+                          <td>{stat.totalStudents}</td>
+                          <td className="text-green-700 font-semibold">{stat.present}</td>
+                          <td className="text-red-700 font-semibold">{stat.absent}</td>
+                          <td className="text-yellow-700 font-semibold">{stat.late}</td>
+                          <td className="text-orange-700 font-semibold">{stat.cutting}</td>
+                          <td>
+                            <span className={`font-semibold ${stat.attendanceRate >= 90 ? 'text-green-700' : stat.attendanceRate >= 70 ? 'text-yellow-700' : 'text-red-700'}`}>
+                              {stat.attendanceRate}%
+                            </span>
+                          </td>
+                        </tr>
+                        {stat.sections && stat.sections.map((s, si) => (
+                          <tr key={`${index}-${si}`} className="text-sm hover:bg-[var(--secondary)] transition-colors duration-200">
+                            <td className="pl-8">— {s.section}</td>
+                            <td>{s.totalStudents}</td>
+                            <td className="text-green-700 font-semibold">{s.present}</td>
+                            <td className="text-red-700 font-semibold">{s.absent}</td>
+                            <td className="text-yellow-700 font-semibold">{s.late}</td>
+                            <td className="text-orange-700 font-semibold">{s.cutting}</td>
+                            <td>
+                              <span className={`font-semibold ${s.attendanceRate >= 90 ? 'text-green-700' : s.attendanceRate >= 70 ? 'text-yellow-700' : 'text-red-700'}`}>
+                                {s.attendanceRate}%
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
                     ))}
                   </tbody>
                 </table>
@@ -547,8 +636,8 @@ export default function ReportsPage() {
           {/* Attendance Patterns */}
           {attendancePatterns.length > 0 && (
             <div className="content-section">
-              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                <LineChart size={20} />
+              <h2 className="text-xl font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
+                <LineChart size={20} className="text-[var(--primary)]" />
                 Daily Attendance Pattern
               </h2>
               <div className="table-container">
@@ -566,7 +655,7 @@ export default function ReportsPage() {
                   </thead>
                   <tbody>
                     {attendancePatterns.map((pattern, index) => (
-                      <tr key={index}>
+                      <tr key={index} className="hover:bg-[var(--secondary)] transition-colors duration-200">
                         <td className="font-medium">{format(parseISO(pattern.date), 'MMM dd, yyyy')}</td>
                         <td className="text-green-700 font-semibold">{pattern.present}</td>
                         <td className="text-red-700 font-semibold">{pattern.absent}</td>

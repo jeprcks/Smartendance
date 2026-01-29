@@ -17,7 +17,7 @@ interface ScheduleFormData {
   teacher: string;
   timeSlot: string;
   room: string;
-  day: string;
+  days: string[]; // multi-day support
   shift: string;
 }
 
@@ -29,7 +29,7 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
     teacher: '',
     timeSlot: '',
     room: '',
-    day: '',
+    days: [],
     shift: '',
   });
 
@@ -88,7 +88,16 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
       setSubmitError(null);
 
       // Validate all fields are filled
-      if (!formData.gradeLevel || !formData.section || !formData.subject || !formData.teacher || !formData.timeSlot || !formData.room || !formData.day || !formData.shift) {
+      if (
+        !formData.gradeLevel ||
+        !formData.section ||
+        !formData.subject ||
+        !formData.teacher ||
+        !formData.timeSlot ||
+        !formData.room ||
+        formData.days.length === 0 ||
+        !formData.shift
+      ) {
         setSubmitError('Please fill in all fields');
         return;
       }
@@ -101,7 +110,8 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
         teacher: formData.teacher,
         timeSlot: formData.timeSlot,
         room: formData.room,
-        day: formData.day as 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday',
+        day: undefined,
+        days: formData.days as ('Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday')[],
         shift: formData.shift as 'Morning' | 'Afternoon',
       });
 
@@ -116,7 +126,7 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
         teacher: '',
         timeSlot: '',
         room: '',
-        day: '',
+        days: [],
         shift: '',
       });
 
@@ -134,6 +144,16 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
+    });
+  };
+
+  const toggleDay = (day: string) => {
+    setFormData((prev) => {
+      const exists = prev.days.includes(day);
+      return {
+        ...prev,
+        days: exists ? prev.days.filter((d) => d !== day) : [...prev.days, day],
+      };
     });
   };
 
@@ -244,38 +264,51 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Day
+                Days (select one or more)
               </label>
-              <select
-                name="day"
-                value={formData.day}
-                onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
-                required
-              >
-                <option value="">Select Day</option>
-                {days.map((day) => (
-                  <option key={day} value={day}>{day}</option>
-                ))}
-              </select>
+              <div className="flex flex-wrap gap-2">
+                {days.map((day) => {
+                  const isSelected = formData.days.includes(day);
+                  return (
+                    <button
+                      type="button"
+                      key={day}
+                      onClick={() => toggleDay(day)}
+                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
+                        isSelected
+                          ? 'bg-green-100 text-green-700 border-green-300'
+                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                      }`}
+                    >
+                      {day}
+                    </button>
+                  );
+                })}
+              </div>
+              {formData.days.length === 0 && submitError && (
+                <p className="mt-1 text-sm text-red-600">Please select at least one day</p>
+              )}
             </div>
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Time Slot
               </label>
-              <select
+              <input
+                type="text"
                 name="timeSlot"
+                list="timeSlots"
                 value={formData.timeSlot}
                 onChange={handleChange}
+                placeholder="Enter time slot (e.g., 7:00 AM - 8:00 AM) or choose from suggestions"
                 className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 required
-              >
-                <option value="">Select Time Slot</option>
+              />
+              <datalist id="timeSlots">
                 {timeSlots.map((time) => (
-                  <option key={time} value={time}>{time}</option>
+                  <option key={time} value={time} />
                 ))}
-              </select>
+              </datalist>
             </div>
           </div>
 

@@ -89,8 +89,8 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
       setState(() => _isLoading = true);
 
       final dateString = DateTime.now().toString().split(' ')[0];
-      print('📅 Fetching attendance for date: $dateString');
-      print('📍 Schedule ID: ${widget.scheduleId}');
+      debugPrint('📅 Fetching attendance for date: $dateString');
+      debugPrint('📍 Schedule ID: ${widget.scheduleId}');
 
       // Fetch attendance records from backend for this schedule
       final attendanceRecords =
@@ -100,11 +100,11 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             date: dateString,
           );
 
-      print('📊 Received ${attendanceRecords.length} attendance records');
+      debugPrint('📊 Received ${attendanceRecords.length} attendance records');
       if (attendanceRecords.isNotEmpty) {
-        print('✅ Sample record: ${attendanceRecords.first}');
+        debugPrint('✅ Sample record: ${attendanceRecords.first}');
       } else {
-        print('❌ NO ATTENDANCE RECORDS RETURNED FROM BACKEND');
+        debugPrint('❌ NO ATTENDANCE RECORDS RETURNED FROM BACKEND');
       }
 
       if (mounted) {
@@ -123,7 +123,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             final studentId = record['studentId'];
             final status = record['status'];
             final subject = record['subject'];
-            print(
+            debugPrint(
               '👤 Processing: $studentId, Status: $status, Subject: $subject',
             );
 
@@ -141,10 +141,10 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                         1];
                 finalStatus =
                     lastUpdate['status'] ?? record['status'] ?? 'Not Scanned';
-                print('  ✅ Using statusHistory: $finalStatus');
+                debugPrint('  ✅ Using statusHistory: $finalStatus');
               } else {
                 finalStatus = record['status'] ?? 'Not Scanned';
-                print('  📌 Using current status: $finalStatus');
+                debugPrint('  📌 Using current status: $finalStatus');
               }
 
               _statusUpdates[studentId] = finalStatus;
@@ -157,7 +157,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                   _scanTimes[studentId] =
                       '${scanTime.hour}:${scanTime.minute.toString().padLeft(2, '0')}';
                 } catch (e) {
-                  print('⏰ Error parsing scan time: $e');
+                  debugPrint('⏰ Error parsing scan time: $e');
                 }
               }
 
@@ -177,7 +177,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
           _statusUpdates.removeWhere((studentId, status) {
             final scannedStatus = _scannedStatus[studentId] ?? 'Not Scanned';
             if (scannedStatus == 'Out') {
-              print(
+              debugPrint(
                 '⚠️ Removing pending update for student $studentId - status is "Out"',
               );
               return true;
@@ -185,18 +185,18 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
             return false;
           });
 
-          print(
+          debugPrint(
             '✅ Loaded attendance data: ${_scannedAttendance.length} students',
           );
-          print('📋 All students in class: ${_students.length}');
-          print(
+          debugPrint('📋 All students in class: ${_students.length}');
+          debugPrint(
             '📊 Students with attendance records: ${_scannedAttendance.length}',
           );
           _isLoading = false;
         });
       }
     } catch (e) {
-      print('❌ Error fetching attendance data: $e');
+      debugPrint('❌ Error fetching attendance data: $e');
       if (mounted) {
         setState(() => _isLoading = false);
       }
@@ -253,7 +253,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
         // Skip students with "Out" status - they cannot be edited
         final scannedStatus = _scannedStatus[studentId] ?? 'Not Scanned';
         if (scannedStatus == 'Out') {
-          print(
+          debugPrint(
             '⚠️ Skipping update for student $studentId - status is "Out" and cannot be edited',
           );
           continue;
@@ -306,6 +306,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
         // Close modal after a short delay
         if (mounted) {
           await Future.delayed(const Duration(seconds: 1));
+          if (!mounted) return;
           Navigator.pop(context);
         }
       }
@@ -469,9 +470,11 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                       vertical: 8,
                     ),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
+                      color: Colors.blue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.blue.withOpacity(0.3)),
+                      border: Border.all(
+                        color: Colors.blue.withValues(alpha: 0.3),
+                      ),
                     ),
                     child: Text(
                       '${_statusUpdates.length} student(s) will be updated',
@@ -555,9 +558,9 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
           ),
           borderRadius: BorderRadius.circular(12),
           color: isUpdated
-              ? Colors.blue.withOpacity(0.05)
+              ? Colors.blue.withValues(alpha: 0.05)
               : isScanned
-              ? Colors.green.withOpacity(0.02)
+              ? Colors.green.withValues(alpha: 0.02)
               : Colors.transparent,
         ),
         child: Padding(
@@ -642,7 +645,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                         decoration: BoxDecoration(
                           color: _getStatusColor(
                             scannedStatus,
-                          ).withOpacity(0.1),
+                          ).withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(6),
                         ),
                         child: Text(
@@ -774,7 +777,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                               ),
                               decoration: BoxDecoration(
                                 color: isSelected
-                                    ? statusColor.withOpacity(0.2)
+                                    ? statusColor.withValues(alpha: 0.2)
                                     : Colors.grey[100],
                                 borderRadius: BorderRadius.circular(8),
                                 border: Border.all(

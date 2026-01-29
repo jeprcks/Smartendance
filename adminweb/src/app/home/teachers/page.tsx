@@ -8,6 +8,7 @@ import AdvancedSearch, { SearchFilters } from '@/app/components/search/AdvancedS
 import BulkActions from '@/app/components/bulk/BulkActions';
 import { teacherService, Teacher } from '../../services/teacherService';
 import toast from 'react-hot-toast';
+import { Users, CheckCircle, XCircle } from 'lucide-react';
 
 
 
@@ -246,21 +247,67 @@ export default function TeachersPage() {
     }
   };
 
+  const teacherStatCards = [
+    { title: 'Total Teachers', value: teachers.length, icon: Users, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+    { title: 'Active Teachers', value: allActiveTeachers.length, icon: CheckCircle, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
+    { title: 'Inactive Teachers', value: allInactiveTeachers.length, icon: XCircle, color: 'bg-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' },
+  ];
+
   return (
     <div className="page-container">
-      <div className="page-header">
-        <div className="flex justify-between items-center">
-          <div>
-            <h1 className="page-title">Teachers</h1>
-            <p className="page-subtitle">Manage teacher information and status</p>
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <div className="dashboard-header-content">
+            <h1>Teachers</h1>
+            <p>Manage teacher information and status</p>
           </div>
-          <button 
-            onClick={() => setIsAddModalOpen(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 transition-colors"
-          >
-            + Add Teacher
-          </button>
+          <div className="dashboard-header-refresh-box">
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              type="button"
+              className="inline-flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add Teacher
+            </button>
+          </div>
         </div>
+      </header>
+
+      {/* Stats cards – same style as dashboard */}
+      <div className="dashboard-grid mb-8">
+        {teacherStatCards.map((stat, index) => {
+          const IconComponent = stat.icon;
+          const maxVal = Math.max(teachers.length, 1);
+          const barHeight = `${(stat.value / maxVal) * 100}%`;
+          return (
+            <div
+              key={stat.title}
+              className="stat-card"
+              style={{ animationDelay: `${index * 80}ms` }}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className={`p-3 ${stat.bgColor} rounded-lg`}>
+                  <IconComponent className={stat.textColor} size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                  <p className={`text-3xl font-bold ${stat.textColor}`}>
+                    {stat.value.toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className={`${stat.color} h-2 rounded-full transition-all duration-500`}
+                  style={{ width: barHeight }}
+                />
+              </div>
+            </div>
+          );
+        })}
       </div>
 
       {error && (

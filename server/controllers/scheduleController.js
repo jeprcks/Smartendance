@@ -1,28 +1,47 @@
 const Schedule = require('../models/scheduleSchema');
 
+const ALLOWED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+function normalizeDays({ day, days }) {
+  // Prefer explicit days array; fallback to legacy day.
+  const raw = Array.isArray(days) ? days : day ? [day] : [];
+  // De-dupe + keep only allowed.
+  const cleaned = Array.from(new Set(raw)).filter((d) => ALLOWED_DAYS.includes(d));
+  return cleaned;
+}
+
 exports.createSchedule = async (req, res) => {
   try {
-    const { gradeLevel, section, subject, teacher, timeSlot, room, day, shift } = req.body;
+    const { gradeLevel, section, subject, teacher, timeSlot, room, day, days, shift } = req.body;
+    const normalizedDays = normalizeDays({ day, days });
+    const primaryDay = normalizedDays[0];
 
     // Validate required fields
-    if (!gradeLevel || !section || !subject || !teacher || !timeSlot || !room || !day || !shift) {
+    if (!gradeLevel || !section || !subject || !teacher || !timeSlot || !room || normalizedDays.length === 0 || !shift) {
       return res.status(400).json({ 
         error: 'All fields are required' 
       });
     }
 
-    // Check for duplicate schedule (same grade, section, day, and time slot)
+    // Check for duplicate schedule across ANY selected day, matching subject and shift
     const existingSchedule = await Schedule.findOne({
       gradeLevel,
       section,
-      day,
+      subject,
+      shift,
       timeSlot,
-      isActive: true
+      isActive: true,
+      $or: [
+        // legacy single-day records
+        { day: { $in: normalizedDays } },
+        // multi-day records
+        { days: { $elemMatch: { $in: normalizedDays } } }
+      ]
     });
 
     if (existingSchedule) {
       return res.status(409).json({ 
-        error: 'A schedule already exists for this grade, section, day, and time slot' 
+        error: 'A schedule already exists for this grade, section, subject, shift, selected day(s), and time slot' 
       });
     }
 
@@ -33,7 +52,8 @@ exports.createSchedule = async (req, res) => {
       teacher,
       timeSlot,
       room,
-      day,
+      day: primaryDay, // keep legacy field populated
+      days: normalizedDays,
       shift,
       isActive: true
     });
@@ -60,7 +80,13 @@ exports.getAllSchedules = async (req, res) => {
     const filter = {};
     if (gradeLevel) filter.gradeLevel = gradeLevel;
     if (section) filter.section = section;
-    if (day) filter.day = day;
+    if (day) {
+      // Support filtering legacy + multi-day schedules by a single day query param
+      filter.$or = [
+        { day: day },
+        { days: day }
+      ];
+    }
     if (teacher) filter.teacher = teacher; // Filter by teacher name
     if (isActive !== undefined) filter.isActive = isActive === 'true';
 
@@ -106,7 +132,7 @@ exports.getScheduleById = async (req, res) => {
 exports.updateSchedule = async (req, res) => {
   try {
     const { id } = req.params;
-    const { gradeLevel, section, subject, teacher, timeSlot, room, day, isActive } = req.body;
+    const { gradeLevel, section, subject, teacher, timeSlot, room, day, days, isActive, shift } = req.body;
 
     const schedule = await Schedule.findById(id);
 
@@ -123,7 +149,20 @@ exports.updateSchedule = async (req, res) => {
     if (teacher) schedule.teacher = teacher;
     if (timeSlot) schedule.timeSlot = timeSlot;
     if (room) schedule.room = room;
-    if (day) schedule.day = day;
+    if (shift) schedule.shift = shift;
+
+    // Update days/day (support both, keep day as primary)
+    if (day !== undefined || days !== undefined) {
+      const normalizedDays = normalizeDays({ day, days });
+      if (normalizedDays.length === 0) {
+        return res.status(400).json({
+          error: 'At least one valid day is required'
+        });
+      }
+      schedule.days = normalizedDays;
+      schedule.day = normalizedDays[0];
+    }
+
     if (isActive !== undefined) schedule.isActive = isActive;
 
     await schedule.save();

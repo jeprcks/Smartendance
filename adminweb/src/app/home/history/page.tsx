@@ -399,7 +399,29 @@ export default function HistoryPage() {
   }, [fetchData]);
 
   return (
-    <div className="p-8">
+    <div className="page-container">
+      <header className="dashboard-header">
+        <div className="dashboard-header-inner">
+          <div className="dashboard-header-content">
+            <h1>History</h1>
+            <p>View and search attendance records</p>
+          </div>
+          <div className="dashboard-header-refresh-box">
+            <button
+              type="button"
+              onClick={() => exportAttendanceToPDF(attendanceRecords)}
+              disabled={isLoading || attendanceRecords.length === 0}
+              className="inline-flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+              </svg>
+              Export PDF
+            </button>
+          </div>
+        </div>
+      </header>
+
       <div className="mb-6">
         <AttendanceStatsComponent 
           totalRecords={stats.total}
@@ -445,133 +467,108 @@ export default function HistoryPage() {
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">
-        <div className="p-6">
-          <div className="mb-6">
-            <div className="flex gap-4 items-end">
-              <div className="flex-1">
-                <div className="relative group">
-                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                    <svg className="h-5 w-5 text-gray-400 group-focus-within:text-green-500 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                  <input
-                    type="text"
-                    placeholder="Search by student name, ID, or subject..."
-                    className="w-full pl-12 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                  />
+      <div className="content-section">
+        <div className="mb-6">
+          <div className="flex gap-4 items-end">
+            <div className="flex-1">
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-[var(--muted-foreground)] group-focus-within:text-[var(--primary)] transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                  </svg>
                 </div>
-              </div>
-              <div className="w-48">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Date</label>
                 <input
-                  type="date"
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  type="text"
+                  placeholder="Search by student name, ID, or subject..."
+                  className="w-full pl-12 pr-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-white transition-all duration-300"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="w-48">
-                <label className="block text-sm font-medium text-gray-600 mb-1.5">Status</label>
-                <select
-                  className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300"
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value as AttendanceRecord['status'] | '')}
-                >
-                  <option value="">All Status</option>
-                  <option value="Present">Present</option>
-                  <option value="Late">Late</option>
-                  <option value="Absent">Absent</option>
-                  <option value="Cutting">Cutting</option>
-                  <option value="Out">Out</option>
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => exportAttendanceToPDF(attendanceRecords)}
-                  disabled={isLoading || attendanceRecords.length === 0}
-                  className="inline-flex items-center px-4 py-2.5 bg-red-600 text-sm font-semibold text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                  </svg>
-                  Export PDF
-                </button>
-              </div>
+            </div>
+            <div className="w-48">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Date</label>
+              <input
+                type="date"
+                className="w-full px-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+              />
+            </div>
+            <div className="w-48">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Status</label>
+              <select
+                className="w-full px-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value as AttendanceRecord['status'] | '')}
+              >
+                <option value="">All Status</option>
+                <option value="Present">Present</option>
+                <option value="Late">Late</option>
+                <option value="Absent">Absent</option>
+                <option value="Cutting">Cutting</option>
+                <option value="Out">Out</option>
+              </select>
             </div>
           </div>
+        </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200/80">
-            <table className="min-w-full divide-y divide-gray-200/80">
-              <thead className="bg-gray-50/50">
+        <div className="table-container">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Student ID</th>
+                <th>Name</th>
+                <th>Subject</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {isLoading ? (
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student ID</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <td colSpan={6} className="text-center py-8 text-[var(--muted-foreground)]">
+                    <div className="flex items-center justify-center">
+                      <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--primary)] border-t-transparent mr-3"></div>
+                      Loading records...
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200/80">
-                {isLoading ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                      <div className="flex items-center justify-center">
-                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-3"></div>
-                        Loading records...
-                      </div>
-                    </td>
-                  </tr>
-                ) : attendanceRecords.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
-                      No attendance records found
-                    </td>
-                  </tr>
-                ) : (
-                  attendanceRecords.map((record) => (
-                    <tr 
-                      key={record._id} 
-                    className="hover:bg-gray-50/50 transition-colors duration-200 cursor-pointer"
-                      onClick={() => fetchStudentDetails(record.studentId)}
+              ) : attendanceRecords.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="text-center py-8 text-[var(--muted-foreground)]">
+                    No attendance records found
+                  </td>
+                </tr>
+              ) : (
+                attendanceRecords.map((record) => (
+                  <tr
+                    key={record._id}
+                    className="hover:bg-[var(--secondary)] transition-colors duration-200 cursor-pointer"
+                    onClick={() => fetchStudentDetails(record.studentId)}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-800">{record.studentId}</span>
+                    <td className="whitespace-nowrap font-medium">{record.studentId}</td>
+                    <td className="whitespace-nowrap font-medium">{record.studentName}</td>
+                    <td className="whitespace-nowrap">{record.subject}</td>
+                    <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'MMM dd, yyyy')}</td>
+                    <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'HH:mm')}</td>
+                    <td className="whitespace-nowrap">
+                      <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
+                        record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :
+                        record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50' :
+                        record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50' :
+                        record.status === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50' :
+                        'bg-orange-50 text-orange-700 ring-orange-200/50'
+                      } transition-colors duration-200`}>
+                        {record.status}
+                      </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-800">{record.studentName}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{record.subject}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{format(new Date(record.scanTime), 'MMM dd, yyyy')}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700">{format(new Date(record.scanTime), 'HH:mm')}</span>
-                    </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
-                          record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :
-                          record.status === 'Late' ? 'bg-yellow-50 text-yellow-700 ring-yellow-200/50' :
-                          record.status === 'Absent' ? 'bg-red-50 text-red-700 ring-red-200/50' :
-                          record.status === 'Out' ? 'bg-purple-50 text-purple-700 ring-purple-200/50' :
-                          'bg-orange-50 text-orange-700 ring-orange-200/50'
-                        } transition-colors duration-200`}>
-                          {record.status}
-                        </span>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
 

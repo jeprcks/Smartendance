@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/fetch/teacherService.dart';
 import 'components/schedule_details.dart';
-import 'components/attendance_modal.dart';
 import 'components/background_logo.dart';
+import 'package:mobile/theme.dart';
 
-// Color scheme for different shifts
+// Color scheme for different shifts (aligned with app theme)
 const Map<String, Color> shiftColors = {
-  'Morning': Color(0xFF3B82F6),
-  'Afternoon': Color(0xFFF59E0B),
+  'Morning': kPrimary,
+  'Afternoon': kAccent,
   'Evening': Color(0xFF8B5CF6),
 };
 
@@ -32,6 +32,8 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
   List<dynamic> _schedules = [];
   final Map<String, List<dynamic>> _classStudents = {};
   String? _error;
+  bool _contentEntered = false;
+  int _visibleScheduleCount = 0;
 
   // Filter states
   String? _selectedDay;
@@ -56,14 +58,31 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
     _loadScheduleData();
   }
 
+  void _runStaggerIfNeeded() {
+    if (!mounted) return;
+    final filtered = _getFilteredSchedules();
+    final len = filtered.length;
+    if (len == 0) return;
+    if (_visibleScheduleCount >= len) return;
+    if (!_contentEntered) setState(() => _contentEntered = true);
+    Future.doWhile(() async {
+      await Future.delayed(kAnimationStaggerStep);
+      if (!mounted) return false;
+      setState(() {
+        if (_visibleScheduleCount < len) _visibleScheduleCount++;
+      });
+      return _visibleScheduleCount < len;
+    });
+  }
+
   Future<void> _loadScheduleData() async {
     try {
       setState(() => _isLoading = true);
 
-      print('\n========== LOADING SCHEDULE ==========');
-      print('Teacher ID: ${widget.teacherId}');
-      print('Teacher Name: ${widget.teacherName}');
-      print('Token: ${widget.token.substring(0, 20)}...');
+      debugPrint('\n========== LOADING SCHEDULE ==========');
+      debugPrint('Teacher ID: ${widget.teacherId}');
+      debugPrint('Teacher Name: ${widget.teacherName}');
+      debugPrint('Token: ${widget.token.substring(0, 20)}...');
 
       // Fetch ONLY this teacher's schedules by name
       final schedules = await TeacherService.getTeacherSchedule(
@@ -72,14 +91,25 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
         teacherName: widget.teacherName,
       );
 
-      print('✅ Schedules loaded: ${schedules.length} schedules');
+      debugPrint('✅ Schedules loaded: ${schedules.length} schedules');
 
-      setState(() {
-        // Sort schedules by day (Monday first)
-        _schedules = _sortSchedulesByDay(schedules);
-        _error = null;
-        _isLoading = false;
-      });
+      if (mounted) {
+        final wasRetry = _error != null;
+        setState(() {
+          _schedules = _sortSchedulesByDay(schedules);
+          _error = null;
+          _isLoading = false;
+        });
+        if (wasRetry) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Schedule refreshed successfully'),
+              backgroundColor: kPrimary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
+      }
 
       // If schedules exist, load students for each class
       if (_schedules.isNotEmpty) {
@@ -110,38 +140,70 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
         }
       }
     } catch (e) {
-      print('❌ Error loading schedule: $e');
+      debugPrint('❌ Error loading schedule: $e');
       if (mounted) {
         setState(() {
           _error = e.toString().replaceAll('Exception: ', '');
           _isLoading = false;
         });
+        final msg = e.toString().length > 50
+            ? '${e.toString().substring(0, 50)}…'
+            : e.toString();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Refresh failed: $msg'),
+            backgroundColor: Colors.red[700],
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _loadScheduleData(),
+            ),
+          ),
+        );
       }
     }
   }
 
   // Sort schedules by day of week
   List<dynamic> _sortSchedulesByDay(List<dynamic> schedules) {
+    int getEarliestIndex(dynamic s) {
+      final raw = s['days'];
+      if (raw is List && raw.isNotEmpty) {
+        final indices = raw
+            .map((d) => daysOfWeek.indexOf(d))
+            .where((i) => i >= 0)
+            .toList();
+        if (indices.isNotEmpty) return indices.reduce((a, b) => a < b ? a : b);
+      }
+      final day = s['day'] ?? '';
+      final idx = daysOfWeek.indexOf(day);
+      return idx >= 0 ? idx : 999;
+    }
+
     return List.from(schedules)..sort((a, b) {
-      final dayA = a['day'] ?? '';
-      final dayB = b['day'] ?? '';
-      final indexA = daysOfWeek.indexOf(dayA);
-      final indexB = daysOfWeek.indexOf(dayB);
-      return (indexA == -1 ? 999 : indexA).compareTo(
-        indexB == -1 ? 999 : indexB,
-      );
+      return getEarliestIndex(a).compareTo(getEarliestIndex(b));
     });
   }
 
   // Get filtered schedules
   List<dynamic> _getFilteredSchedules() {
+    bool scheduleHasDay(dynamic schedule, String? dayName) {
+      if (dayName == null) return true;
+      final raw = schedule['days'];
+      if (raw is List && raw.isNotEmpty) {
+        return raw.contains(dayName);
+      }
+      final day = schedule['day'];
+      return day == dayName;
+    }
+
     return _schedules.where((schedule) {
-      final day = schedule['day'] ?? '';
       final time = schedule['timeSlot'] ?? '';
       final shift = schedule['shift'] ?? '';
       final subject = schedule['subject'] ?? '';
 
-      if (_selectedDay != null && day != _selectedDay) return false;
+      if (!scheduleHasDay(schedule, _selectedDay)) return false;
       if (_selectedTime != null && time != _selectedTime) return false;
       if (_selectedShift != null && shift != _selectedShift) return false;
       if (_selectedSubject != null && subject != _selectedSubject) return false;
@@ -152,12 +214,19 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
 
   // Get unique days in order
   List<String> _getUniqueDays() {
-    final days = <String>{};
+    final found = <String>{};
     for (var schedule in _schedules) {
-      final day = schedule['day'] ?? '';
-      if (day.isNotEmpty) days.add(day);
+      final raw = schedule['days'];
+      if (raw is List && raw.isNotEmpty) {
+        for (var d in raw) {
+          if (d is String && d.isNotEmpty) found.add(d);
+        }
+      } else {
+        final day = schedule['day'] ?? '';
+        if (day is String && day.isNotEmpty) found.add(day);
+      }
     }
-    return daysOfWeek.where((d) => days.contains(d)).toList();
+    return daysOfWeek.where((d) => found.contains(d)).toList();
   }
 
   // Get unique times
@@ -204,7 +273,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
         border: Border.all(color: Colors.grey[300]!, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 4,
             offset: const Offset(0, 2),
           ),
@@ -236,39 +305,45 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                   _selectedTime != null ||
                   _selectedShift != null ||
                   _selectedSubject != null)
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _selectedDay = null;
-                      _selectedTime = null;
-                      _selectedShift = null;
-                      _selectedSubject = null;
-                    });
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Colors.red[50],
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: Colors.red[200]!, width: 1),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.clear, size: 14, color: Colors.red[700]),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Clear',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.red[700],
+                Material(
+                  color: Colors.transparent,
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        _selectedDay = null;
+                        _selectedTime = null;
+                        _selectedShift = null;
+                        _selectedSubject = null;
+                      });
+                    },
+                    borderRadius: BorderRadius.circular(6),
+                    splashColor: Colors.red.withValues(alpha: 0.2),
+                    highlightColor: Colors.red.withValues(alpha: 0.1),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 4,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(color: Colors.red[200]!, width: 1),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.clear, size: 14, color: Colors.red[700]),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Clear',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.red[700],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -299,7 +374,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
           _buildFilterRow(
             label: 'Day',
             icon: Icons.calendar_today,
-            iconColor: const Color(0xFF10B981),
+            iconColor: kPrimary,
             items: uniqueDays,
             selectedItem: _selectedDay,
             onSelected: (selected, item) {
@@ -308,7 +383,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
               });
             },
             getLabel: (item) => item.substring(0, 3),
-            getColor: (item) => const Color(0xFF10B981),
+            getColor: (item) => kPrimary,
           ),
           const SizedBox(height: 12),
 
@@ -342,7 +417,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
               });
             },
             getLabel: (item) => item,
-            getColor: (item) => shiftColors[item] ?? const Color(0xFF10B981),
+            getColor: (item) => shiftColors[item] ?? kPrimary,
           ),
         ],
       ),
@@ -416,19 +491,19 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: kBackground,
       appBar: AppBar(
         flexibleSpace: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [Color(0xFF10B981), Color(0xFF059669)],
+              colors: [kPrimary, kPrimaryLight],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
           ),
         ),
-        elevation: 8,
-        shadowColor: Colors.black26,
+        elevation: 4,
+        shadowColor: kPrimary.withValues(alpha: 0.3),
         title: const Text(
           'My Schedule & Classes',
           style: TextStyle(
@@ -437,11 +512,22 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
             color: Colors.white,
           ),
         ),
+        bottom: _isLoading
+            ? PreferredSize(
+                preferredSize: const Size.fromHeight(4),
+                child: LinearProgressIndicator(
+                  backgroundColor: kPrimaryDark.withValues(alpha: 0.3),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
+                    Colors.white70,
+                  ),
+                ),
+              )
+            : null,
       ),
       body: _isLoading
           ? Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.green[600]!),
+                valueColor: AlwaysStoppedAnimation<Color>(kPrimary),
               ),
             )
           : _error != null
@@ -474,7 +560,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.green[600],
+                      backgroundColor: kPrimary,
                       foregroundColor: Colors.white,
                     ),
                   ),
@@ -500,106 +586,143 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
               ),
             )
           : SafeArea(
-              child: Stack(
-                children: [
-                  // Background Logo
-                  const BackgroundLogo(),
-                  // Main Content
-                  SingleChildScrollView(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Filter Section
-                          _buildFilterSection(),
-                          const SizedBox(height: 24),
+              child: Builder(
+                builder: (context) {
+                  WidgetsBinding.instance.addPostFrameCallback(
+                    (_) => _runStaggerIfNeeded(),
+                  );
+                  return Stack(
+                    children: [
+                      // Background Logo
+                      const BackgroundLogo(),
+                      // Main Content
+                      SingleChildScrollView(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: AnimatedOpacity(
+                            opacity: _contentEntered ? 1.0 : 0.0,
+                            duration: kAnimationEnterDuration,
+                            curve: kAnimationEnterCurve,
+                            child: AnimatedSlide(
+                              offset: _contentEntered
+                                  ? Offset.zero
+                                  : const Offset(0, 0.05),
+                              duration: kAnimationEnterDuration,
+                              curve: kAnimationEnterCurve,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // Filter Section
+                                  _buildFilterSection(),
+                                  const SizedBox(height: 24),
 
-                          // Schedules Section
-                          const Text(
-                            'Class Schedules',
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.black87,
+                                  // Schedules Section
+                                  const Text(
+                                    'Class Schedules',
+                                    style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+
+                                  // Display filtered count
+                                  if (_getFilteredSchedules().isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        bottom: 12,
+                                      ),
+                                      child: Text(
+                                        'Showing ${_getFilteredSchedules().length} of ${_schedules.length} schedules',
+                                        style: TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.grey[600],
+                                          fontStyle: FontStyle.italic,
+                                        ),
+                                      ),
+                                    ),
+
+                                  if (_getFilteredSchedules().isEmpty)
+                                    Center(
+                                      child: Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 32,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Icon(
+                                              Icons.filter_alt_off_outlined,
+                                              size: 48,
+                                              color: Colors.grey[300],
+                                            ),
+                                            const SizedBox(height: 12),
+                                            Text(
+                                              'No schedules match your filters',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            const SizedBox(height: 16),
+                                            ElevatedButton.icon(
+                                              onPressed: () {
+                                                setState(() {
+                                                  _selectedDay = null;
+                                                  _selectedTime = null;
+                                                  _selectedShift = null;
+                                                  _selectedSubject = null;
+                                                });
+                                              },
+                                              icon: const Icon(Icons.clear),
+                                              label: const Text(
+                                                'Clear Filters',
+                                              ),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: kPrimary,
+                                                foregroundColor: Colors.white,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                    )
+                                  else
+                                    ListView.builder(
+                                      shrinkWrap: true,
+                                      physics:
+                                          const NeverScrollableScrollPhysics(),
+                                      itemCount: _getFilteredSchedules().length,
+                                      itemBuilder: (context, index) {
+                                        final schedule =
+                                            _getFilteredSchedules()[index];
+                                        final isVisible =
+                                            index < _visibleScheduleCount;
+                                        return AnimatedOpacity(
+                                          opacity: isVisible ? 1.0 : 0.0,
+                                          duration: kAnimationEnterDuration,
+                                          curve: kAnimationEnterCurve,
+                                          child: AnimatedSlide(
+                                            offset: isVisible
+                                                ? Offset.zero
+                                                : const Offset(0, 0.04),
+                                            duration: kAnimationEnterDuration,
+                                            curve: kAnimationEnterCurve,
+                                            child: _buildScheduleCard(schedule),
+                                          ),
+                                        );
+                                      },
+                                    ),
+                                  const SizedBox(height: 40),
+                                ],
+                              ),
                             ),
                           ),
-                          const SizedBox(height: 12),
-
-                          // Display filtered count
-                          if (_getFilteredSchedules().isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 12),
-                              child: Text(
-                                'Showing ${_getFilteredSchedules().length} of ${_schedules.length} schedules',
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.grey[600],
-                                  fontStyle: FontStyle.italic,
-                                ),
-                              ),
-                            ),
-
-                          if (_getFilteredSchedules().isEmpty)
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(
-                                  vertical: 32,
-                                ),
-                                child: Column(
-                                  children: [
-                                    Icon(
-                                      Icons.filter_alt_off_outlined,
-                                      size: 48,
-                                      color: Colors.grey[300],
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Text(
-                                      'No schedules match your filters',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton.icon(
-                                      onPressed: () {
-                                        setState(() {
-                                          _selectedDay = null;
-                                          _selectedTime = null;
-                                          _selectedShift = null;
-                                          _selectedSubject = null;
-                                        });
-                                      },
-                                      icon: const Icon(Icons.clear),
-                                      label: const Text('Clear Filters'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(
-                                          0xFF10B981,
-                                        ),
-                                        foregroundColor: Colors.white,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            )
-                          else
-                            ListView.builder(
-                              shrinkWrap: true,
-                              physics: const NeverScrollableScrollPhysics(),
-                              itemCount: _getFilteredSchedules().length,
-                              itemBuilder: (context, index) {
-                                final schedule = _getFilteredSchedules()[index];
-                                return _buildScheduleCard(schedule);
-                              },
-                            ),
-                          const SizedBox(height: 40),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-                ],
+                    ],
+                  );
+                },
               ),
             ),
     );
@@ -616,7 +739,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
     final students = _classStudents[classKey] ?? [];
 
     // Get color based on shift
-    final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
+    final shiftColor = shiftColors[shift] ?? kPrimary;
 
     return GestureDetector(
       onTap: () {
@@ -653,7 +776,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: shiftColor.withOpacity(0.1),
+                        color: shiftColor.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Icon(Icons.schedule, color: shiftColor, size: 28),
@@ -707,7 +830,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                     _buildChip(
                       Icons.layers,
                       shift,
-                      shiftColor.withOpacity(0.1),
+                      shiftColor.withValues(alpha: 0.1),
                       shiftColor,
                     ),
                   ],
@@ -715,103 +838,6 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
 
                 const SizedBox(height: 20),
                 const Divider(height: 2),
-                const SizedBox(height: 16),
-
-                // Students List Header
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Students Enrolled',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      decoration: BoxDecoration(
-                        color: shiftColor.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '${students.length} students',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: shiftColor,
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-
-                // Quick Action Buttons
-                if (students.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: _buildActionButton(
-                      'Take Attendance',
-                      Icons.check_circle_outline,
-                      Colors.green,
-                      () => StudentStatusModal.showStatusEditModal(
-                        context,
-                        students: students,
-                        token: widget.token,
-                        scheduleId: schedule['_id'] ?? '',
-                        subject: schedule['subject'] ?? 'General',
-                        gradeLevel: schedule['gradeLevel'] ?? 'N/A',
-                        section: schedule['section'] ?? 'N/A',
-                        scheduleTitle:
-                            '${schedule['subject']} - ${schedule['day']} ${schedule['timeSlot']}',
-                        onStatusUpdated: () {
-                          // Refresh data after status update
-                          _loadScheduleData();
-                        },
-                      ),
-                    ),
-                  ),
-
-                // Students List
-                if (students.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 24),
-                    child: Center(
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.people_outline,
-                            size: 48,
-                            color: Colors.grey[300],
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No students in this class',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[500],
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                else
-                  ListView.builder(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: students.length,
-                    itemBuilder: (context, index) {
-                      final student = students[index];
-                      return _buildStudentTile(student, shiftColor, index);
-                    },
-                  ),
               ],
             ),
           ),
@@ -831,7 +857,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: textColor.withOpacity(0.3), width: 1),
+        border: Border.all(color: textColor.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -851,181 +877,5 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
     );
   }
 
-  Widget _buildActionButton(
-    String label,
-    IconData icon,
-    Color color,
-    VoidCallback onPressed,
-  ) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onPressed,
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: 6),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: color,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStudentTile(dynamic student, Color shiftColor, int index) {
-    final studentName =
-        student['studentName'] ??
-        student['name'] ??
-        student['fullName'] ??
-        'Unknown';
-    final studentId = student['studentId'] ?? student['id'] ?? 'N/A';
-    final section = student['section'] ?? 'N/A';
-
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(12),
-          onTap: () {},
-          child: Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.grey[200]!, width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 4,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                // Avatar with gradient
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: LinearGradient(
-                      colors: [shiftColor, shiftColor.withOpacity(0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: shiftColor.withOpacity(0.3),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      studentName.isNotEmpty
-                          ? studentName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                // Student Info
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        studentName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.badge_outlined,
-                            size: 12,
-                            color: Colors.grey[400],
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'ID: $studentId',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey[500],
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 4),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[100],
-                              borderRadius: BorderRadius.circular(6),
-                            ),
-                            child: Text(
-                              section,
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: Colors.grey[700],
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 8),
-                // Arrow/Action Icon
-                Icon(
-                  Icons.arrow_forward_ios,
-                  size: 16,
-                  color: Colors.grey[400],
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  // Student tile builder removed — student list is shown in ScheduleDetailsPage now.
 }

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
-import 'package:mobile/loginpage.dart/login.dart';
+import 'package:mobile/pages/loginpage/login.dart';
 import 'package:mobile/pages/teachers/teacher.dart';
 
 class AuthWrapper extends StatefulWidget {
@@ -34,8 +34,8 @@ class _AuthWrapperState extends State<AuthWrapper> {
       // Check for teacher token
       final teacherToken = await _storage.read(key: 'teacher_token');
 
-      print('=== CHECK AUTH STATUS ===');
-      print(
+      debugPrint('=== CHECK AUTH STATUS ===');
+      debugPrint(
         'Teacher token found: ${teacherToken != null && teacherToken.isNotEmpty}',
       );
 
@@ -47,6 +47,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
         final subject = await _storage.read(key: 'teacher_subject');
         final role = await _storage.read(key: 'teacher_role');
 
+        if (!mounted) return;
         setState(() {
           _token = teacherToken;
           _teacherId = teacherId ?? '';
@@ -58,11 +59,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
         });
       }
 
-      print('=== CHECK AUTH STATUS END ===');
+      debugPrint('=== CHECK AUTH STATUS END ===');
     } catch (e) {
-      print('❌ Error checking auth status: $e');
+      debugPrint('❌ Error checking auth status: $e');
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -75,6 +76,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
     await _storage.delete(key: 'teacher_subject');
     await _storage.delete(key: 'teacher_role');
 
+    if (!mounted) return;
     setState(() {
       _isLoggedIn = false;
 
@@ -96,35 +98,36 @@ class _AuthWrapperState extends State<AuthWrapper> {
     required String subject,
     required String role,
   }) async {
-    print('\n========== LOGIN SUCCESS HANDLER ==========');
-    print('📋 Storing login credentials...');
-    print('  Token: ${token.substring(0, 20)}...');
-    print('  Teacher ID: $teacherId');
-    print('  Teacher Name: $teacherName');
-    print('  Email: $email');
-    print('  Subject: $subject');
-    print('  Role: $role');
+    debugPrint('\n========== LOGIN SUCCESS HANDLER ==========');
+    debugPrint('📋 Storing login credentials...');
+    debugPrint('  Token: ${token.substring(0, 20)}...');
+    debugPrint('  Teacher ID: $teacherId');
+    debugPrint('  Teacher Name: $teacherName');
+    debugPrint('  Email: $email');
+    debugPrint('  Subject: $subject');
+    debugPrint('  Role: $role');
 
     try {
       // Store credentials
       await _storage.write(key: 'teacher_token', value: token);
-      print('✅ Token stored');
+      debugPrint('✅ Token stored');
 
       await _storage.write(key: 'teacher_id', value: teacherId);
-      print('✅ Teacher ID stored');
+      debugPrint('✅ Teacher ID stored');
 
       await _storage.write(key: 'teacher_name', value: teacherName);
-      print('✅ Teacher Name stored');
+      debugPrint('✅ Teacher Name stored');
 
       await _storage.write(key: 'teacher_email', value: email);
-      print('✅ Email stored');
+      debugPrint('✅ Email stored');
 
       await _storage.write(key: 'teacher_subject', value: subject);
-      print('✅ Subject stored');
+      debugPrint('✅ Subject stored');
 
       await _storage.write(key: 'teacher_role', value: role);
-      print('✅ Role stored');
+      debugPrint('✅ Role stored');
 
+      if (!mounted) return;
       // Update local state
       setState(() {
         _token = token;
@@ -136,11 +139,11 @@ class _AuthWrapperState extends State<AuthWrapper> {
         _isLoggedIn = true;
       });
 
-      print('\n✅ All data stored successfully!');
-      print('========================================\n');
+      debugPrint('\n✅ All data stored successfully!');
+      debugPrint('========================================\n');
     } catch (e) {
-      print('❌ Error in _handleLoginSuccess: $e');
-      print('========================================\n');
+      debugPrint('❌ Error in _handleLoginSuccess: $e');
+      debugPrint('========================================\n');
     }
   }
 

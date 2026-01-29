@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 
+const ALLOWED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
 const scheduleSchema = new mongoose.Schema(
   {
     gradeLevel: {
@@ -29,8 +31,31 @@ const scheduleSchema = new mongoose.Schema(
     },
     day: {
       type: String,
-      required: true,
-      enum: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
+      /**
+       * Legacy single-day field.
+       * For multi-day schedules, we keep this as the "primary" / first day
+       * for backward compatibility and sorting.
+       */
+      required: function () {
+        return !Array.isArray(this.days) || this.days.length === 0;
+      },
+      enum: ALLOWED_DAYS
+    },
+    days: {
+      /**
+       * New multi-day support.
+       * When present, must contain at least one day.
+       */
+      type: [String],
+      enum: ALLOWED_DAYS,
+      default: undefined,
+      validate: {
+        validator: function (value) {
+          if (value === undefined) return true;
+          return Array.isArray(value) && value.length > 0;
+        },
+        message: 'days must be a non-empty array of valid weekdays'
+      }
     },
     shift: {
       type: String,

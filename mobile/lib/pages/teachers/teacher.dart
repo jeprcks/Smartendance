@@ -1,8 +1,19 @@
+import 'dart:typed_data';
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/fetch/teacherService.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:mobile/utils/pdf_download_stub.dart'
+    if (dart.library.html) 'package:mobile/utils/pdf_download_web.dart'
+    as pdf_download;
 import 'schedule.dart';
 import 'components/background_logo.dart';
+import 'package:mobile/theme.dart';
 
 class TeacherDashboard extends StatefulWidget {
   final String token;
@@ -56,12 +67,16 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   };
   List<Map<String, dynamic>> _weeklyTrends = [];
   String? _error;
+  bool _contentEntered = false;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     _loadDashboardData();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) setState(() => _contentEntered = true);
+    });
   }
 
   @override
@@ -87,10 +102,8 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       // Store all schedules
       final allSchedules = List<dynamic>.from(todaySchedules);
 
-      // Fetch attendance stats
-      final stats = await TeacherService.getAttendanceStats(
-        token: widget.token,
-      );
+      // Fetch attendance stats (API call retained if needed in future)
+      await TeacherService.getAttendanceStats(token: widget.token);
 
       // Fetch attendance records
       final recordsResponse = await TeacherService.getAttendanceRecords(
@@ -123,6 +136,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       final filteredStats = _calculateStatsFromRecords(records);
 
       if (mounted) {
+        final wasRetry = _error != null;
         setState(() {
           _attendanceStats =
               filteredStats; // Use filtered stats instead of API stats
@@ -134,8 +148,18 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           _todayAbsentStudents = absentStudents;
           _criticalAlerts = alerts;
           _weeklyTrends = trends;
+          _error = null;
           _isLoading = false;
         });
+        if (wasRetry) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text('Data refreshed successfully'),
+              backgroundColor: kPrimary,
+              behavior: SnackBarBehavior.floating,
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -143,8 +167,22 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           _error = e.toString();
           _isLoading = false;
         });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Refresh failed: ${e.toString().length > 60 ? '${e.toString().substring(0, 60)}…' : e}',
+            ),
+            backgroundColor: Colors.red[700],
+            behavior: SnackBarBehavior.floating,
+            action: SnackBarAction(
+              label: 'Retry',
+              textColor: Colors.white,
+              onPressed: () => _loadDashboardData(),
+            ),
+          ),
+        );
       }
-      print('Error loading dashboard data: $e');
+      debugPrint('Error loading dashboard data: $e');
     }
   }
 
@@ -216,7 +254,17 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     final today = DateTime.now();
     final dayName = _getDayName(today.weekday);
 
-    return schedules.where((schedule) => schedule['day'] == dayName).toList()
+    bool scheduleHasDay(dynamic schedule, String day) {
+      final raw = schedule['days'];
+      if (raw is List && raw.isNotEmpty) {
+        return raw.contains(day);
+      }
+      return schedule['day'] == day;
+    }
+
+    return schedules
+        .where((schedule) => scheduleHasDay(schedule, dayName))
+        .toList()
       ..sort((a, b) {
         final timeA = a['timeSlot'] ?? '';
         final timeB = b['timeSlot'] ?? '';
@@ -356,6 +404,160 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     }
 
     return stats;
+  }
+
+  /// Per-subject/per-class breakdown for today (present, absent, late, cutting).
+  List<Map<String, dynamic>> _getTodaySubjectBreakdown() {
+    final today = DateTime.now();
+    final todayFormatted =
+        '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+
+    final todayRecords = _attendanceRecords.where((r) {
+      final createdAt = r['createdAt'] as String?;
+      return createdAt?.startsWith(todayFormatted) ?? false;
+    }).toList();
+
+    final Map<String, Map<String, dynamic>> byClass = {};
+    for (var record in todayRecords) {
+      final gradeLevel = record['gradeLevel'] ?? 'N/A';
+      final section = record['section'] ?? 'N/A';
+      final subject = record['subject'] ?? 'N/A';
+      final key = '$gradeLevel-$section-$subject';
+      if (!byClass.containsKey(key)) {
+        byClass[key] = {
+          'gradeLevel': gradeLevel,
+          'section': section,
+          'subject': subject,
+          'present': 0,
+          'absent': 0,
+          'late': 0,
+          'cutting': 0,
+          'total': 0,
+        };
+      }
+      byClass[key]!['total']++;
+      final status = record['status'] ?? 'Unknown';
+      switch (status) {
+        case 'Present':
+          byClass[key]!['present']++;
+          break;
+        case 'Absent':
+          byClass[key]!['absent']++;
+          break;
+        case 'Late':
+          byClass[key]!['late']++;
+          break;
+        case 'Cutting':
+          byClass[key]!['cutting']++;
+          break;
+      }
+    }
+
+    return byClass.values.toList()..sort((a, b) {
+      final gradeA = int.tryParse(a['gradeLevel'].toString()) ?? 0;
+      final gradeB = int.tryParse(b['gradeLevel'].toString()) ?? 0;
+      if (gradeA != gradeB) return gradeA.compareTo(gradeB);
+      return (a['section'] ?? '').toString().compareTo(
+        (b['section'] ?? '').toString(),
+      );
+    });
+  }
+
+  /// Per-subject breakdown for last 7 days (present, absent, late, cutting).
+  List<Map<String, dynamic>> _getWeeklySubjectBreakdown() {
+    final now = DateTime.now();
+    final weekAgo = now.subtract(const Duration(days: 7));
+
+    final weekRecords = _attendanceRecords.where((r) {
+      final createdAt = r['createdAt'] as String?;
+      if (createdAt == null) return false;
+      final date = DateTime.tryParse(createdAt.substring(0, 10));
+      return date != null && !date.isBefore(weekAgo) && !date.isAfter(now);
+    }).toList();
+
+    return _subjectBreakdownFromRecords(weekRecords);
+  }
+
+  /// Per-subject breakdown for current month (present, absent, late, cutting).
+  List<Map<String, dynamic>> _getMonthlySubjectBreakdown() {
+    final now = DateTime.now();
+    final monthPrefix = '${now.year}-${now.month.toString().padLeft(2, '0')}';
+
+    final monthRecords = _attendanceRecords.where((r) {
+      final createdAt = r['createdAt'] as String?;
+      return createdAt != null && createdAt.startsWith(monthPrefix);
+    }).toList();
+
+    return _subjectBreakdownFromRecords(monthRecords);
+  }
+
+  List<Map<String, dynamic>> _subjectBreakdownFromRecords(
+    List<dynamic> records,
+  ) {
+    final Map<String, Map<String, dynamic>> byClass = {};
+    for (var record in records) {
+      final gradeLevel = record['gradeLevel'] ?? 'N/A';
+      final section = record['section'] ?? 'N/A';
+      final subject = record['subject'] ?? 'N/A';
+      final key = '$gradeLevel-$section-$subject';
+      if (!byClass.containsKey(key)) {
+        byClass[key] = {
+          'gradeLevel': gradeLevel,
+          'section': section,
+          'subject': subject,
+          'present': 0,
+          'absent': 0,
+          'late': 0,
+          'cutting': 0,
+          'total': 0,
+        };
+      }
+      byClass[key]!['total']++;
+      final status = record['status'] ?? 'Unknown';
+      switch (status) {
+        case 'Present':
+          byClass[key]!['present']++;
+          break;
+        case 'Absent':
+          byClass[key]!['absent']++;
+          break;
+        case 'Late':
+          byClass[key]!['late']++;
+          break;
+        case 'Cutting':
+          byClass[key]!['cutting']++;
+          break;
+      }
+    }
+    return byClass.values.toList()..sort((a, b) {
+      final gradeA = int.tryParse(a['gradeLevel'].toString()) ?? 0;
+      final gradeB = int.tryParse(b['gradeLevel'].toString()) ?? 0;
+      if (gradeA != gradeB) return gradeA.compareTo(gradeB);
+      return (a['section'] ?? '').toString().compareTo(
+        (b['section'] ?? '').toString(),
+      );
+    });
+  }
+
+  /// Overall stats (present, absent, late, cutting, total) from a breakdown list.
+  Map<String, int> _overallStatsFromBreakdown(
+    List<Map<String, dynamic>> breakdown,
+  ) {
+    int present = 0, absent = 0, late = 0, cutting = 0, total = 0;
+    for (var row in breakdown) {
+      present += (row['present'] as int? ?? 0);
+      absent += (row['absent'] as int? ?? 0);
+      late += (row['late'] as int? ?? 0);
+      cutting += (row['cutting'] as int? ?? 0);
+      total += (row['total'] as int? ?? 0);
+    }
+    return {
+      'present': present,
+      'absent': absent,
+      'late': late,
+      'cutting': cutting,
+      'total': total,
+    };
   }
 
   List<dynamic> _getTodayAbsentStudents(List<dynamic> records) {
@@ -561,10 +763,18 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[100],
+      backgroundColor: kBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF10B981),
         elevation: 0,
+        flexibleSpace: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [kPrimary, kPrimaryLight],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
         title: const Text(
           'Teacher Dashboard',
           style: TextStyle(
@@ -578,26 +788,40 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             icon: const Icon(Icons.logout, color: Colors.white),
             onPressed: _handleLogout,
             tooltip: 'Logout',
+            splashRadius: 24,
+            splashColor: Colors.white24,
+            highlightColor: Colors.white12,
           ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(56),
-          child: Container(
-            color: Colors.green[700],
-            child: TabBar(
-              controller: _tabController,
-              indicatorColor: Colors.white,
-              indicatorWeight: 3,
-              labelColor: Colors.white,
-              unselectedLabelColor: Colors.white70,
-              onTap: (index) {
-                setState(() => _currentTab = index);
-              },
-              tabs: const [
-                Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
-                Tab(icon: Icon(Icons.schedule), text: 'Schedule'),
-              ],
-            ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                color: kPrimaryDark,
+                child: TabBar(
+                  controller: _tabController,
+                  indicatorColor: Colors.white,
+                  indicatorWeight: 3,
+                  labelColor: Colors.white,
+                  unselectedLabelColor: Colors.white70,
+                  splashFactory: InkRipple.splashFactory,
+                  onTap: (index) {
+                    setState(() => _currentTab = index);
+                  },
+                  tabs: const [
+                    Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
+                    Tab(icon: Icon(Icons.schedule), text: 'Schedule'),
+                  ],
+                ),
+              ),
+              if (_isLoading)
+                const LinearProgressIndicator(
+                  backgroundColor: Color(0x20000000),
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
+                ),
+            ],
           ),
         ),
       ),
@@ -605,9 +829,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           ? _isLoading
                 ? Center(
                     child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        Colors.green[600]!,
-                      ),
+                      valueColor: AlwaysStoppedAnimation<Color>(kPrimary),
                     ),
                   )
                 : _error != null
@@ -647,7 +869,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                           icon: const Icon(Icons.refresh),
                           label: const Text('Retry'),
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green[600],
+                            backgroundColor: kPrimary,
                             foregroundColor: Colors.white,
                           ),
                         ),
@@ -663,45 +885,57 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                         SingleChildScrollView(
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                // Profile Section
-                                _buildProfileCard(),
-                                const SizedBox(height: 24),
+                            child: AnimatedOpacity(
+                              opacity: _contentEntered ? 1.0 : 0.0,
+                              duration: kAnimationEnterDuration,
+                              curve: kAnimationEnterCurve,
+                              child: AnimatedSlide(
+                                offset: _contentEntered
+                                    ? Offset.zero
+                                    : const Offset(0, 0.06),
+                                duration: kAnimationEnterDuration,
+                                curve: kAnimationEnterCurve,
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    // Profile Section
+                                    _buildProfileCard(),
+                                    const SizedBox(height: 24),
 
-                                // Quick Actions Bar
-                                _buildQuickActionsBar(),
-                                const SizedBox(height: 24),
+                                    // Quick Actions Bar
+                                    _buildQuickActionsBar(),
+                                    const SizedBox(height: 24),
 
-                                // Today's Quick Stats Cards
-                                _buildTodayQuickStatsSection(),
-                                const SizedBox(height: 24),
+                                    // Today's Quick Stats Cards
+                                    _buildTodayQuickStatsSection(),
+                                    const SizedBox(height: 24),
 
-                                // Critical Alerts Panel
-                                _buildCriticalAlertsSection(),
-                                const SizedBox(height: 24),
+                                    // Critical Alerts Panel
+                                    _buildCriticalAlertsSection(),
+                                    const SizedBox(height: 24),
 
-                                // Today's Schedule Section
-                                _buildTodayScheduleSection(),
-                                const SizedBox(height: 24),
+                                    // Today's Schedule Section
+                                    _buildTodayScheduleSection(),
+                                    const SizedBox(height: 24),
 
-                                // Today's Absent Students
-                                _buildTodayAbsentStudentsSection(),
-                                const SizedBox(height: 24),
+                                    // Today's Absent Students
+                                    _buildTodayAbsentStudentsSection(),
+                                    const SizedBox(height: 24),
 
-                                // Attendance Trends
-                                _buildAttendanceTrendsSection(),
-                                const SizedBox(height: 24),
+                                    // Attendance Trends
+                                    _buildAttendanceTrendsSection(),
+                                    const SizedBox(height: 24),
 
-                                // Class Performance Overview
-                                _buildClassPerformanceSection(),
-                                const SizedBox(height: 24),
+                                    // Class Performance Overview
+                                    _buildClassPerformanceSection(),
+                                    const SizedBox(height: 24),
 
-                                // Attendance Records Section
-                                _buildAttendanceRecordsSection(),
-                                const SizedBox(height: 40),
-                              ],
+                                    // Attendance Records Section
+                                    _buildAttendanceRecordsSection(),
+                                    const SizedBox(height: 40),
+                                  ],
+                                ),
+                              ),
                             ),
                           ),
                         ),
@@ -776,10 +1010,10 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -867,7 +1101,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: severityColor.withOpacity(0.2),
+            color: severityColor.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Center(
@@ -902,7 +1136,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: severityColor.withOpacity(0.1),
+            color: severityColor.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(4),
           ),
           child: Text(
@@ -940,7 +1174,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
-                color: Colors.red.withOpacity(0.1),
+                color: Colors.red.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Text(
@@ -1013,7 +1247,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.2),
+            color: Colors.red.withValues(alpha: 0.2),
             borderRadius: BorderRadius.circular(8),
           ),
           child: const Center(
@@ -1201,7 +1435,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             child: _buildQuickActionButton(
               icon: Icons.date_range,
               label: 'Weekly',
-              color: Colors.green,
+              color: kPrimary,
               onTap: () => _showWeeklyStats(),
             ),
           ),
@@ -1243,48 +1477,98 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   void _showReportOptions() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
       builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Generate Report',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 20),
-            _buildReportOption(
-              icon: Icons.calendar_month,
-              title: 'Daily Report',
-              subtitle: 'Today\'s attendance summary',
-              onTap: () => _generateReport('daily'),
-            ),
-            const SizedBox(height: 12),
-            _buildReportOption(
-              icon: Icons.assessment,
-              title: 'Weekly Report',
-              subtitle: 'Last 7 days attendance',
-              onTap: () => _generateReport('weekly'),
-            ),
-            const SizedBox(height: 12),
-            _buildReportOption(
-              icon: Icons.bar_chart,
-              title: 'Monthly Report',
-              subtitle: 'Current month attendance',
-              onTap: () => _generateReport('monthly'),
-            ),
-            const SizedBox(height: 12),
-            _buildReportOption(
-              icon: Icons.school,
-              title: 'Class Performance Report',
-              subtitle: 'All classes summary',
-              onTap: () => _generateReport('class'),
+        decoration: const BoxDecoration(
+          color: kBackground,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black26,
+              blurRadius: 20,
+              offset: Offset(0, -4),
             ),
           ],
+        ),
+        child: SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: kPrimary.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(Icons.assessment, color: kPrimary, size: 24),
+                    ),
+                    const SizedBox(width: 14),
+                    const Expanded(
+                      child: Text(
+                        'Generate Report',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: kForeground,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Choose a report type to view and share',
+                  style: TextStyle(fontSize: 13, color: kMutedForeground),
+                ),
+                const SizedBox(height: 20),
+                _buildReportOption(
+                  icon: Icons.book,
+                  title: 'Subject Report (Today)',
+                  subtitle: 'Per subject: present, absent, late, cutting',
+                  onTap: () => _generateReport('subject'),
+                ),
+                const SizedBox(height: 10),
+                _buildReportOption(
+                  icon: Icons.date_range,
+                  title: 'Subject Report (Weekly)',
+                  subtitle: 'Per subject: last 7 days',
+                  onTap: () => _generateReport('weekly'),
+                ),
+                const SizedBox(height: 10),
+                _buildReportOption(
+                  icon: Icons.bar_chart,
+                  title: 'Subject Report (Monthly)',
+                  subtitle: 'Per subject: current month',
+                  onTap: () => _generateReport('monthly'),
+                ),
+                const SizedBox(height: 10),
+                _buildReportOption(
+                  icon: Icons.school,
+                  title: 'Class Performance',
+                  subtitle: 'All classes summary',
+                  onTap: () => _generateReport('class'),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -1338,27 +1622,35 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
   void _showAllSchedules() {
     // Sort all schedules by day and time
+    final dayOrder = [
+      'Monday',
+      'Tuesday',
+      'Wednesday',
+      'Thursday',
+      'Friday',
+      'Saturday',
+      'Sunday',
+    ];
+
+    int earliestIndex(dynamic s) {
+      final raw = s['days'];
+      if (raw is List && raw.isNotEmpty) {
+        final indices = raw
+            .map((d) => dayOrder.indexOf(d))
+            .where((i) => i >= 0)
+            .toList();
+        if (indices.isNotEmpty) return indices.reduce((a, b) => a < b ? a : b);
+      }
+      final day = s['day'] ?? '';
+      final idx = dayOrder.indexOf(day);
+      return idx >= 0 ? idx : 999;
+    }
+
     final sortedSchedules = List<dynamic>.from(_allSchedules)
       ..sort((a, b) {
-        // First sort by day
-        final dayOrder = [
-          'Monday',
-          'Tuesday',
-          'Wednesday',
-          'Thursday',
-          'Friday',
-          'Saturday',
-          'Sunday',
-        ];
-        final dayA = a['day'] ?? '';
-        final dayB = b['day'] ?? '';
-        final dayIndexA = dayOrder.indexOf(dayA);
-        final dayIndexB = dayOrder.indexOf(dayB);
-
-        if (dayIndexA != dayIndexB) {
-          return dayIndexA.compareTo(dayIndexB);
-        }
-
+        final idxA = earliestIndex(a);
+        final idxB = earliestIndex(b);
+        if (idxA != idxB) return idxA.compareTo(idxB);
         // Then sort by time
         final timeA = a['timeSlot'] ?? '';
         final timeB = b['timeSlot'] ?? '';
@@ -1423,7 +1715,13 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     final gradeLevel = schedule['gradeLevel'] ?? 'N/A';
                     final section = schedule['section'] ?? 'N/A';
                     final timeSlot = schedule['timeSlot'] ?? 'N/A';
-                    final day = schedule['day'] ?? 'N/A';
+                    final rawDays = schedule['days'];
+                    final dayList = (rawDays is List && rawDays.isNotEmpty)
+                        ? rawDays.cast<String>()
+                        : (schedule['day'] != null
+                              ? [schedule['day'] as String]
+                              : <String>[]);
+                    final day = dayList.join(', ');
                     final shift = schedule['shift'] ?? 'N/A';
 
                     // Convert time to AM/PM format
@@ -1437,8 +1735,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                       'Afternoon': const Color(0xFFF59E0B),
                       'Evening': const Color(0xFF8B5CF6),
                     };
-                    final shiftColor =
-                        shiftColors[shift] ?? const Color(0xFF10B981);
+                    final shiftColor = shiftColors[shift] ?? kPrimary;
 
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 12),
@@ -1448,12 +1745,12 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: shiftColor.withOpacity(0.3),
+                            color: shiftColor.withValues(alpha: 0.3),
                             width: 1.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.05),
+                              color: Colors.black.withValues(alpha: 0.05),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -1682,7 +1979,7 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
+                color: Colors.blue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
               ),
               child: Row(
@@ -1742,20 +2039,34 @@ class _TeacherDashboardState extends State<TeacherDashboard>
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(12),
+        borderRadius: BorderRadius.circular(14),
+        splashColor: kPrimary.withValues(alpha: 0.12),
+        highlightColor: kPrimary.withValues(alpha: 0.06),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: Colors.grey[200]!),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.04),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: Colors.purple.withOpacity(0.1),
+                  color: kPrimary.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: Colors.purple, size: 24),
+                child: Icon(icon, color: kPrimary, size: 22),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1763,20 +2074,20 @@ class _TeacherDashboardState extends State<TeacherDashboard>
                     Text(
                       title,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: kForeground,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 2),
                     Text(
                       subtitle,
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12, color: kMutedForeground),
                     ),
                   ],
                 ),
               ),
-              Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey[400]),
+              Icon(Icons.arrow_forward_ios, size: 14, color: kMutedForeground),
             ],
           ),
         ),
@@ -1785,38 +2096,665 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   }
 
   void _generateReport(String reportType) {
-    Navigator.pop(context); // Close bottom sheet
+    Navigator.pop(context); // Close report-type picker
 
-    showDialog(
+    final title = _getReportTitle(reportType);
+    final plainContent = _buildReportContent(reportType);
+
+    showModalBottomSheet(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Report Generated'),
-        content: Text(_buildReportContent(reportType)),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.4,
+        maxChildSize: 0.95,
+        builder: (context, scrollController) => Container(
+          decoration: const BoxDecoration(
+            color: kBackground,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black26,
+                blurRadius: 20,
+                offset: Offset(0, -4),
+              ),
+            ],
           ),
-          ElevatedButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('$reportType Report downloaded successfully'),
-                  backgroundColor: Colors.green,
+          child: SafeArea(
+            top: false,
+            child: Column(
+              children: [
+                _buildReportModalHeader(
+                  reportType: reportType,
+                  title: title,
+                  onClose: () => Navigator.pop(context),
                 ),
-              );
-            },
-            icon: const Icon(Icons.download),
-            label: const Text('Download'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.purple,
-              foregroundColor: Colors.white,
+                Expanded(
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 16),
+                    child: _buildReportModalBody(reportType),
+                  ),
+                ),
+                _buildReportModalActions(
+                  plainContent: plainContent,
+                  title: title,
+                  reportType: reportType,
+                  onClose: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReportModalHeader({
+    required String reportType,
+    required String title,
+    required VoidCallback onClose,
+  }) {
+    final labels = <String, String>{
+      'daily': 'Daily Report',
+      'subject': 'Subject Report (Today)',
+      'weekly': 'Subject Report (Weekly)',
+      'monthly': 'Subject Report (Monthly)',
+      'class': 'Class Performance',
+    };
+    final label = labels[reportType] ?? 'Report';
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 16, 12, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [kPrimary, kPrimaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.assessment, color: Colors.white, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  DateTime.now().toString().split(' ')[0],
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white.withValues(alpha: 0.9),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            onPressed: onClose,
+            icon: const Icon(Icons.close, color: Colors.white),
+            tooltip: 'Close',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportModalActions({
+    required String plainContent,
+    required String title,
+    required String reportType,
+    required VoidCallback onClose,
+  }) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 20),
+      decoration: BoxDecoration(
+        color: kBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: onClose,
+              icon: const Icon(Icons.close, size: 20),
+              label: const Text('Close'),
+              style: OutlinedButton.styleFrom(
+                foregroundColor: kMutedForeground,
+                side: BorderSide(color: Colors.grey[400]!),
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: ElevatedButton.icon(
+              onPressed: () async {
+                onClose();
+                try {
+                  final pdfBytes = await _buildReportPdfBytes(reportType);
+                  final filename =
+                      'Smartendance-Report-${DateTime.now().toString().split(' ')[0]}.pdf';
+
+                  if (kIsWeb) {
+                    // Web: printing plugin has no implementation; trigger browser download
+                    await pdf_download.downloadPdfOnWeb(pdfBytes, filename);
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('PDF downloaded'),
+                          backgroundColor: kPrimary,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  final shared = await Printing.sharePdf(
+                    bytes: pdfBytes,
+                    filename: filename,
+                    subject: title,
+                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          shared ? 'PDF report shared' : 'Share cancelled',
+                        ),
+                        backgroundColor: kPrimary,
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  if (mounted) {
+                    try {
+                      await Share.share(plainContent, subject: title);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text(
+                            'Shared as text (PDF not available)',
+                          ),
+                          backgroundColor: kPrimary,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    } catch (e2) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Could not share: $e'),
+                          backgroundColor: Colors.red,
+                          behavior: SnackBarBehavior.floating,
+                        ),
+                      );
+                    }
+                  }
+                }
+              },
+              icon: const Icon(Icons.picture_as_pdf, size: 20),
+              label: const Text('Share / Save PDF'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: kPrimary,
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
             ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildReportModalBody(String reportType) {
+    switch (reportType) {
+      case 'daily':
+        return _buildDailyReportBody();
+      case 'subject':
+        return _buildSubjectReportBody();
+      case 'weekly':
+        return _buildWeeklyReportBody();
+      case 'monthly':
+        return _buildMonthlyReportBody();
+      case 'class':
+        return _buildClassReportBody();
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _reportSectionTitle(String text) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.bold,
+          color: kForeground,
+        ),
+      ),
+    );
+  }
+
+  Widget _reportStatCard({
+    required String label,
+    required String value,
+    Color? color,
+    IconData? icon,
+  }) {
+    final c = color ?? kPrimary;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: c.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: c.withValues(alpha: 0.25), width: 1),
+      ),
+      child: Row(
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 22, color: c),
+            const SizedBox(width: 12),
+          ],
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: kMutedForeground,
+              ),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: c,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDailyReportBody() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _reportSectionTitle('Today\'s attendance'),
+        _reportStatCard(
+          label: 'Present',
+          value: '${_todayStats['present'] ?? 0}',
+          color: Colors.green,
+          icon: Icons.check_circle,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Absent',
+          value: '${_todayStats['absent'] ?? 0}',
+          color: Colors.red,
+          icon: Icons.cancel,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Late',
+          value: '${_todayStats['late'] ?? 0}',
+          color: Colors.orange,
+          icon: Icons.schedule,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Cutting',
+          value: '${_todayStats['cutting'] ?? 0}',
+          color: Colors.purple,
+          icon: Icons.warning,
+        ),
+        const SizedBox(height: 16),
+        _reportSectionTitle('Summary'),
+        _reportStatCard(
+          label: 'Total students marked',
+          value: '${_todayStats['total'] ?? 0}',
+          icon: Icons.people,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Critical alerts',
+          value: '${_criticalAlerts.length}',
+          color: Colors.orange,
+          icon: Icons.notification_important,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Absent today',
+          value: '${_todayAbsentStudents.length}',
+          color: Colors.red,
+          icon: Icons.person_off,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubjectReportBody() {
+    final breakdown = _getTodaySubjectBreakdown();
+    if (breakdown.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _reportSectionTitle('Subject report (today)'),
+          _emptyReportMessage('No attendance records for today yet.'),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _reportSectionTitle('Per subject (today)'),
+        ...breakdown.map((row) => _buildSubjectReportCard(row)),
+        const SizedBox(height: 12),
+        _reportSectionTitle('Overall today'),
+        _reportStatCard(
+          label: 'Present',
+          value: '${_todayStats['present'] ?? 0}',
+          color: Colors.green,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Absent',
+          value: '${_todayStats['absent'] ?? 0}',
+          color: Colors.red,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Late',
+          value: '${_todayStats['late'] ?? 0}',
+          color: Colors.orange,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Cutting',
+          value: '${_todayStats['cutting'] ?? 0}',
+          color: Colors.purple,
+        ),
+      ],
+    );
+  }
+
+  Widget _miniChip(String label, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        '$label: $value',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWeeklyReportBody() {
+    final breakdown = _getWeeklySubjectBreakdown();
+    final overall = _overallStatsFromBreakdown(breakdown);
+    if (breakdown.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _reportSectionTitle('Subject report (last 7 days)'),
+          _emptyReportMessage('No attendance records for the last 7 days.'),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _reportSectionTitle('Per subject (last 7 days)'),
+        ...breakdown.map((row) => _buildSubjectReportCard(row)),
+        const SizedBox(height: 12),
+        _reportSectionTitle('Overall (last 7 days)'),
+        _reportStatCard(
+          label: 'Present',
+          value: '${overall['present']}',
+          color: Colors.green,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Absent',
+          value: '${overall['absent']}',
+          color: Colors.red,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Late',
+          value: '${overall['late']}',
+          color: Colors.orange,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Cutting',
+          value: '${overall['cutting']}',
+          color: Colors.purple,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMonthlyReportBody() {
+    final breakdown = _getMonthlySubjectBreakdown();
+    final overall = _overallStatsFromBreakdown(breakdown);
+    if (breakdown.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _reportSectionTitle('Subject report (current month)'),
+          _emptyReportMessage('No attendance records for the current month.'),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _reportSectionTitle('Per subject (current month)'),
+        ...breakdown.map((row) => _buildSubjectReportCard(row)),
+        const SizedBox(height: 12),
+        _reportSectionTitle('Overall (current month)'),
+        _reportStatCard(
+          label: 'Present',
+          value: '${overall['present']}',
+          color: Colors.green,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Absent',
+          value: '${overall['absent']}',
+          color: Colors.red,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Late',
+          value: '${overall['late']}',
+          color: Colors.orange,
+        ),
+        const SizedBox(height: 8),
+        _reportStatCard(
+          label: 'Cutting',
+          value: '${overall['cutting']}',
+          color: Colors.purple,
+        ),
+      ],
+    );
+  }
+
+  Widget _emptyReportMessage(String text) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.grey.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[300]!),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.info_outline, color: Colors.grey[600], size: 28),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 14, color: kMutedForeground),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubjectReportCard(Map<String, dynamic> row) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kPrimary.withValues(alpha: 0.2)),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.book, size: 20, color: kPrimary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: kForeground,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              children: [
+                _miniChip('Present', '${row['present']}', Colors.green),
+                _miniChip('Absent', '${row['absent']}', Colors.red),
+                _miniChip('Late', '${row['late']}', Colors.orange),
+                _miniChip('Cutting', '${row['cutting']}', Colors.purple),
+                _miniChip('Total', '${row['total']}', kPrimary),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildClassReportBody() {
+    if (_classPerformance.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _reportSectionTitle('Class performance'),
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.grey.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              'No class data available.',
+              style: TextStyle(fontSize: 14, color: kMutedForeground),
+            ),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _reportSectionTitle('By class'),
+        ..._classPerformance.map((c) {
+          final total = c['totalRecords'] ?? 0;
+          final percentage = total > 0
+              ? (((c['present'] ?? 0) / total) * 100).toStringAsFixed(1)
+              : '0';
+          final pctNum = double.tryParse(percentage) ?? 0;
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: _reportStatCard(
+              label: 'Grade ${c['gradeLevel']}-${c['section']}',
+              value: '$percentage%',
+              color: pctNum >= 70
+                  ? Colors.green
+                  : (pctNum >= 50 ? Colors.orange : Colors.red),
+              icon: Icons.school,
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  String _getReportTitle(String reportType) {
+    final date = DateTime.now().toString().split(' ')[0];
+    switch (reportType) {
+      case 'daily':
+        return 'Smartendance Daily Report $date';
+      case 'subject':
+        return 'Smartendance Subject Report $date';
+      case 'weekly':
+        return 'Smartendance Subject Report (Weekly)';
+      case 'monthly':
+        return 'Smartendance Subject Report (Monthly)';
+      case 'class':
+        return 'Smartendance Class Performance Report';
+      default:
+        return 'Smartendance Report $date';
+    }
   }
 
   String _buildReportContent(String reportType) {
@@ -1835,27 +2773,90 @@ Total Students Marked: ${_todayStats['total'] ?? 0}
 Critical Alerts: ${_criticalAlerts.length}
 Absent Today: ${_todayAbsentStudents.length}
 ''';
+      case 'subject':
+        final breakdown = _getTodaySubjectBreakdown();
+        final todayStr = DateTime.now().toString().split(' ')[0];
+        if (breakdown.isEmpty) {
+          return '''
+Subject Report (Today: $todayStr)
+────────────────────
+No attendance records for today yet.
+''';
+        }
+        final buffer = StringBuffer('''
+Subject Report (Today: $todayStr)
+────────────────────
+''');
+        for (var row in breakdown) {
+          buffer.writeln(
+            '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+          );
+          buffer.writeln(
+            '  Present: ${row['present']}  Absent: ${row['absent']}  Late: ${row['late']}  Cutting: ${row['cutting']}  Total: ${row['total']}',
+          );
+          buffer.writeln('');
+        }
+        buffer.writeln('────────────────────');
+        buffer.writeln(
+          'Overall today: Present ${_todayStats['present'] ?? 0}, Absent ${_todayStats['absent'] ?? 0}, Late ${_todayStats['late'] ?? 0}, Cutting ${_todayStats['cutting'] ?? 0}',
+        );
+        return buffer.toString();
       case 'weekly':
-        return '''
-Weekly Attendance Report
+        final weeklyBreakdown = _getWeeklySubjectBreakdown();
+        final weeklyOverall = _overallStatsFromBreakdown(weeklyBreakdown);
+        if (weeklyBreakdown.isEmpty) {
+          return '''
+Subject Report (Last 7 Days)
 ────────────────────
-Last 7 Days Data:
-${_weeklyTrends.map((t) => '${t['day']}: ${t['percentage']}% (${t['count']} present)').join('\n')}
-
-Average Attendance: ${_weeklyTrends.isEmpty ? 0 : _weeklyTrends.map((t) => t['percentage'] as int).reduce((a, b) => a + b) ~/ _weeklyTrends.length}%
+No attendance records for the last 7 days.
 ''';
+        }
+        final weeklyBuffer = StringBuffer('''
+Subject Report (Last 7 Days)
+────────────────────
+''');
+        for (var row in weeklyBreakdown) {
+          weeklyBuffer.writeln(
+            '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+          );
+          weeklyBuffer.writeln(
+            '  Present: ${row['present']}  Absent: ${row['absent']}  Late: ${row['late']}  Cutting: ${row['cutting']}  Total: ${row['total']}',
+          );
+          weeklyBuffer.writeln('');
+        }
+        weeklyBuffer.writeln('────────────────────');
+        weeklyBuffer.writeln(
+          'Overall: Present ${weeklyOverall['present']}, Absent ${weeklyOverall['absent']}, Late ${weeklyOverall['late']}, Cutting ${weeklyOverall['cutting']}, Total ${weeklyOverall['total']}',
+        );
+        return weeklyBuffer.toString();
       case 'monthly':
-        return '''
-Monthly Attendance Report
+        final monthlyBreakdown = _getMonthlySubjectBreakdown();
+        final monthlyOverall = _overallStatsFromBreakdown(monthlyBreakdown);
+        if (monthlyBreakdown.isEmpty) {
+          return '''
+Subject Report (Current Month)
 ────────────────────
-Total Records: ${_attendanceRecords.length}
-Present: ${_attendanceStats['present'] ?? 0}
-Absent: ${_attendanceStats['absent'] ?? 0}
-Late: ${_attendanceStats['late'] ?? 0}
-Cutting: ${_attendanceStats['cutting'] ?? 0}
-
-Overall Attendance: ${_attendanceRecords.isNotEmpty ? (((_attendanceStats['present'] ?? 0) / _attendanceRecords.length) * 100).toStringAsFixed(1) : 0}%
+No attendance records for the current month.
 ''';
+        }
+        final monthlyBuffer = StringBuffer('''
+Subject Report (Current Month)
+────────────────────
+''');
+        for (var row in monthlyBreakdown) {
+          monthlyBuffer.writeln(
+            '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+          );
+          monthlyBuffer.writeln(
+            '  Present: ${row['present']}  Absent: ${row['absent']}  Late: ${row['late']}  Cutting: ${row['cutting']}  Total: ${row['total']}',
+          );
+          monthlyBuffer.writeln('');
+        }
+        monthlyBuffer.writeln('────────────────────');
+        monthlyBuffer.writeln(
+          'Overall: Present ${monthlyOverall['present']}, Absent ${monthlyOverall['absent']}, Late ${monthlyOverall['late']}, Cutting ${monthlyOverall['cutting']}, Total ${monthlyOverall['total']}',
+        );
+        return monthlyBuffer.toString();
       case 'class':
         return '''
 Class Performance Report
@@ -1873,6 +2874,258 @@ ${_classPerformance.map((c) {
     }
   }
 
+  /// Builds PDF document bytes for the given report type (for share/save as PDF).
+  Future<Uint8List> _buildReportPdfBytes(String reportType) async {
+    final doc = pw.Document();
+    final dateStr = DateTime.now().toString().split(' ')[0];
+    final title = _getReportTitle(reportType);
+
+    pw.Widget buildContent() {
+      switch (reportType) {
+        case 'daily':
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              _pdfSectionTitle('Today\'s attendance'),
+              _pdfStatRow('Present', '${_todayStats['present'] ?? 0}'),
+              _pdfStatRow('Absent', '${_todayStats['absent'] ?? 0}'),
+              _pdfStatRow('Late', '${_todayStats['late'] ?? 0}'),
+              _pdfStatRow('Cutting', '${_todayStats['cutting'] ?? 0}'),
+              pw.SizedBox(height: 12),
+              _pdfSectionTitle('Summary'),
+              _pdfStatRow(
+                'Total students marked',
+                '${_todayStats['total'] ?? 0}',
+              ),
+              _pdfStatRow('Critical alerts', '${_criticalAlerts.length}'),
+              _pdfStatRow('Absent today', '${_todayAbsentStudents.length}'),
+            ],
+          );
+        case 'subject':
+          final breakdown = _getTodaySubjectBreakdown();
+          if (breakdown.isEmpty) {
+            return pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Text(
+                  'No attendance records for today yet.',
+                  style: pw.TextStyle(fontSize: 12),
+                ),
+              ],
+            );
+          }
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              _pdfSectionTitle('Per subject (today)'),
+              ...breakdown.map(
+                (row) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 8),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Text(
+                        'Present: ${row['present']}  Absent: ${row['absent']}  Late: ${row['late']}  Cutting: ${row['cutting']}  Total: ${row['total']}',
+                        style: pw.TextStyle(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              _pdfSectionTitle('Overall today'),
+              _pdfStatRow('Present', '${_todayStats['present'] ?? 0}'),
+              _pdfStatRow('Absent', '${_todayStats['absent'] ?? 0}'),
+              _pdfStatRow('Late', '${_todayStats['late'] ?? 0}'),
+              _pdfStatRow('Cutting', '${_todayStats['cutting'] ?? 0}'),
+            ],
+          );
+        case 'weekly':
+          final weeklyBreakdown = _getWeeklySubjectBreakdown();
+          final weeklyOverall = _overallStatsFromBreakdown(weeklyBreakdown);
+          if (weeklyBreakdown.isEmpty) {
+            return pw.Text(
+              'No attendance records for the last 7 days.',
+              style: pw.TextStyle(fontSize: 12),
+            );
+          }
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              _pdfSectionTitle('Per subject (last 7 days)'),
+              ...weeklyBreakdown.map(
+                (row) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 8),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Text(
+                        'Present: ${row['present']}  Absent: ${row['absent']}  Late: ${row['late']}  Cutting: ${row['cutting']}  Total: ${row['total']}',
+                        style: pw.TextStyle(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              _pdfSectionTitle('Overall (last 7 days)'),
+              _pdfStatRow('Present', '${weeklyOverall['present']}'),
+              _pdfStatRow('Absent', '${weeklyOverall['absent']}'),
+              _pdfStatRow('Late', '${weeklyOverall['late']}'),
+              _pdfStatRow('Cutting', '${weeklyOverall['cutting']}'),
+            ],
+          );
+        case 'monthly':
+          final monthlyBreakdown = _getMonthlySubjectBreakdown();
+          final monthlyOverall = _overallStatsFromBreakdown(monthlyBreakdown);
+          if (monthlyBreakdown.isEmpty) {
+            return pw.Text(
+              'No attendance records for the current month.',
+              style: pw.TextStyle(fontSize: 12),
+            );
+          }
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              _pdfSectionTitle('Per subject (current month)'),
+              ...monthlyBreakdown.map(
+                (row) => pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 8),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    mainAxisSize: pw.MainAxisSize.min,
+                    children: [
+                      pw.Text(
+                        '${row['subject']} — Grade ${row['gradeLevel']}-${row['section']}',
+                        style: pw.TextStyle(
+                          fontSize: 11,
+                          fontWeight: pw.FontWeight.bold,
+                        ),
+                      ),
+                      pw.Text(
+                        'Present: ${row['present']}  Absent: ${row['absent']}  Late: ${row['late']}  Cutting: ${row['cutting']}  Total: ${row['total']}',
+                        style: pw.TextStyle(fontSize: 10),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              _pdfSectionTitle('Overall (current month)'),
+              _pdfStatRow('Present', '${monthlyOverall['present']}'),
+              _pdfStatRow('Absent', '${monthlyOverall['absent']}'),
+              _pdfStatRow('Late', '${monthlyOverall['late']}'),
+              _pdfStatRow('Cutting', '${monthlyOverall['cutting']}'),
+            ],
+          );
+        case 'class':
+          if (_classPerformance.isEmpty) {
+            return pw.Text(
+              'No class data available.',
+              style: pw.TextStyle(fontSize: 12),
+            );
+          }
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              _pdfSectionTitle('By class'),
+              ..._classPerformance.map((c) {
+                final total = c['totalRecords'] ?? 0;
+                final percentage = total > 0
+                    ? (((c['present'] ?? 0) / total) * 100).toStringAsFixed(1)
+                    : '0';
+                return _pdfStatRow(
+                  'Grade ${c['gradeLevel']}-${c['section']}',
+                  '$percentage%',
+                );
+              }),
+            ],
+          );
+        default:
+          return pw.Text('Report', style: pw.TextStyle(fontSize: 12));
+      }
+    }
+
+    doc.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        header: (context) => pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 12),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              pw.Text(
+                title,
+                style: pw.TextStyle(
+                  fontSize: 14,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.Text(
+                'Generated: $dateStr',
+                style: const pw.TextStyle(fontSize: 9),
+              ),
+              pw.Divider(thickness: 1),
+            ],
+          ),
+        ),
+        build: (context) => [buildContent()],
+      ),
+    );
+
+    return doc.save();
+  }
+
+  pw.Widget _pdfSectionTitle(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 8, bottom: 4),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(fontSize: 11, fontWeight: pw.FontWeight.bold),
+      ),
+    );
+  }
+
+  pw.Widget _pdfStatRow(String label, String value) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          pw.Text(label, style: const pw.TextStyle(fontSize: 10)),
+          pw.Text(
+            value,
+            style: pw.TextStyle(fontSize: 10, fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildQuickActionButton({
     required IconData icon,
     required String label,
@@ -1884,12 +3137,14 @@ ${_classPerformance.map((c) {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(12),
+        splashColor: color.withValues(alpha: 0.2),
+        highlightColor: color.withValues(alpha: 0.1),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 16),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
           ),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -2022,12 +3277,12 @@ ${_classPerformance.map((c) {
     final shift = schedule['shift'] ?? 'N/A';
 
     const Map<String, Color> shiftColors = {
-      'Morning': Color(0xFF3B82F6),
-      'Afternoon': Color(0xFFF59E0B),
+      'Morning': kPrimary,
+      'Afternoon': kAccent,
       'Evening': Color(0xFF8B5CF6),
     };
 
-    final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
+    final shiftColor = shiftColors[shift] ?? kPrimary;
 
     // Convert timeSlot to AM/PM format
     final formattedTimeSlot = timeSlot != 'N/A'
@@ -2050,7 +3305,7 @@ ${_classPerformance.map((c) {
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: shiftColor.withOpacity(0.1),
+                  color: shiftColor.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(Icons.schedule, color: shiftColor, size: 24),
@@ -2085,7 +3340,7 @@ ${_classPerformance.map((c) {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: shiftColor.withOpacity(0.1),
+                      color: shiftColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -2191,8 +3446,8 @@ ${_classPerformance.map((c) {
                   ),
                   decoration: BoxDecoration(
                     color: isGoodAttendance
-                        ? Colors.green.withOpacity(0.1)
-                        : Colors.orange.withOpacity(0.1),
+                        ? Colors.green.withValues(alpha: 0.1)
+                        : Colors.orange.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Column(
@@ -2259,9 +3514,9 @@ ${_classPerformance.map((c) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.3), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.3), width: 1),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -2293,11 +3548,15 @@ ${_classPerformance.map((c) {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [const Color(0xFF10B981), Colors.green.shade700],
+          colors: [kPrimary, kPrimaryDark],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: kPrimaryLight.withValues(alpha: 0.6),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -2310,7 +3569,10 @@ ${_classPerformance.map((c) {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: Colors.white,
-                  border: Border.all(color: Colors.green.shade300, width: 3),
+                  border: Border.all(
+                    color: kPrimaryLight.withValues(alpha: 0.8),
+                    width: 3,
+                  ),
                 ),
                 child: Center(
                   child: Text(
@@ -2322,7 +3584,7 @@ ${_classPerformance.map((c) {
                     style: const TextStyle(
                       fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: Color(0xFF10B981),
+                      color: kPrimary,
                     ),
                   ),
                 ),
@@ -2599,7 +3861,7 @@ ${_classPerformance.map((c) {
           height: 36,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: statusColor.withOpacity(0.2),
+            color: statusColor.withValues(alpha: 0.2),
           ),
           child: Center(child: Icon(statusIcon, color: statusColor, size: 18)),
         ),
@@ -2625,7 +3887,7 @@ ${_classPerformance.map((c) {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
+                      color: statusColor.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
@@ -2771,7 +4033,7 @@ ${_classPerformance.map((c) {
               height: 50,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: statusColor.withOpacity(0.2),
+                color: statusColor.withValues(alpha: 0.2),
               ),
               child: Center(
                 child: Icon(statusIcon, color: statusColor, size: 24),
@@ -2804,7 +4066,7 @@ ${_classPerformance.map((c) {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

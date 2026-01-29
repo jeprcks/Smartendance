@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:mobile/fetch/teacherService.dart';
+import 'student_details.dart';
+import 'attendance_modal.dart';
+import 'package:mobile/theme.dart';
 
-// Color scheme for different shifts
+// Color scheme for different shifts (aligned with app theme)
 const Map<String, Color> shiftColors = {
-  'Morning': Color(0xFF3B82F6),
-  'Afternoon': Color(0xFFF59E0B),
+  'Morning': kPrimary,
+  'Afternoon': kAccent,
   'Evening': Color(0xFF8B5CF6),
 };
 
@@ -65,7 +68,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
                   _scanTimes[studentId] =
                       '${scanTime.hour}:${scanTime.minute.toString().padLeft(2, '0')}';
                 } catch (e) {
-                  print('Error parsing scan time: $e');
+                  debugPrint('Error parsing scan time: $e');
                 }
               }
             }
@@ -73,8 +76,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
         });
       }
     } catch (e) {
-      print('Error fetching attendance data: $e');
-      if (mounted) {}
+      debugPrint('Error fetching attendance data: $e');
     }
   }
 
@@ -144,10 +146,16 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
     final section = widget.schedule['section'] ?? 'N/A';
     final subject = widget.schedule['subject'] ?? 'N/A';
     final timeSlot = widget.schedule['timeSlot'] ?? 'N/A';
-    final day = widget.schedule['day'] ?? 'N/A';
+    final rawDays = widget.schedule['days'];
+    final dayList = (rawDays is List && rawDays.isNotEmpty)
+        ? rawDays.cast<String>()
+        : (widget.schedule['day'] != null
+              ? [widget.schedule['day'] as String]
+              : <String>[]);
+    final day = dayList.join(', ');
     final shift = widget.schedule['shift'] ?? 'N/A';
 
-    final shiftColor = shiftColors[shift] ?? const Color(0xFF10B981);
+    final shiftColor = shiftColors[shift] ?? kPrimary;
     final filteredStudents = _getFilteredStudents();
 
     return Scaffold(
@@ -156,7 +164,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
         flexibleSpace: Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: [shiftColor, shiftColor.withOpacity(0.7)],
+              colors: [shiftColor, shiftColor.withValues(alpha: 0.7)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -208,7 +216,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
                             Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: shiftColor.withOpacity(0.1),
+                                color: shiftColor.withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
@@ -284,6 +292,59 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
               ),
               const SizedBox(height: 24),
 
+              // Prominent Take Attendance button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _students.isEmpty
+                      ? null
+                      : () {
+                          final rawDays = widget.schedule['days'];
+                          final dayList =
+                              (rawDays is List && rawDays.isNotEmpty)
+                              ? rawDays.cast<String>()
+                              : (widget.schedule['day'] != null
+                                    ? [widget.schedule['day'] as String]
+                                    : <String>[]);
+                          final daysLabel = dayList.join(', ');
+
+                          StudentStatusModal.showStatusEditModal(
+                            context,
+                            students: _students,
+                            token: widget.token,
+                            scheduleId: widget.scheduleId,
+                            subject: widget.schedule['subject'] ?? 'General',
+                            gradeLevel: widget.schedule['gradeLevel'] ?? 'N/A',
+                            section: widget.schedule['section'] ?? 'N/A',
+                            scheduleTitle:
+                                '${widget.schedule['subject']} - ${daysLabel} ${widget.schedule['timeSlot']}',
+                            onStatusUpdated: () async {
+                              await _fetchAttendanceData();
+                            },
+                          );
+                        },
+                  icon: const Icon(Icons.check_circle_outline),
+                  label: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14.0),
+                    child: Text(
+                      'Take Attendance',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: shiftColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+
               // Students Section
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -302,7 +363,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: shiftColor.withOpacity(0.15),
+                      color: shiftColor.withValues(alpha: 0.15),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -414,9 +475,9 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.2), width: 1),
+        border: Border.all(color: color.withValues(alpha: 0.2), width: 1),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -497,167 +558,198 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
     // Determine gender color
     Color genderColor = Colors.grey[100]!; // Default
     if (gender.toLowerCase() == 'male') {
-      genderColor = const Color(0xFF3B82F6).withOpacity(0.08); // Light blue
+      genderColor = const Color(
+        0xFF3B82F6,
+      ).withValues(alpha: 0.08); // Light blue
     } else if (gender.toLowerCase() == 'female') {
-      genderColor = const Color(0xFFEC4899).withOpacity(0.08); // Light pink
+      genderColor = const Color(
+        0xFFEC4899,
+      ).withValues(alpha: 0.08); // Light pink
     }
 
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
-      child: Card(
-        elevation: 2,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        shadowColor: Colors.black.withOpacity(0.08),
-        child: Container(
-          decoration: BoxDecoration(
-            color: genderColor,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () {
+          final id =
+              student['studentId'] ?? student['id'] ?? student['_id'] ?? '';
+          final name =
+              student['studentName'] ??
+              student['fullName'] ??
+              student['name'] ??
+              'Student';
+          final subj = widget.schedule['subject'] ?? 'General';
+          final gradeLevel = widget.schedule['gradeLevel'] ?? '';
+          final sectionVal = widget.schedule['section'] ?? '';
+
+          StudentDetailsModal.show(
+            context,
+            token: widget.token,
+            studentId: id.toString(),
+            studentName: name,
+            subject: subj,
+            gradeLevel: gradeLevel,
+            section: sectionVal,
+          );
+        },
+        child: Card(
+          elevation: 2,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                // Student Information
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        studentName,
-                        style: const TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 6),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.badge_outlined,
-                            size: 13,
-                            color: Colors.grey[500],
+          shadowColor: Colors.black.withValues(alpha: 0.08),
+          child: Container(
+            decoration: BoxDecoration(
+              color: genderColor,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  // Student Information
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          studentName,
+                          style: const TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.black87,
                           ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              'ID: $studentId',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 6),
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.badge_outlined,
+                              size: 13,
+                              color: Colors.grey[500],
                             ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            gender.toLowerCase() == 'male'
-                                ? Icons.male
-                                : gender.toLowerCase() == 'female'
-                                ? Icons.female
-                                : Icons.help_outline,
-                            size: 13,
-                            color: Colors.grey[500],
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              ': $gender',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Colors.grey[600],
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 2,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.grey[100],
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Text(
-                          'Section: $section',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey[700],
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ),
-                      if (scanTime != null)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 6),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.access_time,
-                                size: 11,
-                                color: Colors.grey[500],
-                              ),
-                              const SizedBox(width: 2),
-                              Text(
-                                'Scanned: $scanTime',
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                'ID: $studentId',
                                 style: TextStyle(
-                                  fontSize: 10,
-                                  color: Colors.grey[500],
-                                  fontStyle: FontStyle.italic,
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
                                 ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Row(
+                          children: [
+                            Icon(
+                              gender.toLowerCase() == 'male'
+                                  ? Icons.male
+                                  : gender.toLowerCase() == 'female'
+                                  ? Icons.female
+                                  : Icons.help_outline,
+                              size: 13,
+                              color: Colors.grey[500],
+                            ),
+                            const SizedBox(width: 4),
+                            Expanded(
+                              child: Text(
+                                ': $gender',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey[600],
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 2,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[100],
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            'Section: $section',
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Colors.grey[700],
+                              fontWeight: FontWeight.w600,
+                            ),
                           ),
                         ),
-                    ],
-                  ),
-                ),
-                const SizedBox(width: 12),
-
-                // Status Display
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 8,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: statusColor.withOpacity(0.3),
-                      width: 1.5,
+                        if (scanTime != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 6),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  size: 11,
+                                  color: Colors.grey[500],
+                                ),
+                                const SizedBox(width: 2),
+                                Text(
+                                  'Scanned: $scanTime',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey[500],
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                      ],
                     ),
                   ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(statusIcon, size: 24, color: statusColor),
-                      const SizedBox(height: 4),
-                      Text(
-                        statusText,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: statusColor,
-                        ),
-                        textAlign: TextAlign.center,
+                  const SizedBox(width: 12),
+
+                  // Status Display
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: statusColor.withValues(alpha: 0.3),
+                        width: 1.5,
                       ),
-                    ],
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(statusIcon, size: 24, color: statusColor),
+                        const SizedBox(height: 4),
+                        Text(
+                          statusText,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: statusColor,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

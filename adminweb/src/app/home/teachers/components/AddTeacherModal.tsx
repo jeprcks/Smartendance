@@ -123,8 +123,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
     // Gender is optional
 
     // Optional field validations
-    if (formData.zipCode && !/^\d{4,6}$/.test(formData.zipCode)) {
-      newErrors.zipCode = 'ZIP code must be 4-6 digits';
+    if (formData.zipCode && !/^\d+$/.test(formData.zipCode)) {
+      newErrors.zipCode = 'ZIP code must be numeric';
     }
 
     setErrors(newErrors);
