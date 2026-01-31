@@ -62,51 +62,43 @@ export function exportStudentsToPDF(students: Student[], filename?: string) {
       }
     };
 
-    // Add title
-    pdf.setFontSize(20);
-    pdf.setFont('helvetica', 'bold');
-    pdf.text('Student Records Export', margin, yPosition);
-    yPosition += 15;
-
-    // Add export date and summary
-    pdf.setFontSize(bodyFontSize);
-    pdf.setFont('helvetica', 'normal');
-    pdf.text(`Export Date: ${new Date().toLocaleDateString()}`, margin, yPosition);
-    yPosition += 5;
-    pdf.text(`Total Students: ${students.length}`, margin, yPosition);
-    yPosition += 15;
-
-    // No image in header — photo appears only once per student, centered under name
-    // Add students data
+    // One bond paper (one page) per student
     students.forEach((student, index) => {
-      // Check if we need a new page
-      if (yPosition > pageHeight - 60) {
+      if (index > 0) {
         pdf.addPage();
-        yPosition = 20;
       }
+      yPosition = margin;
 
-      // Student header
+      // Page title: Student Record
+      pdf.setFontSize(16);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text('Student Record', margin, yPosition);
+      yPosition += 8;
+      pdf.setFontSize(bodyFontSize);
+      pdf.setFont('helvetica', 'normal');
+      pdf.text(`Export Date: ${new Date().toLocaleDateString()}`, margin, yPosition);
+      yPosition += 12;
+
+      // Student name
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Student ${index + 1}: ${student.fullName}`, margin, yPosition);
+      pdf.text(`${student.fullName}`, margin, yPosition);
       yPosition += 10;
 
-      // Photo under student name (left-aligned)
+      // Photo (left-aligned)
       const studentImgSize = 22;
       tryAddStudentPhoto(student, yPosition, studentImgSize);
       yPosition += studentImgSize + 8;
 
-      // Student details in two columns
+      // Two columns
       const leftColumn = margin;
       const rightColumn = margin + (maxWidth / 2) + 10;
       const columnWidth = (maxWidth / 2) - 10;
 
-      // Left column
       pdf.setFontSize(sectionTitleFontSize);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Basic Information:', leftColumn, yPosition);
       yPosition += 6;
-      
       pdf.setFontSize(bodyFontSize);
       pdf.setFont('helvetica', 'normal');
       yPosition = addWrappedText(`Student ID: ${student.studentId}`, leftColumn, yPosition, columnWidth);
@@ -116,25 +108,31 @@ export function exportStudentsToPDF(students: Student[], filename?: string) {
       yPosition = addWrappedText(`Gender: ${student.gender}`, leftColumn, yPosition, columnWidth);
       yPosition = addWrappedText(`Shift: ${student.shift || 'N/A'}`, leftColumn, yPosition, columnWidth);
 
-      // Right column
       const rightYStart = yPosition - (6 * lineHeight);
       let rightY = rightYStart;
-      
       pdf.setFontSize(sectionTitleFontSize);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Academic Information:', rightColumn, rightY);
       rightY += 6;
-      
       pdf.setFontSize(bodyFontSize);
       pdf.setFont('helvetica', 'normal');
       rightY = addWrappedText(`Grade Level: ${student.gradeLevel}`, rightColumn, rightY, columnWidth);
+      if ((student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate)) {
+        const syText = student.graduationSchoolYear
+          ? `SY ${student.graduationSchoolYear}`
+          : (() => {
+              const year = typeof student.graduationDate === 'string'
+                ? parseInt(student.graduationDate.slice(0, 4), 10)
+                : new Date(student.graduationDate!).getFullYear();
+              return `SY ${year - 1}-${year}`;
+            })();
+        rightY = addWrappedText(`School Year Graduated: ${syText}`, rightColumn, rightY, columnWidth);
+      }
       rightY = addWrappedText(`Section: ${student.section}`, rightColumn, rightY, columnWidth);
       rightY = addWrappedText(`Enrollment: ${formatDate(student.createdAt)}`, rightColumn, rightY, columnWidth);
 
-      // Use the higher Y position for continuation
       yPosition = Math.max(yPosition, rightY) + 6;
 
-      // Address section
       pdf.setFontSize(sectionTitleFontSize);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Address:', leftColumn, yPosition);
@@ -143,7 +141,6 @@ export function exportStudentsToPDF(students: Student[], filename?: string) {
       pdf.setFont('helvetica', 'normal');
       yPosition = addWrappedText(formatAddress(student.address), leftColumn, yPosition, maxWidth);
 
-      // Parent/Guardian Information
       pdf.setFontSize(sectionTitleFontSize);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Parent/Guardian Information:', leftColumn, yPosition);
@@ -153,7 +150,6 @@ export function exportStudentsToPDF(students: Student[], filename?: string) {
       yPosition = addWrappedText(`Name: ${student.parentInfo?.name || student.parentName || 'N/A'}`, leftColumn, yPosition, maxWidth);
       yPosition = addWrappedText(`Contact: ${student.parentInfo?.contactNumber || student.parentContact || 'N/A'}`, leftColumn, yPosition, maxWidth);
 
-      // Emergency Contact
       pdf.setFontSize(sectionTitleFontSize);
       pdf.setFont('helvetica', 'bold');
       pdf.text('Emergency Contact:', leftColumn, yPosition);
@@ -163,12 +159,6 @@ export function exportStudentsToPDF(students: Student[], filename?: string) {
       yPosition = addWrappedText(`Name: ${student.emergencyContact?.name || student.emergencyContactName || 'N/A'}`, leftColumn, yPosition, maxWidth);
       yPosition = addWrappedText(`Contact: ${student.emergencyContact?.contactNumber || 'N/A'}`, leftColumn, yPosition, maxWidth);
       yPosition = addWrappedText(`Relationship: ${student.emergencyContact?.relationship || student.relationship || 'N/A'}`, leftColumn, yPosition, maxWidth);
-
-      // Add separator line
-      yPosition += 6;
-      pdf.setDrawColor(200, 200, 200);
-      pdf.line(margin, yPosition, pageWidth - margin, yPosition);
-      yPosition += 10;
     });
 
     // Save the PDF

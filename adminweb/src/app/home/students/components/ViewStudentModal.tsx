@@ -126,11 +126,13 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <h2 className="text-xl font-bold text-gray-900 mb-1 text-center">{student.fullName}</h2>
               <p className="text-gray-500 mb-2 text-center">{student.studentId}</p>
               <span className={`px-4 py-1 rounded-full text-sm font-semibold ${
-                student.gender === 'Male' 
-                  ? 'bg-green-50 text-green-700 ring-1 ring-green-200/50' 
-                  : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50'
+                (student.status ?? '') === 'Graduated'
+                  ? 'bg-gray-100 text-gray-600 ring-1 ring-gray-200/50'
+                  : student.gender === 'Male'
+                    ? 'bg-green-50 text-green-700 ring-1 ring-green-200/50'
+                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50'
               }`}>
-                {student.gender}
+                {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}
               </span>
             </div>
 
@@ -230,20 +232,46 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </div>
               <div>
                 <p className="text-sm text-gray-500">Grade Level</p>
-                <p className="text-base text-gray-900">{student.gradeLevel}</p>
+                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gradeLevel}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Section</p>
-                <p className="text-base text-gray-900">{student.section}</p>
+                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.section}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Gender</p>
-                <p className="text-base text-gray-900">{student.gender}</p>
+                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Shift</p>
-                <p className="text-base text-gray-900">{student.shift}</p>
+                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.shift}</p>
               </div>
+              <div>
+                <p className="text-sm text-gray-500">Enrollment Status</p>
+                <p className="text-base">
+                  <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
+                    (student.status ?? 'Active') === 'Active'
+                      ? 'bg-emerald-50 text-emerald-700'
+                      : (student.status ?? '') === 'Graduated'
+                        ? 'bg-indigo-50 text-indigo-700'
+                        : 'bg-amber-50 text-amber-700'
+                  }`}>
+                    {student.status ?? 'Active'}
+                  </span>
+                </p>
+              </div>
+              {(student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate) && (
+                <div>
+                  <p className="text-sm text-gray-500">School year graduated</p>
+                  <p className="text-base text-gray-900">
+                    {student.graduationSchoolYear
+                      ? `SY ${student.graduationSchoolYear}`
+                      : typeof student.graduationDate === 'string'
+                        ? student.graduationDate.split('T')[0]
+                        : new Date(student.graduationDate!).toLocaleDateString()}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { notificationService, Notification, NotificationStats } from '@/app/services/notificationService';
 import { format, formatDistanceToNow } from 'date-fns';
 import LoadingSkeleton from '@/app/components/loading/LoadingSkeleton';
-import { Bell, AlertTriangle, Clock, XCircle, Scissors, RefreshCw } from 'lucide-react';
+import { Bell, AlertTriangle, Clock, XCircle, Scissors, RefreshCw, Scan } from 'lucide-react';
 import Link from 'next/link';
 
 export default function NotificationsPage() {
@@ -14,10 +14,11 @@ export default function NotificationsPage() {
     late: 0,
     absent: 0,
     cutting: 0,
+    noTimeOut: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'late' | 'absent' | 'cutting'>('all');
+  const [filter, setFilter] = useState<'all' | 'late' | 'absent' | 'cutting' | 'no_time_out'>('all');
 
   const fetchNotifications = async () => {
     try {
@@ -58,6 +59,8 @@ export default function NotificationsPage() {
         return <XCircle className="text-red-600" size={20} />;
       case 'cutting':
         return <Scissors className="text-orange-600" size={20} />;
+      case 'no_time_out':
+        return <Scan className="text-violet-600" size={20} />;
       default:
         return <Bell className="text-gray-600" size={20} />;
     }
@@ -74,6 +77,8 @@ export default function NotificationsPage() {
         return 'border-red-500 bg-red-50';
       case 'cutting':
         return 'border-orange-500 bg-orange-50';
+      case 'no_time_out':
+        return 'border-violet-500 bg-violet-50';
       default:
         return 'border-gray-500 bg-gray-50';
     }
@@ -84,6 +89,7 @@ export default function NotificationsPage() {
       late: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Late' },
       absent: { bg: 'bg-red-100', text: 'text-red-800', label: 'Absent' },
       cutting: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Cutting' },
+      no_time_out: { bg: 'bg-violet-100', text: 'text-violet-800', label: 'No Time Out' },
     };
     const badge = badges[type as keyof typeof badges] || badges.late;
     return (
@@ -99,7 +105,7 @@ export default function NotificationsPage() {
         <div className="dashboard-header-inner">
           <div className="dashboard-header-content">
             <h1>Notifications</h1>
-            <p>Students with 3+ consecutive days of late, absent, or cutting</p>
+            <p>Consecutive late/absent/cutting and abnormal scanning (scanned in but no time out)</p>
           </div>
           <div className="dashboard-header-refresh-box">
             <button
@@ -173,6 +179,18 @@ export default function NotificationsPage() {
             </div>
           </div>
         </div>
+
+        <div className="stat-card">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 bg-violet-50 rounded-lg">
+              <Scan className="text-violet-700" size={24} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">No Time Out (Abnormal)</p>
+              <p className="text-3xl font-bold text-violet-700">{stats.noTimeOut}</p>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Filter Buttons */}
@@ -221,6 +239,17 @@ export default function NotificationsPage() {
         >
           Cutting ({stats.cutting})
         </button>
+        <button
+          type="button"
+          onClick={() => setFilter('no_time_out')}
+          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
+            filter === 'no_time_out'
+              ? 'bg-violet-500 text-white hover:bg-violet-600'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
+          }`}
+        >
+          No Time Out ({stats.noTimeOut})
+        </button>
       </div>
 
       {/* Notifications List */}
@@ -233,8 +262,10 @@ export default function NotificationsPage() {
             <p className="text-lg font-medium text-[var(--foreground)]">No notifications</p>
             <p className="text-sm mt-2">
               {filter === 'all'
-                ? 'No students with 3+ consecutive days of late, absent, or cutting'
-                : `No students with 3+ consecutive days of ${filter}`}
+                ? 'No notifications (consecutive late/absent/cutting or no time out)'
+                : filter === 'no_time_out'
+                  ? 'No students who scanned in but did not scan out'
+                  : `No students with 3+ consecutive days of ${filter}`}
             </p>
           </div>
         ) : (
@@ -267,13 +298,21 @@ export default function NotificationsPage() {
                           {notification.gradeLevel} - {notification.section}
                         </span>
                         <span>•</span>
-                        <span>
-                          {notification.consecutiveCount} consecutive {notification.consecutiveCount === 1 ? 'day' : 'days'}
-                        </span>
-                        <span>•</span>
-                        <span>
-                          Last: {format(new Date(notification.lastOccurrence), 'MMM dd, yyyy')} ({formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })})
-                        </span>
+                        {notification.type === 'no_time_out' ? (
+                          <span>
+                            Scanned in: {format(new Date(notification.lastOccurrence), 'MMM dd, yyyy, h:mm a')} ({formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })})
+                          </span>
+                        ) : (
+                          <>
+                            <span>
+                              {notification.consecutiveCount} consecutive {notification.consecutiveCount === 1 ? 'day' : 'days'}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              Last: {format(new Date(notification.lastOccurrence), 'MMM dd, yyyy')} ({formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })})
+                            </span>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>

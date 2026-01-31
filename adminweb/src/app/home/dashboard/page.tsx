@@ -7,7 +7,8 @@ import { teacherService } from '@/app/services/teacherService';
 import { scheduleService } from '@/app/services/scheduleService';
 import { format, formatDistanceToNow } from 'date-fns';
 import LoadingSkeleton from '@/app/components/loading/LoadingSkeleton';
-import { Users, CheckCircle, XCircle, BookOpen, Clock, TrendingUp, AlertCircle } from 'lucide-react';
+import { Users, CheckCircle, XCircle, BookOpen, Clock, TrendingUp, AlertCircle, Activity, ArrowRight } from 'lucide-react';
+import Link from 'next/link';
 import {
   BarChart,
   Bar,
@@ -308,7 +309,7 @@ export default function DashboardPage() {
                 <YAxis tick={{ fontSize: 12 }} stroke="#6b7280" />
                 <Tooltip
                   contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                  formatter={(value: number) => [value.toLocaleString(), 'Count']}
+                  formatter={(value: number | undefined) => [(value ?? 0).toLocaleString(), 'Count']}
                 />
                 <Bar dataKey="value" radius={[6, 6, 0, 0]} animationDuration={600} animationEasing="ease-out" />
               </BarChart>
@@ -341,7 +342,7 @@ export default function DashboardPage() {
                     dataKey="value"
                     animationDuration={600}
                     animationEasing="ease-out"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) => `${name} ${((percent ?? 0) * 100).toFixed(0)}%`}
                   >
                     {[
                       { name: 'Present', value: stats.presentToday, color: '#43a047' },
@@ -355,7 +356,7 @@ export default function DashboardPage() {
                   </Pie>
                   <Tooltip
                     contentStyle={{ borderRadius: '8px', border: '1px solid #e5e7eb' }}
-                    formatter={(value: number) => [value.toLocaleString(), 'Count']}
+                    formatter={(value: number | undefined) => [(value ?? 0).toLocaleString(), 'Count']}
                   />
                   <Legend />
                 </PieChart>
@@ -366,55 +367,70 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="content-section dashboard-section-animate" style={{ animationDelay: '550ms' }}>
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold text-primary-dark">Recent Activity</h2>
-          {recentActivity.length > 0 && (
-            <span className="text-sm text-gray-500">
-              Showing {recentActivity.length} recent records
-            </span>
-          )}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '550ms' }}>
+        <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
+          <div className="flex items-center gap-2">
+            <Activity className="text-green-600" size={24} />
+            <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
+          </div>
+          <div className="flex items-center gap-3">
+            {recentActivity.length > 0 && (
+              <span className="text-sm text-gray-500">
+                Last {recentActivity.length} records
+              </span>
+            )}
+            <Link
+              href="/home/history"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800"
+            >
+              View all
+              <ArrowRight size={16} />
+            </Link>
+          </div>
         </div>
         {isLoading ? (
           <LoadingSkeleton type="table" count={5} />
         ) : recentActivity.length === 0 ? (
-          <div className="text-center py-12 text-gray-500">
-            <p>No recent activity to display</p>
-            <p className="text-sm mt-2">Attendance records will appear here as students check in/out</p>
+          <div className="text-center py-12 text-gray-500 rounded-lg border border-dashed border-gray-200 bg-gray-50/50">
+            <Activity className="mx-auto text-gray-400 mb-3" size={40} />
+            <p className="font-medium">No recent activity</p>
+            <p className="text-sm mt-1">Attendance records will appear here as students check in or out</p>
           </div>
         ) : (
-          <div className="table-container">
-            <table className="data-table">
+          <div className="overflow-x-auto rounded-lg border border-gray-200">
+            <table className="min-w-[640px] w-full border-collapse">
               <thead>
-                <tr>
-                  <th>Time</th>
-                  <th>Student</th>
-                  <th>Subject/Class</th>
-                  <th>Type</th>
-                  <th>Status</th>
+                <tr className="bg-green-600 text-white">
+                  <th className="px-4 py-3 text-left text-sm font-semibold rounded-tl-lg">Time</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Student</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Subject</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Type</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold rounded-tr-lg">Status</th>
                 </tr>
               </thead>
               <tbody>
-                {recentActivity.map((record) => (
-                  <tr key={record._id}>
-                    <td>
-                      {format(new Date(record.scanTime), 'hh:mm a')}
-                      <br />
-                      <span className="text-xs text-gray-500">
+                {recentActivity.map((record, index) => (
+                  <tr
+                    key={record._id}
+                    className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors ${index % 2 === 1 ? 'bg-gray-50/50' : ''}`}
+                  >
+                    <td className="px-4 py-3 text-sm">
+                      <span className="font-medium text-gray-900">{format(new Date(record.scanTime), 'hh:mm a')}</span>
+                      <span className="text-gray-500 block text-xs mt-0.5">
                         {formatDistanceToNow(new Date(record.scanTime), { addSuffix: true })}
                       </span>
                     </td>
-                    <td className="font-medium">{record.studentName}</td>
-                    <td>
-                      {record.subject || 'N/A'}
-                      {record.gradeLevel && (
-                        <span className="text-xs text-gray-500 block">
-                          {record.gradeLevel} - {record.section}
+                    <td className="px-4 py-3 font-medium text-gray-900">{record.studentName}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700">
+                      {record.subject || '—'}
+                      {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (
+                        <span className="text-gray-500 block text-xs mt-0.5">
+                          {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
                         </span>
                       )}
                     </td>
-                    <td>{getTypeBadge(record)}</td>
-                    <td>{getStatusBadge(record.status)}</td>
+                    <td className="px-4 py-3">{getTypeBadge(record)}</td>
+                    <td className="px-4 py-3">{getStatusBadge(record.status)}</td>
                   </tr>
                 ))}
               </tbody>

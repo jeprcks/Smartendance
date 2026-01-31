@@ -163,10 +163,15 @@ const createStudent = async (req, res) => {
     }
 };
 
-// Get all students
+// Get all students (optional filter: status=Active|Inactive)
 const getAllStudents = async (req, res) => {
     try {
-        const students = await Student.find({}).sort({ createdAt: -1 });
+        const { status } = req.query;
+        const filter = {};
+        if (status && ['Active', 'Inactive'].includes(status)) {
+            filter.status = status;
+        }
+        const students = await Student.find(filter).sort({ createdAt: -1 });
         res.status(200).json(students);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -189,11 +194,15 @@ const getStudent = async (req, res) => {
     }
 };
 
-// Get students by grade and section
+// Get students by grade and section (optional status filter)
 const getStudentsByClass = async (req, res) => {
     try {
-        const { gradeLevel, section } = req.query;
-        const students = await Student.find({ gradeLevel, section }).sort({ fullName: 1 });
+        const { gradeLevel, section, status } = req.query;
+        const filter = { gradeLevel, section };
+        if (status && ['Active', 'Inactive'].includes(status)) {
+            filter.status = status;
+        }
+        const students = await Student.find(filter).sort({ fullName: 1 });
         res.status(200).json(students);
     } catch (error) {
         res.status(400).json({ error: error.message });
@@ -243,11 +252,12 @@ const getStudentsByTeacherSchedule = async (req, res) => {
         
         console.log(`Teacher teaches in shifts: ${shiftsArray.join(', ')}`);
 
-        // Find students in this grade and section that match the teacher's shift(s)
+        // Find students in this grade and section that match the teacher's shift(s) (active only)
         const studentFilter = {
             gradeLevel: gradeLevel,
             section: section,
-            shift: { $in: shiftsArray }  // Only include students in shifts where teacher teaches
+            shift: { $in: shiftsArray },
+            $or: [{ status: 'Active' }, { status: { $exists: false } }]  // Include legacy docs without status
         };
 
         const students = await Student.find(studentFilter).sort({ fullName: 1 });
@@ -826,6 +836,46 @@ const validateCheckOut = async (req, res) => {
     }
 };
 
+// Bulk update students (grade level, section, shift)
+const bulkUpdateStudents = async (req, res) => {
+    try {
+        const { ids, updates } = req.body;
+
+        if (!ids || !Array.isArray(ids) || ids.length === 0) {
+            return res.status(400).json({ error: 'ids array is required and must not be empty' });
+        }
+        if (!updates || typeof updates !== 'object') {
+            return res.status(400).json({ error: 'updates object is required' });
+        }
+
+        const allowed = ['gradeLevel', 'section', 'shift', 'status', 'graduationDate', 'graduationSchoolYear'];
+        const sanitized = {};
+        for (const key of allowed) {
+            if (updates[key] !== undefined && updates[key] !== null && updates[key] !== '') {
+                sanitized[key] = key === 'graduationDate' ? new Date(updates[key]) : updates[key];
+            }
+        }
+        if (Object.keys(sanitized).length === 0) {
+            return res.status(400).json({ error: 'At least one of gradeLevel, section, shift, status, graduationDate, or graduationSchoolYear is required' });
+        }
+
+        const result = await Student.updateMany(
+            { _id: { $in: ids } },
+            { $set: sanitized }
+        );
+
+        res.status(200).json({
+            success: true,
+            message: `Updated ${result.modifiedCount} student(s)`,
+            modifiedCount: result.modifiedCount,
+            matchedCount: result.matchedCount
+        });
+    } catch (error) {
+        console.error('Error bulk updating students:', error);
+        res.status(400).json({ error: error.message || 'Failed to bulk update students' });
+    }
+};
+
 module.exports = {
     createStudent,
     getAllStudents,
@@ -841,5 +891,6 @@ module.exports = {
     getStudentByQRCode,
     validateCheckIn,
     validateCheckOut,
-    clearDatabase
+    clearDatabase,
+    bulkUpdateStudents
 };

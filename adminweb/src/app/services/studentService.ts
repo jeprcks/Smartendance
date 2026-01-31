@@ -7,10 +7,14 @@ export interface Student {
   phoneNumber: string;
   age: number;
   birthDate: string; // ISO string format
-  gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6';
+  gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6' | 'Graduated';
   section: string;
   gender: 'Male' | 'Female' | 'Other';
   shift: 'Morning' | 'Afternoon';
+  /** Enrollment status: Active = in school, Inactive = stopped mid-year, Graduated = completed Grade 6 */
+  status?: 'Active' | 'Inactive' | 'Graduated';
+  graduationDate?: string;
+  graduationSchoolYear?: string;
   photo?: string;
   // Address can be either a string or an object
   address?: string | {
@@ -126,9 +130,12 @@ export const studentService = {
     }
   },
 
-  async getAllStudents(): Promise<Student[]> {
+  async getAllStudents(options?: { status?: 'Active' | 'Inactive' }): Promise<Student[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/api/students`, {
+      const params = new URLSearchParams();
+      if (options?.status) params.set('status', options.status);
+      const url = params.toString() ? `${API_BASE_URL}/api/students?${params}` : `${API_BASE_URL}/api/students`;
+      const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',
         },
@@ -237,6 +244,27 @@ export const studentService = {
     } catch (error) {
       console.error('Error updating student:', error);
       throw error instanceof Error ? error : new Error('Failed to update student');
+    }
+  },
+
+  async bulkUpdateStudents(
+    ids: string[],
+    updates: { gradeLevel?: string; section?: string; shift?: string; status?: string; graduationDate?: string; graduationSchoolYear?: string }
+  ): Promise<{ modifiedCount: number; matchedCount: number }> {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/students/bulk-update`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, updates }),
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to bulk update students');
+      }
+      return { modifiedCount: data.modifiedCount ?? 0, matchedCount: data.matchedCount ?? 0 };
+    } catch (error) {
+      console.error('Error bulk updating students:', error);
+      throw error instanceof Error ? error : new Error('Failed to bulk update students');
     }
   },
 };

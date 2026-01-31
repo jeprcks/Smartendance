@@ -270,6 +270,7 @@ export default function SchedulesPage() {
           // Refetch schedules after adding a new one
           fetchSchedules();
         }}
+        existingSchedules={schedules}
       />
 
       <ViewScheduleModal 
@@ -294,6 +295,7 @@ export default function SchedulesPage() {
           setIsEditModalOpen(false);
           setSelectedSchedule(null);
         }}
+        existingSchedules={schedules}
       />
     </div>
   );

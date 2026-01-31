@@ -15,7 +15,8 @@ const {
   getStudentByQRCode,
   validateCheckIn,
   validateCheckOut,
-  clearDatabase
+  clearDatabase,
+  bulkUpdateStudents
 } = require("../controllers/studentsController");
 
 // POST: Create a new student
@@ -32,6 +33,9 @@ router.get("/class", getStudentsByClass);
 
 // GET: Get students enrolled in a specific teacher's schedule
 router.get("/teacher/schedule", getStudentsByTeacherSchedule);
+
+// PATCH: Bulk update students (grade level, section, shift)
+router.patch("/bulk-update", bulkUpdateStudents);
 
 // GET: Retrieve a single student by ID
 router.get("/:id", getStudent);
