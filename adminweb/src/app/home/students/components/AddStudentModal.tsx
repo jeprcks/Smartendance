@@ -85,6 +85,7 @@ interface StudentFormData {
   gender: 'Male' | 'Female' | 'Other';
   photo?: string; // Base64 encoded image
   shift: string;
+  status?: 'Active' | 'Inactive';
   address?: string;
   city?: string;
   province?: string;
@@ -115,6 +116,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     section: '' as any,
     gender: '' as any,
     shift: '',
+    status: 'Active',
     address: '',
     city: '',
     province: '',
@@ -222,7 +224,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     setError(null); // Clear any previous errors
 
     try {
-      // Transform the data to match the backend schema
+      // Transform the data to match the backend schema (Add Student only supports Active/Inactive)
       const transformedData = {
         studentId: formData.studentId,
         fullName: formData.fullName,
@@ -234,6 +236,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         gender: formData.gender as 'Male' | 'Female' | 'Other',
         photo: formData.photo,
         shift: formData.shift as 'Morning' | 'Afternoon',
+        status: (formData.status ?? 'Active') as 'Active' | 'Inactive',
         // Transform flat address fields to nested object
         address: {
           street: formData.address || '',
@@ -332,12 +335,12 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
       ...formData,
       [name]: value
     });
-    
+
     // Clear validation errors for the field being changed
     if (validationErrors.some(err => err.field === name)) {
       setValidationErrors(prev => prev.filter(err => err.field !== name));
     }
-    
+
     // Clear general error when user starts typing
     if (error) {
       setError(null);
@@ -534,7 +537,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   onChange={handleChange}
                 >
                   <option value="">Select Grade Level</option>
-                  <option value="">Select Grade Level</option>
                   {gradeLevels.map((grade) => (
                     <option key={grade} value={grade}>
                       {grade}
@@ -570,7 +572,6 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   onChange={handleChange}
                 >
                   <option value="">Select Gender</option>
-                  <option value="">Select Gender</option>
                   <option value="Male">Male</option>
                   <option value="Female">Female</option>
                   <option value="Other">Other</option>
@@ -589,9 +590,23 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                   onChange={handleChange}
                 >
                   <option value="">Select Shift</option>
-                  <option value="">Select Shift</option>
                   <option value="Morning">Morning</option>
                   <option value="Afternoon">Afternoon</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Enrollment Status
+                </label>
+                <select
+                  name="status"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  value={formData.status ?? 'Active'}
+                  onChange={handleChange}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
                 </select>
               </div>
 

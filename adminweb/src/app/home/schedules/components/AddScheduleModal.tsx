@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { teacherService, type Teacher } from '@/app/services/teacherService';
-import { scheduleService } from '@/app/services/scheduleService';
+import { scheduleService, type Schedule } from '@/app/services/scheduleService';
 
 interface AddScheduleModalProps {
   isOpen: boolean;
   onClose: () => void;
   onAdd: (scheduleData: ScheduleFormData) => void;
+  existingSchedules?: Schedule[];
 }
 
 interface ScheduleFormData {
@@ -21,7 +22,7 @@ interface ScheduleFormData {
   shift: string;
 }
 
-export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddScheduleModalProps) {
+export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSchedules = [] }: AddScheduleModalProps) {
   const [formData, setFormData] = useState<ScheduleFormData>({
     gradeLevel: '',
     section: '',
@@ -99,6 +100,35 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd }: AddSchedule
         !formData.shift
       ) {
         setSubmitError('Please fill in all fields');
+        return;
+      }
+
+      // Validate no overlapping: same section (gradeLevel + section) cannot have same timeSlot and same day
+      const conflictingDays: string[] = [];
+      for (const existing of existingSchedules) {
+        const existingDays = existing.days?.length
+          ? existing.days
+          : existing.day
+            ? [existing.day]
+            : [];
+        const sameSection =
+          existing.gradeLevel === formData.gradeLevel &&
+          existing.section === formData.section &&
+          existing.timeSlot === formData.timeSlot &&
+          existing.shift === formData.shift;
+        if (sameSection) {
+          const existingDaySet = new Set(existingDays as string[]);
+          for (const d of formData.days) {
+            if (existingDaySet.has(d)) {
+              if (!conflictingDays.includes(d)) conflictingDays.push(d);
+            }
+          }
+        }
+      }
+      if (conflictingDays.length > 0) {
+        setSubmitError(
+          `This section (${formData.gradeLevel} - ${formData.section}) already has a schedule for ${conflictingDays.join(', ')} at ${formData.timeSlot}. Please choose different days or time slot.`
+        );
         return;
       }
 

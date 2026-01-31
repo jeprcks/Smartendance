@@ -1,9 +1,53 @@
-﻿'use client';
+'use client';
 
 import { useState, useEffect } from 'react';
 import { Student } from '@/app/services/studentService';
 import toast from 'react-hot-toast';
 import { QRCodeSVG } from 'qrcode.react';
+
+const compressImage = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined') {
+      reject(new Error('Window is not defined'));
+      return;
+    }
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = document.createElement('img');
+      img.src = event.target?.result as string;
+      img.onload = () => {
+        const maxWidth = 800;
+        const maxHeight = 800;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > maxWidth) {
+            height *= maxWidth / width;
+            width = maxWidth;
+          }
+        } else {
+          if (height > maxHeight) {
+            width *= maxHeight / height;
+            height = maxHeight;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', 0.7));
+        } else {
+          reject(new Error('Could not get canvas context'));
+        }
+      };
+      img.onerror = () => reject(new Error('Failed to load image'));
+    };
+    reader.onerror = () => reject(new Error('Failed to read file'));
+  });
+};
 
 interface ValidationError {
   field: string;
@@ -16,11 +60,13 @@ interface EditStudentFormData {
   phoneNumber: string;
   age: number;
   birthDate: string;
-  gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6';
+  gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6' | 'Graduated';
   section: string;
   gender: 'Male' | 'Female' | 'Other';
   photo?: string;
   shift: 'Morning' | 'Afternoon';
+  status?: 'Active' | 'Inactive' | 'Graduated';
+  graduationDate?: string;
   address?: string | {
     street?: string;
     city?: string;
@@ -53,17 +99,24 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
 
   useEffect(() => {
     if (student) {
+      const birthDateValue = student.birthDate
+        ? (typeof student.birthDate === 'string'
+            ? student.birthDate.split('T')[0]
+            : new Date(student.birthDate).toISOString().split('T')[0])
+        : '';
       setFormData({
         studentId: student.studentId,
         fullName: student.fullName,
         phoneNumber: student.phoneNumber,
         age: student.age,
-        birthDate: student.birthDate,
+        birthDate: birthDateValue,
         gradeLevel: student.gradeLevel as EditStudentFormData['gradeLevel'],
         section: student.section as EditStudentFormData['section'],
         gender: student.gender as EditStudentFormData['gender'],
         photo: student.photo,
         shift: student.shift,
+        status: (student.status ?? 'Active') as EditStudentFormData['status'],
+        graduationDate: student.graduationDate ? (typeof student.graduationDate === 'string' ? student.graduationDate.split('T')[0] : new Date(student.graduationDate).toISOString().split('T')[0]) : '',
         address: typeof student.address === 'object' ? student.address : { street: student.address || '' },
         parentName: student.parentInfo?.name || student.parentName || '',
         parentEmail: student.parentInfo?.email || '',
@@ -147,7 +200,9 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
           contactNumber: formData.parentContact || ''
         }
       };
-      
+      if (formData.status === 'Graduated') {
+        transformedData.gradeLevel = 'Graduated';
+      }
       // Remove the flat parent fields since we're using the nested object
       delete transformedData.parentName;
       delete transformedData.parentEmail;
@@ -202,9 +257,18 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
       return;
     }
 
+    if (name === 'status' && value === 'Graduated') {
+      setFormData(prev => ({
+        ...prev,
+        status: 'Graduated' as const,
+        gradeLevel: 'Graduated' as EditStudentFormData['gradeLevel']
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'age' ? parseInt(value) : value
+      [name]: name === 'age' ? parseInt(value) : (name === 'status' ? value as 'Active' | 'Inactive' | 'Graduated' : value)
     }));
   };
 
@@ -239,10 +303,10 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
             {/* Left Side - Profile */}
             <div className="flex flex-col items-center w-1/4">
               <div className="relative mb-6">
-                {student.photo && student.photo.startsWith('data:image/') ? (
+                {(formData.photo ?? student.photo) && (formData.photo ?? student.photo)!.startsWith('data:image/') ? (
                   <div className="w-40 h-40 rounded-xl overflow-hidden border-2 border-green-200 shadow-lg">
                     <img
-                      src={student.photo}
+                      src={formData.photo ?? student.photo ?? ''}
                       alt={`${student.fullName}'s profile`}
                       className="w-full h-full object-cover"
                     />
@@ -254,6 +318,36 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                     </span>
                   </div>
                 )}
+                <input
+                  type="file"
+                  id="edit-student-photo"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      try {
+                        if (file.size > 5 * 1024 * 1024) {
+                          toast.error('Image size should be less than 5MB');
+                          return;
+                        }
+                        const compressed = await compressImage(file);
+                        setFormData(prev => ({ ...prev, photo: compressed }));
+                        toast.success('Photo updated');
+                      } catch (err) {
+                        console.error(err);
+                        toast.error('Error processing image. Try another image.');
+                      }
+                    }
+                    e.target.value = '';
+                  }}
+                />
+                <label
+                  htmlFor="edit-student-photo"
+                  className="mt-2 inline-block px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100 transition-colors"
+                >
+                  Change photo
+                </label>
               </div>
               <h2 className="text-2xl font-bold text-gray-900 mb-2 text-center">{student.fullName}</h2>
               <p className="text-gray-600 mb-3 text-center">{student.studentId}</p>
@@ -344,19 +438,25 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="gradeLevel" className="block text-sm font-medium text-gray-700">
                         Grade Level
                       </label>
-                      <select
-                        id="gradeLevel"
-                        name="gradeLevel"
-                        value={formData.gradeLevel || ''}
-                        onChange={handleChange}
-                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Select Grade Level</option>
-                        {gradeLevels.map(level => (
-                          <option key={level} value={level}>{level}</option>
-                        ))}
-                      </select>
+                      {(formData.status ?? 'Active') === 'Graduated' ? (
+                        <div className="block w-full rounded-lg border border-gray-200 bg-gray-100 py-2 px-3 text-gray-600 sm:text-sm">
+                          Graduated
+                        </div>
+                      ) : (
+                        <select
+                          id="gradeLevel"
+                          name="gradeLevel"
+                          value={formData.gradeLevel === 'Graduated' ? '' : (formData.gradeLevel || '')}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                          required
+                        >
+                          <option value="">Select Grade Level</option>
+                          {gradeLevels.map(level => (
+                            <option key={level} value={level}>{level}</option>
+                          ))}
+                        </select>
+                      )}
                     </div>
 
                     {/* Section */}
@@ -364,15 +464,21 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="section" className="block text-sm font-medium text-gray-700">
                         Section
                       </label>
-                      <input
-                        type="text"
-                        id="section"
-                        name="section"
-                        value={formData.section || ''}
-                        onChange={handleChange}
-                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        required
-                      />
+                      {(formData.status ?? 'Active') === 'Graduated' ? (
+                        <div className="block w-full rounded-lg border border-gray-200 bg-gray-100 py-2 px-3 text-gray-600 sm:text-sm">
+                          N/A
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          id="section"
+                          name="section"
+                          value={formData.section || ''}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                          required
+                        />
+                      )}
                     </div>
 
                     {/* Age */}
@@ -414,19 +520,25 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
                         Gender
                       </label>
-                      <select
-                        id="gender"
-                        name="gender"
-                        value={formData.gender || ''}
-                        onChange={handleChange}
-                        className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        required
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
+                      {(formData.status ?? 'Active') === 'Graduated' ? (
+                        <div className="block w-full rounded-lg border border-gray-200 bg-gray-100 py-2 px-3 text-gray-600 sm:text-sm">
+                          N/A
+                        </div>
+                      ) : (
+                        <select
+                          id="gender"
+                          name="gender"
+                          value={formData.gender || ''}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                          required
+                        >
+                          <option value="">Select Gender</option>
+                          <option value="Male">Male</option>
+                          <option value="Female">Female</option>
+                          <option value="Other">Other</option>
+                        </select>
+                      )}
                     </div>
 
                     {/* Shift */}
@@ -434,19 +546,58 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="shift" className="block text-sm font-medium text-gray-700">
                         Shift
                       </label>
+                      {(formData.status ?? 'Active') === 'Graduated' ? (
+                        <div className="block w-full rounded-lg border border-gray-200 bg-gray-100 py-2 px-3 text-gray-600 sm:text-sm">
+                          N/A
+                        </div>
+                      ) : (
+                        <select
+                          id="shift"
+                          name="shift"
+                          value={formData.shift || ''}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                          required
+                        >
+                          <option value="">Select Shift</option>
+                          <option value="Morning">Morning</option>
+                          <option value="Afternoon">Afternoon</option>
+                        </select>
+                      )}
+                    </div>
+
+                    {/* Status (Active / Inactive / Graduated) */}
+                    <div className="space-y-1.5">
+                      <label htmlFor="status" className="block text-sm font-medium text-gray-700">
+                        Enrollment Status
+                      </label>
                       <select
-                        id="shift"
-                        name="shift"
-                        value={formData.shift || ''}
+                        id="status"
+                        name="status"
+                        value={formData.status ?? 'Active'}
                         onChange={handleChange}
                         className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        required
                       >
-                        <option value="">Select Shift</option>
-                        <option value="Morning">Morning</option>
-                        <option value="Afternoon">Afternoon</option>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Graduated">Graduated</option>
                       </select>
                     </div>
+                    {(formData.status ?? 'Active') === 'Graduated' && (
+                      <div className="space-y-1.5">
+                        <label htmlFor="graduationDate" className="block text-sm font-medium text-gray-700">
+                          Graduation date
+                        </label>
+                        <input
+                          type="date"
+                          id="graduationDate"
+                          name="graduationDate"
+                          value={formData.graduationDate ?? ''}
+                          onChange={handleChange}
+                          className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        />
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -41,14 +41,13 @@ class _StudentDetailsSheet extends StatefulWidget {
   final String? section;
 
   const _StudentDetailsSheet({
-    Key? key,
     required this.token,
     required this.studentId,
     this.studentName,
     this.subject,
     this.gradeLevel,
     this.section,
-  }) : super(key: key);
+  });
 
   @override
   State<_StudentDetailsSheet> createState() => _StudentDetailsSheetState();
@@ -129,8 +128,9 @@ class _StudentDetailsSheetState extends State<_StudentDetailsSheet> {
 
       // Status filter
       if (_selectedStatus != null && _selectedStatus!.isNotEmpty) {
-        if (status.toLowerCase() != _selectedStatus!.toLowerCase())
+        if (status.toLowerCase() != _selectedStatus!.toLowerCase()) {
           return false;
+        }
       }
 
       // Date filter (match by yyyy-MM-dd)
@@ -298,7 +298,7 @@ class _StudentDetailsSheetState extends State<_StudentDetailsSheet> {
                     // Status filter
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _selectedStatus,
+                        initialValue: _selectedStatus,
                         isDense: true,
                         decoration: InputDecoration(
                           border: OutlineInputBorder(

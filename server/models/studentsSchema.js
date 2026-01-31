@@ -30,7 +30,7 @@ const studentSchema = new Schema(
         gradeLevel: {
             type: String,
             required: true,
-            enum: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6']
+            enum: ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Graduated']
         },
         section: {
             type: String,
@@ -49,6 +49,23 @@ const studentSchema = new Schema(
             type: String,
             required: true,
             enum: ['Morning', 'Afternoon']
+        },
+        // Enrollment status: Active = in school, Inactive = stopped mid-year, Graduated = completed Grade 6
+        status: {
+            type: String,
+            required: true,
+            enum: ['Active', 'Inactive', 'Graduated'],
+            default: 'Active'
+        },
+        // Date when student graduated (for status = Graduated)
+        graduationDate: {
+            type: Date,
+            required: false
+        },
+        // School year graduated, e.g. "2023-2024" (for status = Graduated)
+        graduationSchoolYear: {
+            type: String,
+            required: false
         },
         // Address Information
         address: {

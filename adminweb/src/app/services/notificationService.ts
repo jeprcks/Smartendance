@@ -4,7 +4,7 @@ import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 
 export interface Notification {
   id: string;
-  type: 'late' | 'absent' | 'cutting';
+  type: 'late' | 'absent' | 'cutting' | 'no_time_out';
   studentId: string;
   studentName: string;
   gradeLevel: string;
@@ -20,6 +20,7 @@ export interface NotificationStats {
   late: number;
   absent: number;
   cutting: number;
+  noTimeOut: number;
 }
 
 class NotificationService {
@@ -145,7 +146,65 @@ class NotificationService {
   }
 
   /**
-   * Get all notifications for consecutive late/absent/cutting
+   * Find students who scanned In but did not scan Out (abnormal scanning behavior).
+   * Only checks the last `daysWindow` days so notifications stay actionable.
+   */
+  private checkNoTimeOut(
+    records: AttendanceRecord[],
+    daysWindow: number = 7
+  ): Notification[] {
+    const notifications: Notification[] = [];
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysWindow);
+
+    // Group by student, then by date
+    const studentByDate = new Map<string, Map<string, { in: AttendanceRecord[]; out: AttendanceRecord[] }>>();
+
+    records.forEach((record) => {
+      const dateKey = format(startOfDay(parseISO(record.scanTime)), 'yyyy-MM-dd');
+      const recordDate = parseISO(dateKey + 'T00:00:00');
+      if (recordDate < cutoff) return;
+
+      if (!studentByDate.has(record.studentId)) {
+        studentByDate.set(record.studentId, new Map());
+      }
+      const dates = studentByDate.get(record.studentId)!;
+      if (!dates.has(dateKey)) {
+        dates.set(dateKey, { in: [], out: [] });
+      }
+      const day = dates.get(dateKey)!;
+      if (record.attendanceType === 'In') {
+        day.in.push(record);
+      } else if (record.attendanceType === 'Out') {
+        day.out.push(record);
+      }
+    });
+
+    studentByDate.forEach((dates, studentId) => {
+      dates.forEach((day, dateKey) => {
+        if (day.in.length > 0 && day.out.length === 0) {
+          const inRecord = day.in[0];
+          notifications.push({
+            id: `no-time-out-${studentId}-${dateKey}`,
+            type: 'no_time_out',
+            studentId: inRecord.studentId,
+            studentName: inRecord.studentName,
+            gradeLevel: inRecord.gradeLevel,
+            section: inRecord.section,
+            consecutiveCount: 1,
+            lastOccurrence: inRecord.scanTime,
+            severity: 'warning',
+            message: `${inRecord.studentName} scanned in but did not scan out (abnormal scanning behavior)`,
+          });
+        }
+      });
+    });
+
+    return notifications;
+  }
+
+  /**
+   * Get all notifications for consecutive late/absent/cutting and no-time-out
    */
   async getNotifications(daysToCheck: number = 30): Promise<{
     success: boolean;
@@ -161,11 +220,12 @@ class NotificationService {
       const startDate = new Date();
       startDate.setDate(startDate.getDate() - daysToCheck);
 
-      // Fetch attendance records for the date range
+      // Fetch attendance records (both In and Out) for the date range
       const response = await historyService.getAllRecords({
         startDate: format(startDate, 'yyyy-MM-dd'),
         endDate: format(endDate, 'yyyy-MM-dd'),
-        limit: 10000, // Get enough records
+        limit: 10000,
+        attendanceType: 'All',
       }).catch((error) => {
         console.warn('Error fetching attendance records for notifications:', error);
         return { success: false, records: [], pagination: {} };
@@ -173,7 +233,7 @@ class NotificationService {
 
       const records = response.success ? response.records : [];
 
-      // Check for consecutive late
+      // Check for consecutive late (only In records have Late status)
       const lateNotifications = this.checkConsecutiveStatus(records, 'Late', 3);
       
       // Check for consecutive absent
@@ -182,11 +242,15 @@ class NotificationService {
       // Check for consecutive cutting
       const cuttingNotifications = this.checkConsecutiveStatus(records, 'Cutting', 3);
 
+      // Check for scanned in but no time out (abnormal scanning) – last 7 days
+      const noTimeOutNotifications = this.checkNoTimeOut(records, 7);
+
       // Combine all notifications
       const allNotifications = [
         ...lateNotifications,
         ...absentNotifications,
         ...cuttingNotifications,
+        ...noTimeOutNotifications,
       ].sort((a, b) => new Date(b.lastOccurrence).getTime() - new Date(a.lastOccurrence).getTime());
 
       const stats: NotificationStats = {
@@ -194,6 +258,7 @@ class NotificationService {
         late: lateNotifications.length,
         absent: absentNotifications.length,
         cutting: cuttingNotifications.length,
+        noTimeOut: noTimeOutNotifications.length,
       };
 
       return {
@@ -211,6 +276,7 @@ class NotificationService {
           late: 0,
           absent: 0,
           cutting: 0,
+          noTimeOut: 0,
         },
       };
     }

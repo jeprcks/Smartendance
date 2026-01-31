@@ -168,6 +168,7 @@ class HistoryService {
     section?: string;
     shift?: string;
     search?: string;
+    attendanceType?: 'In' | 'Out' | 'All';
   } = {}): Promise<{ success: boolean; records: AttendanceRecord[]; pagination: any }> {
     try {
       const searchParams = new URLSearchParams();

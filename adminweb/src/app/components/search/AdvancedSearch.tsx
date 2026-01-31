@@ -83,7 +83,7 @@ export default function AdvancedSearch({
   };
 
   const clearFilters = () => {
-    const cleared = { query: '' };
+    const cleared = { query: '', gradeLevel: '', section: '', status: '' };
     setFilters(cleared);
     onSearch(cleared);
   };

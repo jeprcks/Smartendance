@@ -6,9 +6,14 @@ import { usePathname } from 'next/navigation';
 import { Bell } from 'lucide-react';
 import { notificationService } from '@/app/services/notificationService';
 
+const NOTIFICATION_LAST_SEEN_KEY = 'notificationLastSeenCount';
+
 export default function Navbar() {
   const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(0);
+  const [lastSeenCount, setLastSeenCount] = useState(0);
+
+  const hasUnread = notificationCount > lastSeenCount;
 
   const navItems = [
     { href: '/home/dashboard', label: 'Dashboard', icon: '📊' },
@@ -21,20 +26,39 @@ export default function Navbar() {
   ];
 
   useEffect(() => {
+    const stored = typeof window !== 'undefined' ? localStorage.getItem(NOTIFICATION_LAST_SEEN_KEY) : null;
+    if (stored !== null) {
+      const n = parseInt(stored, 10);
+      if (!Number.isNaN(n)) setLastSeenCount(n);
+    }
+  }, []);
+
+  useEffect(() => {
     const fetchNotificationCount = async () => {
       try {
         const count = await notificationService.getNotificationCount();
         setNotificationCount(count);
+        if (pathname === '/home/notifications') {
+          setLastSeenCount(count);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(NOTIFICATION_LAST_SEEN_KEY, String(count));
+          }
+        } else if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem(NOTIFICATION_LAST_SEEN_KEY);
+          if (stored !== null) {
+            const n = parseInt(stored, 10);
+            if (!Number.isNaN(n)) setLastSeenCount(n);
+          }
+        }
       } catch (error) {
         console.error('Error fetching notification count:', error);
       }
     };
 
     fetchNotificationCount();
-    // Refresh every 2 minutes
     const interval = setInterval(fetchNotificationCount, 120000);
     return () => clearInterval(interval);
-  }, []);
+  }, [pathname]);
 
   return (
     <nav className="navbar">
@@ -79,12 +103,12 @@ export default function Navbar() {
             <Link
               href="/home/notifications"
               className="navbar-action navbar-action-bell"
-              aria-label="Notifications"
+              aria-label={hasUnread ? `${notificationCount} unread notifications` : 'Notifications'}
             >
               <Bell size={18} strokeWidth={2} />
-              {notificationCount > 0 && (
-                <span className="navbar-badge">
-                  {notificationCount > 99 ? '99+' : notificationCount}
+              {hasUnread && (
+                <span className="navbar-badge" aria-hidden>
+                  {/* Red dot – disappears after notifications are viewed */}
                 </span>
               )}
             </Link>

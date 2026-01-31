@@ -55,7 +55,7 @@ const createAttendanceRecord = async (req, res) => {
             notes
         });
 
-        // If this is an 'Out' record, try to find the matching 'In' record
+        // If this is an 'Out' record, find and link to the matching 'In' record (required)
         if (attendanceType === 'Out') {
             const startOfDay = new Date(now);
             startOfDay.setHours(0, 0, 0, 0);
@@ -67,7 +67,10 @@ const createAttendanceRecord = async (req, res) => {
                     $gte: startOfDay,
                     $lte: now
                 },
-                checkOutTime: { $exists: false } // Only find unclosed check-ins
+                $or: [
+                    { checkOutTime: { $exists: false } },
+                    { checkOutTime: null }
+                ]
             }).sort({ scanTime: -1 });
 
             if (inRecord) {
@@ -100,7 +103,12 @@ const createAttendanceRecord = async (req, res) => {
                 console.log(`  - Update acknowledged: ${updateResult.acknowledged}`);
                 console.log(`  - Docs modified: ${updateResult.modifiedCount}`);
             } else {
-                console.log(`⚠️ No unclosed check-in found for ${studentId} checkout`);
+                // Reject check-out if no open check-in (handles concurrent scan race)
+                console.log(`⚠️ No unclosed check-in found for ${studentId} checkout - rejecting`);
+                return res.status(400).json({
+                    error: 'No check-in found. Please check in first before checking out.',
+                    code: 'NO_OPEN_CHECKIN'
+                });
             }
         }
 

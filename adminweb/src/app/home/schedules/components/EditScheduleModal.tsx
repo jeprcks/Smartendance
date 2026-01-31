@@ -9,6 +9,7 @@ interface EditScheduleModalProps {
   onClose: () => void;
   schedule: Schedule | null;
   onEdit: (updated: Schedule) => void;
+  existingSchedules?: Schedule[];
 }
 
 const gradeLevels = ['Grade 1','Grade 2','Grade 3','Grade 4','Grade 5','Grade 6'];
@@ -25,7 +26,7 @@ const timeSlots = [
   '3:00 PM - 4:00 PM'
 ];
 
-export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit }: EditScheduleModalProps) {
+export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, existingSchedules = [] }: EditScheduleModalProps) {
   const [form, setForm] = useState({
     gradeLevel: '',
     section: '',
@@ -89,6 +90,36 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit }:
     if (!schedule?._id) return;
     if (!form.gradeLevel || !form.section || !form.subject || !form.teacher || !form.timeSlot || form.days.length === 0 || !form.shift) {
       setError('Please fill in all required fields (including at least one day).');
+      return;
+    }
+
+    // Validate no overlapping: same section cannot have same timeSlot and same day (exclude current schedule)
+    const others = existingSchedules.filter(s => s._id !== schedule._id);
+    const conflictingDays: string[] = [];
+    for (const existing of others) {
+      const existingDays = existing.days?.length
+        ? existing.days
+        : existing.day
+          ? [existing.day]
+          : [];
+      const sameSection =
+        existing.gradeLevel === form.gradeLevel &&
+        existing.section === form.section &&
+        existing.timeSlot === form.timeSlot &&
+        existing.shift === form.shift;
+      if (sameSection) {
+        const existingDaySet = new Set(existingDays as string[]);
+        for (const d of form.days) {
+          if (existingDaySet.has(d)) {
+            if (!conflictingDays.includes(d)) conflictingDays.push(d);
+          }
+        }
+      }
+    }
+    if (conflictingDays.length > 0) {
+      setError(
+        `This section (${form.gradeLevel} - ${form.section}) already has a schedule for ${conflictingDays.join(', ')} at ${form.timeSlot}. Please choose different days or time slot.`
+      );
       return;
     }
 

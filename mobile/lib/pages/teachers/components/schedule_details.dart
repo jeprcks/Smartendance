@@ -317,7 +317,7 @@ class _ScheduleDetailsPageState extends State<ScheduleDetailsPage> {
                             gradeLevel: widget.schedule['gradeLevel'] ?? 'N/A',
                             section: widget.schedule['section'] ?? 'N/A',
                             scheduleTitle:
-                                '${widget.schedule['subject']} - ${daysLabel} ${widget.schedule['timeSlot']}',
+                                '${widget.schedule['subject']} - $daysLabel ${widget.schedule['timeSlot']}',
                             onStatusUpdated: () async {
                               await _fetchAttendanceData();
                             },

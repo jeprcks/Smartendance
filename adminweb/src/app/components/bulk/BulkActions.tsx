@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { CheckSquare, Square, MoreVertical, Trash2, Edit, Download, Mail } from 'lucide-react';
+import { CheckSquare, Square, MoreVertical, Trash2, Edit, Download, Mail, QrCode } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface BulkActionsProps<T> {
@@ -11,7 +11,9 @@ interface BulkActionsProps<T> {
   onDeselectAll: () => void;
   onBulkDelete?: (ids: string[]) => Promise<void>;
   onBulkUpdate?: (ids: string[], updates: Partial<T>) => Promise<void>;
+  onBulkEditGrade?: (ids: string[]) => void;
   onBulkExport?: (ids: string[]) => void;
+  onBulkPrintQR?: (ids: string[]) => void;
   onBulkMessage?: (ids: string[]) => void;
   getId: (item: T) => string;
   getLabel?: (item: T) => string;
@@ -24,7 +26,9 @@ export default function BulkActions<T>({
   onDeselectAll,
   onBulkDelete,
   onBulkUpdate,
+  onBulkEditGrade,
   onBulkExport,
+  onBulkPrintQR,
   onBulkMessage,
   getId,
   getLabel,
@@ -70,6 +74,13 @@ export default function BulkActions<T>({
     if (!onBulkExport || selectedCount === 0) return;
     const ids = Array.from(selectedItems);
     onBulkExport(ids);
+    setShowMenu(false);
+  };
+
+  const handleBulkPrintQR = () => {
+    if (!onBulkPrintQR || selectedCount === 0) return;
+    const ids = Array.from(selectedItems);
+    onBulkPrintQR(ids);
     setShowMenu(false);
   };
 
@@ -122,7 +133,16 @@ export default function BulkActions<T>({
               Export
             </button>
           )}
-          
+          {onBulkPrintQR && (
+            <button
+              onClick={handleBulkPrintQR}
+              disabled={isProcessing || selectedCount === 0}
+              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+            >
+              <QrCode size={16} />
+              Print QR
+            </button>
+          )}
           {onBulkMessage && (
             <button
               onClick={handleBulkMessage}
@@ -134,7 +154,7 @@ export default function BulkActions<T>({
             </button>
           )}
 
-          {(onBulkDelete || onBulkUpdate) && (
+          {(onBulkDelete || onBulkUpdate || onBulkEditGrade) && (
             <div className="relative">
               <button
                 onClick={() => setShowMenu(!showMenu)}
@@ -151,8 +171,20 @@ export default function BulkActions<T>({
                     className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
-                    {onBulkUpdate && (
+                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                    {onBulkEditGrade && (
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          onBulkEditGrade(Array.from(selectedItems));
+                        }}
+                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                      >
+                        <Edit size={16} />
+                        Edit grade / section / shift
+                      </button>
+                    )}
+                    {onBulkUpdate && !onBulkEditGrade && (
                       <button
                         onClick={() => {
                           setShowMenu(false);

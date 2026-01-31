@@ -210,8 +210,13 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
-                        {record.subject}
+                        {record.subject || '—'}
                       </span>
+                      {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (
+                        <span className="text-gray-500 block text-xs mt-0.5">
+                          {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
+                        </span>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
@@ -550,7 +555,14 @@ export default function HistoryPage() {
                   >
                     <td className="whitespace-nowrap font-medium">{record.studentId}</td>
                     <td className="whitespace-nowrap font-medium">{record.studentName}</td>
-                    <td className="whitespace-nowrap">{record.subject}</td>
+                    <td className="whitespace-nowrap">
+                      <span>{record.subject || '—'}</span>
+                      {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (
+                        <span className="text-gray-500 block text-xs mt-0.5">
+                          {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
+                        </span>
+                      )}
+                    </td>
                     <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'MMM dd, yyyy')}</td>
                     <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'HH:mm')}</td>
                     <td className="whitespace-nowrap">

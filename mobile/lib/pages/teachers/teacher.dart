@@ -1,7 +1,7 @@
-import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:mobile/fetch/teacherService.dart';
 import 'package:pdf/pdf.dart';
@@ -762,191 +762,245 @@ class _TeacherDashboardState extends State<TeacherDashboard>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: kBackground,
-      appBar: AppBar(
-        elevation: 0,
-        flexibleSpace: Container(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: [kPrimary, kPrimaryLight],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: SystemUiOverlayStyle.light.copyWith(
+        statusBarColor: Colors.transparent,
+        statusBarIconBrightness: Brightness.light,
+        systemNavigationBarColor: kBackground,
+        systemNavigationBarIconBrightness: Brightness.dark,
+      ),
+      child: Scaffold(
+        backgroundColor: kBackground,
+        appBar: AppBar(
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
+          systemOverlayStyle: SystemUiOverlayStyle.light,
+          flexibleSpace: Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [kPrimary, kPrimaryLight],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                stops: const [0.0, 1.0],
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: kPrimaryDark.withValues(alpha: 0.25),
+                  offset: const Offset(0, 2),
+                  blurRadius: 6,
+                ),
+              ],
+            ),
+          ),
+          title: Text(
+            'Teacher Dashboard',
+            style: TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Colors.white,
+              letterSpacing: -0.5,
+            ),
+          ),
+          centerTitle: false,
+          titleSpacing: 20,
+          iconTheme: const IconThemeData(color: Colors.white, size: 24),
+          actionsIconTheme: const IconThemeData(color: Colors.white, size: 24),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: IconButton(
+                icon: const Icon(Icons.logout_rounded),
+                onPressed: _handleLogout,
+                tooltip: 'Logout',
+                style: IconButton.styleFrom(
+                  foregroundColor: Colors.white,
+                  splashFactory: InkRipple.splashFactory,
+                ),
+              ),
+            ),
+          ],
+          bottom: PreferredSize(
+            preferredSize: const Size.fromHeight(56),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    color: kPrimaryDark.withValues(alpha: 0.95),
+                    border: Border(
+                      top: BorderSide(
+                        color: Colors.white.withValues(alpha: 0.12),
+                        width: 1,
+                      ),
+                    ),
+                  ),
+                  child: TabBar(
+                    controller: _tabController,
+                    indicatorColor: Colors.white,
+                    indicatorWeight: 3,
+                    indicatorSize: TabBarIndicatorSize.label,
+                    labelColor: Colors.white,
+                    unselectedLabelColor: Colors.white.withValues(alpha: 0.75),
+                    labelStyle: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                    unselectedLabelStyle: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      fontSize: 13,
+                    ),
+                    splashFactory: InkRipple.splashFactory,
+                    onTap: (index) {
+                      setState(() => _currentTab = index);
+                    },
+                    tabs: const [
+                      Tab(
+                        icon: Icon(Icons.dashboard_rounded, size: 22),
+                        text: 'Dashboard',
+                      ),
+                      Tab(
+                        icon: Icon(Icons.schedule_rounded, size: 22),
+                        text: 'Schedule',
+                      ),
+                    ],
+                  ),
+                ),
+                if (_isLoading)
+                  LinearProgressIndicator(
+                    backgroundColor: kPrimaryDark.withValues(alpha: 0.3),
+                    valueColor: const AlwaysStoppedAnimation<Color>(
+                      Colors.white,
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
-        title: const Text(
-          'Teacher Dashboard',
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.white),
-            onPressed: _handleLogout,
-            tooltip: 'Logout',
-            splashRadius: 24,
-            splashColor: Colors.white24,
-            highlightColor: Colors.white12,
-          ),
-        ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(56),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                color: kPrimaryDark,
-                child: TabBar(
-                  controller: _tabController,
-                  indicatorColor: Colors.white,
-                  indicatorWeight: 3,
-                  labelColor: Colors.white,
-                  unselectedLabelColor: Colors.white70,
-                  splashFactory: InkRipple.splashFactory,
-                  onTap: (index) {
-                    setState(() => _currentTab = index);
-                  },
-                  tabs: const [
-                    Tab(icon: Icon(Icons.dashboard), text: 'Dashboard'),
-                    Tab(icon: Icon(Icons.schedule), text: 'Schedule'),
-                  ],
-                ),
-              ),
-              if (_isLoading)
-                const LinearProgressIndicator(
-                  backgroundColor: Color(0x20000000),
-                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white70),
-                ),
-            ],
-          ),
-        ),
-      ),
-      body: _currentTab == 0
-          ? _isLoading
-                ? Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation<Color>(kPrimary),
-                    ),
-                  )
-                : _error != null
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Data',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.red[700],
+        body: _currentTab == 0
+            ? _isLoading
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(kPrimary),
+                      ),
+                    )
+                  : _error != null
+                  ? Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.red[400],
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            _error!,
-                            textAlign: TextAlign.center,
+                          const SizedBox(height: 16),
+                          Text(
+                            'Error Loading Data',
                             style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[600],
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red[700],
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton.icon(
-                          onPressed: _loadDashboardData,
-                          icon: const Icon(Icons.refresh),
-                          label: const Text('Retry'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: kPrimary,
-                            foregroundColor: Colors.white,
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Text(
+                              _error!,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-                : SafeArea(
-                    child: Stack(
-                      children: [
-                        // Background Logo
-                        const BackgroundLogo(),
-                        // Main Content
-                        SingleChildScrollView(
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: AnimatedOpacity(
-                              opacity: _contentEntered ? 1.0 : 0.0,
-                              duration: kAnimationEnterDuration,
-                              curve: kAnimationEnterCurve,
-                              child: AnimatedSlide(
-                                offset: _contentEntered
-                                    ? Offset.zero
-                                    : const Offset(0, 0.06),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _loadDashboardData,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: kPrimary,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    )
+                  : SafeArea(
+                      child: Stack(
+                        children: [
+                          // Background Logo
+                          const BackgroundLogo(),
+                          // Main Content
+                          SingleChildScrollView(
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: AnimatedOpacity(
+                                opacity: _contentEntered ? 1.0 : 0.0,
                                 duration: kAnimationEnterDuration,
                                 curve: kAnimationEnterCurve,
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    // Profile Section
-                                    _buildProfileCard(),
-                                    const SizedBox(height: 24),
+                                child: AnimatedSlide(
+                                  offset: _contentEntered
+                                      ? Offset.zero
+                                      : const Offset(0, 0.06),
+                                  duration: kAnimationEnterDuration,
+                                  curve: kAnimationEnterCurve,
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Profile Section
+                                      _buildProfileCard(),
+                                      const SizedBox(height: 24),
 
-                                    // Quick Actions Bar
-                                    _buildQuickActionsBar(),
-                                    const SizedBox(height: 24),
+                                      // Quick Actions Bar
+                                      _buildQuickActionsBar(),
+                                      const SizedBox(height: 24),
 
-                                    // Today's Quick Stats Cards
-                                    _buildTodayQuickStatsSection(),
-                                    const SizedBox(height: 24),
+                                      // Today's Quick Stats Cards
+                                      _buildTodayQuickStatsSection(),
+                                      const SizedBox(height: 24),
 
-                                    // Critical Alerts Panel
-                                    _buildCriticalAlertsSection(),
-                                    const SizedBox(height: 24),
+                                      // Critical Alerts Panel
+                                      _buildCriticalAlertsSection(),
+                                      const SizedBox(height: 24),
 
-                                    // Today's Schedule Section
-                                    _buildTodayScheduleSection(),
-                                    const SizedBox(height: 24),
+                                      // Today's Schedule Section
+                                      _buildTodayScheduleSection(),
+                                      const SizedBox(height: 24),
 
-                                    // Today's Absent Students
-                                    _buildTodayAbsentStudentsSection(),
-                                    const SizedBox(height: 24),
+                                      // Today's Absent Students
+                                      _buildTodayAbsentStudentsSection(),
+                                      const SizedBox(height: 24),
 
-                                    // Attendance Trends
-                                    _buildAttendanceTrendsSection(),
-                                    const SizedBox(height: 24),
+                                      // Attendance Trends
+                                      _buildAttendanceTrendsSection(),
+                                      const SizedBox(height: 24),
 
-                                    // Class Performance Overview
-                                    _buildClassPerformanceSection(),
-                                    const SizedBox(height: 24),
+                                      // Class Performance Overview
+                                      _buildClassPerformanceSection(),
+                                      const SizedBox(height: 24),
 
-                                    // Attendance Records Section
-                                    _buildAttendanceRecordsSection(),
-                                    const SizedBox(height: 40),
-                                  ],
+                                      // Attendance Records Section
+                                      _buildAttendanceRecordsSection(),
+                                      const SizedBox(height: 40),
+                                    ],
+                                  ),
                                 ),
                               ),
                             ),
                           ),
-                        ),
-                      ],
-                    ),
-                  )
-          : TeacherSchedule(
-              token: widget.token,
-              teacherId: widget.teacherId,
-              teacherName: widget.teacherName,
-            ),
+                        ],
+                      ),
+                    )
+            : TeacherSchedule(
+                token: widget.token,
+                teacherId: widget.teacherId,
+                teacherName: widget.teacherName,
+              ),
+      ),
     );
   }
 
@@ -1416,61 +1470,71 @@ class _TeacherDashboardState extends State<TeacherDashboard>
   }
 
   Widget _buildQuickActionsBar() {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          SizedBox(
-            width: 90,
-            child: _buildQuickActionButton(
-              icon: Icons.calendar_today,
-              label: 'Today',
-              color: Colors.blue,
-              onTap: () => _showTodayStats(),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minWidth: constraints.maxWidth),
+            child: Center(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SizedBox(
+                    width: 90,
+                    child: _buildQuickActionButton(
+                      icon: Icons.calendar_today,
+                      label: 'Today',
+                      color: Colors.blue,
+                      onTap: () => _showTodayStats(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 90,
+                    child: _buildQuickActionButton(
+                      icon: Icons.date_range,
+                      label: 'Weekly',
+                      color: kPrimary,
+                      onTap: () => _showWeeklyStats(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 90,
+                    child: _buildQuickActionButton(
+                      icon: Icons.calendar_month,
+                      label: 'Monthly',
+                      color: Colors.orange,
+                      onTap: () => _showMonthlyStats(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 90,
+                    child: _buildQuickActionButton(
+                      icon: Icons.schedule,
+                      label: 'Schedule',
+                      color: Colors.teal,
+                      onTap: () => _showAllSchedules(),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  SizedBox(
+                    width: 90,
+                    child: _buildQuickActionButton(
+                      icon: Icons.file_download,
+                      label: 'Download',
+                      color: Colors.purple,
+                      onTap: () => _showReportOptions(),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 90,
-            child: _buildQuickActionButton(
-              icon: Icons.date_range,
-              label: 'Weekly',
-              color: kPrimary,
-              onTap: () => _showWeeklyStats(),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 90,
-            child: _buildQuickActionButton(
-              icon: Icons.calendar_month,
-              label: 'Monthly',
-              color: Colors.orange,
-              onTap: () => _showMonthlyStats(),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 90,
-            child: _buildQuickActionButton(
-              icon: Icons.schedule,
-              label: 'Schedule',
-              color: Colors.teal,
-              onTap: () => _showAllSchedules(),
-            ),
-          ),
-          const SizedBox(width: 12),
-          SizedBox(
-            width: 90,
-            child: _buildQuickActionButton(
-              icon: Icons.file_download,
-              label: 'Download',
-              color: Colors.purple,
-              onTap: () => _showReportOptions(),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -1574,48 +1638,41 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     );
   }
 
+  /// Shows a dialog with today's attendance summary:
+  /// total students scanned, and counts for present, absent, late, and cutting.
   void _showTodayStats() {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Today's Statistics"),
+      builder: (context) => _buildStatsDialog(
+        title: "Today's Statistics",
+        subtitle: 'Attendance summary for today',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildStatsRow('Total Students', _todayStats['total'].toString()),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             _buildStatsRow(
               'Present',
               _todayStats['present'].toString(),
-              Colors.green,
+              kPrimary,
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
             _buildStatsRow(
               'Absent',
               _todayStats['absent'].toString(),
-              Colors.red,
+              const Color(0xFFD32F2F),
             ),
-            const SizedBox(height: 8),
-            _buildStatsRow(
-              'Late',
-              _todayStats['late'].toString(),
-              Colors.orange,
-            ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 10),
+            _buildStatsRow('Late', _todayStats['late'].toString(), kAccent),
+            const SizedBox(height: 10),
             _buildStatsRow(
               'Cutting',
               _todayStats['cutting'].toString(),
-              Colors.purple,
+              kChart5,
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }
@@ -1864,137 +1921,248 @@ class _TeacherDashboardState extends State<TeacherDashboard>
     );
   }
 
-  void _showWeeklyStats() {
-    // Calculate weekly stats from trends
-    int totalPresent = 0;
-    for (var trend in _weeklyTrends) {
-      totalPresent += (trend['count'] as int? ?? 0);
-    }
-
-    int totalRecordsThisWeek = _attendanceRecords.where((r) {
+  /// Returns aggregated stats for the last 7 days: total records,
+  /// present/absent/late/cutting counts (same logic as today and monthly),
+  /// overall attendance %, and average from trends.
+  ({
+    int totalRecords,
+    int present,
+    int absent,
+    int late,
+    int cutting,
+    String overallPercent,
+    int avgAttendance,
+  })
+  _getWeeklyStatsForDialog() {
+    final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
+    final weeklyRecords = _attendanceRecords.where((r) {
       final createdAt = r['createdAt'] as String?;
-      final sevenDaysAgo = DateTime.now().subtract(const Duration(days: 7));
       final createdDate = DateTime.tryParse(createdAt ?? '');
       return createdDate != null && createdDate.isAfter(sevenDaysAgo);
-    }).length;
-
+    }).toList();
+    // Use same status counting as _calculateStatsFromRecords (handles any case)
+    int present = 0, absent = 0, late = 0, cutting = 0;
+    for (final r in weeklyRecords) {
+      final status = (r['status'] ?? '').toString().toLowerCase();
+      if (status == 'present') {
+        present++;
+      } else if (status == 'absent') {
+        absent++;
+      } else if (status == 'late') {
+        late++;
+      } else if (status == 'cutting') {
+        cutting++;
+      }
+    }
+    final totalRecords = weeklyRecords.length;
+    final overallPercent = totalRecords > 0
+        ? ((present / totalRecords) * 100).toStringAsFixed(1)
+        : '0';
     final avgAttendance = _weeklyTrends.isEmpty
         ? 0
         : _weeklyTrends
                   .map((t) => t['percentage'] as int? ?? 0)
                   .reduce((a, b) => a + b) ~/
               _weeklyTrends.length;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Weekly Statistics (Last 7 Days)'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildStatsRow('Total Records', totalRecordsThisWeek.toString()),
-            const SizedBox(height: 8),
-            _buildStatsRow(
-              'Present Count',
-              totalPresent.toString(),
-              Colors.green,
-            ),
-            const SizedBox(height: 8),
-            _buildStatsRow(
-              'Average Attendance',
-              '$avgAttendance%',
-              Colors.blue,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Daily Breakdown:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            ..._weeklyTrends.map(
-              (trend) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 4),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(trend['day'] ?? ''),
-                    Text(
-                      '${trend['percentage']}%',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
+    return (
+      totalRecords: totalRecords,
+      present: present,
+      absent: absent,
+      late: late,
+      cutting: cutting,
+      overallPercent: overallPercent,
+      avgAttendance: avgAttendance,
     );
   }
 
-  void _showMonthlyStats() {
-    // Calculate monthly stats
-    int totalRecordsThisMonth = _attendanceRecords.where((r) {
-      final createdAt = r['createdAt'] as String?;
-      final now = DateTime.now();
-      final firstDayOfMonth = DateTime(now.year, now.month, 1);
-      final createdDate = DateTime.tryParse(createdAt ?? '');
-      return createdDate != null && createdDate.isAfter(firstDayOfMonth);
-    }).length;
-
-    int presentCount = _attendanceStats['present'] ?? 0;
-    int absentCount = _attendanceStats['absent'] ?? 0;
-    int lateCount = _attendanceStats['late'] ?? 0;
-    int cuttingCount = _attendanceStats['cutting'] ?? 0;
-
-    final overallAttendance = totalRecordsThisMonth > 0
-        ? ((presentCount / totalRecordsThisMonth) * 100).toStringAsFixed(1)
-        : '0';
-
+  /// Shows a dialog with last 7 days stats: same layout as Today/Monthly
+  /// (Total Records, Present, Absent, Late, Cutting, Overall %), plus Daily Breakdown.
+  void _showWeeklyStats() {
+    final stats = _getWeeklyStatsForDialog();
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Monthly Statistics'),
+      builder: (context) => _buildStatsDialog(
+        title: 'Weekly Statistics',
+        subtitle: 'Last 7 days',
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildStatsRow('Total Records', totalRecordsThisMonth.toString()),
-            const SizedBox(height: 8),
-            _buildStatsRow('Present', presentCount.toString(), Colors.green),
-            const SizedBox(height: 8),
-            _buildStatsRow('Absent', absentCount.toString(), Colors.red),
-            const SizedBox(height: 8),
-            _buildStatsRow('Late', lateCount.toString(), Colors.orange),
-            const SizedBox(height: 8),
-            _buildStatsRow('Cutting', cuttingCount.toString(), Colors.purple),
-            const SizedBox(height: 8),
+            _buildStatsRow('Total Records', stats.totalRecords.toString()),
+            const SizedBox(height: 10),
+            _buildStatsRow('Present', stats.present.toString(), kPrimary),
+            const SizedBox(height: 10),
+            _buildStatsRow(
+              'Absent',
+              stats.absent.toString(),
+              const Color(0xFFD32F2F),
+            ),
+            const SizedBox(height: 10),
+            _buildStatsRow('Late', stats.late.toString(), kAccent),
+            const SizedBox(height: 10),
+            _buildStatsRow('Cutting', stats.cutting.toString(), kChart5),
+            const SizedBox(height: 12),
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
               decoration: BoxDecoration(
-                color: Colors.blue.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
+                color: kPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: kPrimary.withValues(alpha: 0.25),
+                  width: 1,
+                ),
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
+                  Text(
                     'Overall Attendance',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: kForeground,
+                      fontSize: 14,
+                    ),
                   ),
                   Text(
-                    '$overallAttendance%',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                      color: Colors.blue,
+                    '${stats.overallPercent}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: kPrimary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (_weeklyTrends.isNotEmpty) ...[
+              const SizedBox(height: 16),
+              Text(
+                'Daily Breakdown',
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: kForeground,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 10),
+              ..._weeklyTrends.map(
+                (trend) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        trend['day'] ?? '',
+                        style: TextStyle(fontSize: 14, color: kMutedForeground),
+                      ),
+                      Text(
+                        '${trend['percentage']}%',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: kPrimary,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Returns aggregated stats for the current month: total records,
+  /// present/absent/late/cutting counts, and overall attendance percentage.
+  ({
+    int totalRecords,
+    int present,
+    int absent,
+    int late,
+    int cutting,
+    String overallPercent,
+  })
+  _getMonthlyStatsForDialog() {
+    final now = DateTime.now();
+    final firstDayOfMonth = DateTime(now.year, now.month, 1);
+    final totalRecords = _attendanceRecords.where((r) {
+      final createdAt = r['createdAt'] as String?;
+      final createdDate = DateTime.tryParse(createdAt ?? '');
+      return createdDate != null && !createdDate.isBefore(firstDayOfMonth);
+    }).length;
+    final present = _attendanceStats['present'] as int? ?? 0;
+    final absent = _attendanceStats['absent'] as int? ?? 0;
+    final late = _attendanceStats['late'] as int? ?? 0;
+    final cutting = _attendanceStats['cutting'] as int? ?? 0;
+    final overallPercent = totalRecords > 0
+        ? ((present / totalRecords) * 100).toStringAsFixed(1)
+        : '0';
+    return (
+      totalRecords: totalRecords,
+      present: present,
+      absent: absent,
+      late: late,
+      cutting: cutting,
+      overallPercent: overallPercent,
+    );
+  }
+
+  /// Shows a dialog with current month stats: total records, present/absent/late/cutting,
+  /// and a highlighted overall attendance percentage.
+  void _showMonthlyStats() {
+    final stats = _getMonthlyStatsForDialog();
+    showDialog(
+      context: context,
+      builder: (context) => _buildStatsDialog(
+        title: 'Monthly Statistics',
+        subtitle: 'Current month',
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatsRow('Total Records', stats.totalRecords.toString()),
+            const SizedBox(height: 10),
+            _buildStatsRow('Present', stats.present.toString(), kPrimary),
+            const SizedBox(height: 10),
+            _buildStatsRow(
+              'Absent',
+              stats.absent.toString(),
+              const Color(0xFFD32F2F),
+            ),
+            const SizedBox(height: 10),
+            _buildStatsRow('Late', stats.late.toString(), kAccent),
+            const SizedBox(height: 10),
+            _buildStatsRow('Cutting', stats.cutting.toString(), kChart5),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              decoration: BoxDecoration(
+                color: kPrimary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: kPrimary.withValues(alpha: 0.25),
+                  width: 1,
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Overall Attendance',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      color: kForeground,
+                      fontSize: 14,
+                    ),
+                  ),
+                  Text(
+                    '${stats.overallPercent}%',
+                    style: TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 18,
+                      color: kPrimary,
                     ),
                   ),
                 ],
@@ -2002,27 +2170,79 @@ class _TeacherDashboardState extends State<TeacherDashboard>
             ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close'),
-          ),
-        ],
       ),
     );
   }
 
+  /// Shared dialog shell for Today/Weekly/Monthly stats: theme styling, title, subtitle, content, Close action.
+  Widget _buildStatsDialog({
+    required String title,
+    required String subtitle,
+    required Widget content,
+  }) {
+    return AlertDialog(
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.w700,
+              color: kForeground,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 13,
+              color: kMutedForeground,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+      content: content,
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: Text(
+            'Close',
+            style: TextStyle(
+              fontWeight: FontWeight.w600,
+              color: kPrimary,
+              fontSize: 15,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// One row for stats dialogs: [label] on the left, [value] on the right.
+  /// [valueColor] tints the value (e.g. kPrimary for present, red for absent).
   Widget _buildStatsRow(String label, String value, [Color? valueColor]) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        Text(label, style: const TextStyle(fontSize: 14)),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 14,
+            color: kMutedForeground,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
         Text(
           value,
           style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: valueColor ?? Colors.black,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+            color: valueColor ?? kForeground,
           ),
         ),
       ],
