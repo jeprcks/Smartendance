@@ -1,5 +1,52 @@
 # In/Out Attendance System - Architecture & Flow Diagrams
 
+## Mermaid Flowcharts
+
+### System Overview Flowchart
+
+```mermaid
+flowchart TD
+  subgraph Tablets
+    CI[Check-In Tablet]
+    CO[Check-Out Tablet]
+  end
+
+  subgraph Mobile_Apps
+    TM[Teacher Mobile App]
+    PM[Parent Mobile App]
+  end
+
+  AW[Admin Web Dashboard]
+  API[Backend API (Node/Express)]
+  DB[(MongoDB)]
+  RPT[Daily Summary and Reports]
+
+  CI -->|POST /api/history (attendanceType=In)| API
+  CO -->|POST /api/history (attendanceType=Out)| API
+  TM -->|Auth and history stats| API
+  PM -->|Auth and history| API
+  AW -->|Admin management and reports| API
+  API -->|Read and write| DB
+  API -->|Daily summary data| RPT
+  RPT -->|Dashboard view| AW
+```
+
+### In and Out Attendance Flowchart
+
+```mermaid
+flowchart TD
+  Start([Student arrives])
+  ScanIn[Scan QR at Check-In Tablet]
+  CreateIn[Create In record\ncheckInTime + attendanceType=In]
+  ClassTime([Student in school])
+  ScanOut[Scan QR at Check-Out Tablet]
+  CreateOut[Create Out record\ncheckOutTime + attendanceType=Out]
+  LinkRecords[Link In and Out records\ncalculate durationMinutes]
+  Summary[Daily Summary and Reports]
+
+  Start --> ScanIn --> CreateIn --> ClassTime --> ScanOut --> CreateOut --> LinkRecords --> Summary
+```
+
 ## System Architecture
 
 ```
