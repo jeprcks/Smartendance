@@ -19,7 +19,7 @@
     "date-fns": "^4.1.0",
     "jspdf": "^4.1.0",
     "lucide-react": "^0.544.0",
-    "node-telegram-bot-api": "^0.67.0",
+    "node-telegram-bot-api": "^0.63.0",
     "qrcode.react": "^4.2.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
