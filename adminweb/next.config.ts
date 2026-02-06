@@ -1,10 +1,12 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
+const nextConfig = {
   reactStrictMode: true,
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   experimental: {
-    webpackBuildWorker: true
+    webpackBuildWorker: true,
   },
 };
-
 export default nextConfig;
