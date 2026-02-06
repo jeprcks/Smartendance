@@ -19,7 +19,7 @@ interface ReportFilters {
   section?: string;
 }
 
-interface AttendancePattern {
+export interface AttendancePattern {
   date: string;
   present: number;
   absent: number;
@@ -29,7 +29,7 @@ interface AttendancePattern {
   attendanceRate: number;
 }
 
-interface GradeLevelStats {
+export interface GradeLevelStats {
   gradeLevel: string;
   totalStudents: number;
   present: number;
