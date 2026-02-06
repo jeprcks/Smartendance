@@ -87,9 +87,12 @@ export default function ReportsPage() {
         endDate = format(endOfYear(new Date()), 'yyyy-MM-dd');
       }
 
-      // Fetch students for total count
+      // Fetch students for total count (excluding graduated)
       const students = await studentService.getAllStudents().catch(() => []);
-      const totalStudents = Array.isArray(students) ? students.length : 0;
+      const activeStudents = Array.isArray(students) 
+        ? students.filter((s: any) => s.gradeLevel?.toLowerCase() !== 'graduated')
+        : [];
+      const totalStudents = activeStudents.length;
 
       // Fetch attendance records
       const response = await historyService.getAllRecords({
@@ -189,8 +192,8 @@ export default function ReportsPage() {
         cutting: number;
       }>>();
 
-      // Initialize from students list to capture totalStudents per section
-      students.forEach((student: any) => {
+      // Initialize from active students list to capture totalStudents per section
+      activeStudents.forEach((student: any) => {
         const grade = student.gradeLevel || 'Unknown';
         const sectionVal = student.section || 'Unknown';
         if (!gradeMap.has(grade)) gradeMap.set(grade, new Map());

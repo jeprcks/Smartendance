@@ -408,7 +408,7 @@ export default function DashboardPage() {
         <div className="dashboard-header-inner">
           <div className="dashboard-header-content">
             <h1>Dashboard</h1>
-            <p>Overview of school attendance statistics • <span className="text-white font-semibold">⚡ Auto-refresh: 10s</span></p>
+            <p>Overview of school attendance statistics</p>
           </div>
           <div className="dashboard-header-refresh-box">
             <span>Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
@@ -419,6 +419,7 @@ export default function DashboardPage() {
             >
               {isLoading ? 'Refreshing...' : 'Refresh Now'}
             </button>
+            <span className="text-white/90 text-sm font-semibold">⚡ Auto-refresh: 10s</span>
           </div>
         </div>
       </header>
