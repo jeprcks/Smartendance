@@ -94,6 +94,7 @@ interface StudentFormData {
   parentEmail?: string;
   parentPassword?: string;
   parentContact?: string;
+  parentTelegramChatId?: string;
   emergencyContact?: string;
   emergencyContactName?: string;
   relationship?: string;
@@ -125,6 +126,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
     parentEmail: '',
     parentPassword: '',
     parentContact: '',
+    parentTelegramChatId: '',
     emergencyContact: '',
     emergencyContactName: '',
     relationship: ''
@@ -249,7 +251,8 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
           name: formData.parentName || '',
           email: formData.parentEmail || '',
           password: formData.parentPassword || '',
-          contactNumber: formData.parentContact || ''
+          contactNumber: formData.parentContact || '',
+          telegramChatId: formData.parentTelegramChatId || ''
         },
         // Transform flat emergency contact fields to nested object
         emergencyContact: {
@@ -287,6 +290,7 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
         parentEmail: '',
         parentPassword: '',
         parentContact: '',
+        parentTelegramChatId: '',
         emergencyContact: '',
         emergencyContactName: '',
         relationship: ''
@@ -705,6 +709,28 @@ export default function AddStudentModal({ isOpen, onClose, onAdd }: AddStudentMo
                     onChange={handleChange}
                     placeholder="Enter contact number"
                   />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    <span className="inline-flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                        <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                      </svg>
+                      Parent Telegram Chat ID
+                    </span>
+                  </label>
+                  <input
+                    type="text"
+                    name="parentTelegramChatId"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-blue-50/30"
+                    value={formData.parentTelegramChatId}
+                    onChange={handleChange}
+                    placeholder="e.g., 123456789"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Parent must start @SmartendanceBot on Telegram to get their Chat ID
+                  </p>
                 </div>
               </div>
             </div>

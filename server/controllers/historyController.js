@@ -1,5 +1,6 @@
 const History = require("../models/historySchema");
 const Student = require("../models/studentsSchema");
+const telegramService = require("../services/telegramService");
 
 // Create new attendance record
 const createAttendanceRecord = async (req, res) => {
@@ -114,6 +115,23 @@ const createAttendanceRecord = async (req, res) => {
 
         // Save the record
         await attendanceRecord.save();
+
+        // Send Telegram notification to parent (non-blocking)
+        if (student && student.parentInfo && student.parentInfo.telegramChatId) {
+            // Don't await - send notification asynchronously
+            sendAttendanceNotification(student, attendanceRecord, attendanceType).catch(err => {
+                console.error('Telegram notification error:', err.message);
+                // Don't fail the request if notification fails
+            });
+        } else if (student && (student.parentTelegramChatId || student.telegramChatId)) {
+            // Try legacy Chat ID fields
+            const chatId = student.parentTelegramChatId || student.telegramChatId;
+            sendAttendanceNotificationLegacy(chatId, student, attendanceRecord, attendanceType).catch(err => {
+                console.error('Telegram notification error (legacy):', err.message);
+            });
+        } else {
+            console.log(`No Telegram Chat ID found for student ${studentId} - skipping notification`);
+        }
 
         res.status(201).json({
             success: true,
@@ -737,6 +755,159 @@ const exportAttendanceData = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
+
+// Helper function to send Telegram attendance notification
+async function sendAttendanceNotification(student, record, attendanceType) {
+    try {
+        const chatId = student.parentInfo.telegramChatId;
+        
+        if (!chatId) {
+            console.log(`No Chat ID for student ${student.studentId}`);
+            return;
+        }
+
+        const timeFormatted = new Date(record.scanTime).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const dateFormatted = new Date(record.scanTime).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+        });
+
+        let message;
+        
+        if (attendanceType === 'In') {
+            // Check-in notification
+            const statusEmoji = record.status === 'Present' ? '✅' : 
+                               record.status === 'Late' ? '⏰' : '⚠️';
+            
+            message = `
+🟢 *Student Check-In*
+
+👤 *${student.fullName}*
+🆔 Student ID: \`${student.studentId}\`
+
+📅 *Date:* ${dateFormatted}
+🕐 *Time:* ${timeFormatted}
+${statusEmoji} *Status:* ${record.status}
+
+🎓 ${student.gradeLevel} - Section ${student.section}
+${student.shift === 'Morning' ? '🌅' : '🌆'} ${student.shift} Shift
+
+✅ Your child has checked in to school.
+            `.trim();
+        } else {
+            // Check-out notification
+            const durationMinutes = record.durationMinutes || 0;
+            const hours = Math.floor(durationMinutes / 60);
+            const minutes = durationMinutes % 60;
+            
+            message = `
+🔴 *Student Check-Out*
+
+👤 *${student.fullName}*
+🆔 Student ID: \`${student.studentId}\`
+
+📅 *Date:* ${dateFormatted}
+🕐 *Time:* ${timeFormatted}
+
+⏱️ *Time at School:* ${hours}h ${minutes}m
+
+🎓 ${student.gradeLevel} - Section ${student.section}
+${student.shift === 'Morning' ? '🌅' : '🌆'} ${student.shift} Shift
+
+✅ Your child has checked out from school.
+            `.trim();
+        }
+
+        // Send the notification
+        await telegramService.sendMessage(chatId, message);
+        console.log(`✅ Sent ${attendanceType} notification to parent (Chat ID: ${chatId})`);
+        
+    } catch (error) {
+        console.error('Error sending Telegram notification:', error.message);
+        throw error;
+    }
+}
+
+// Helper function for legacy Chat ID format
+async function sendAttendanceNotificationLegacy(chatId, student, record, attendanceType) {
+    try {
+        if (!chatId) {
+            console.log(`No Chat ID for student ${student.studentId}`);
+            return;
+        }
+
+        const timeFormatted = new Date(record.scanTime).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const dateFormatted = new Date(record.scanTime).toLocaleDateString('en-US', {
+            weekday: 'short',
+            month: 'short',
+            day: '2-digit',
+            year: 'numeric'
+        });
+
+        let message;
+        
+        if (attendanceType === 'In') {
+            const statusEmoji = record.status === 'Present' ? '✅' : 
+                               record.status === 'Late' ? '⏰' : '⚠️';
+            
+            message = `
+🟢 *Student Check-In*
+
+👤 *${student.fullName}*
+🆔 Student ID: \`${student.studentId}\`
+
+📅 *Date:* ${dateFormatted}
+🕐 *Time:* ${timeFormatted}
+${statusEmoji} *Status:* ${record.status}
+
+🎓 ${student.gradeLevel} - Section ${student.section}
+${student.shift === 'Morning' ? '🌅' : '🌆'} ${student.shift} Shift
+
+✅ Your child has checked in to school.
+            `.trim();
+        } else {
+            const durationMinutes = record.durationMinutes || 0;
+            const hours = Math.floor(durationMinutes / 60);
+            const minutes = durationMinutes % 60;
+            
+            message = `
+🔴 *Student Check-Out*
+
+👤 *${student.fullName}*
+🆔 Student ID: \`${student.studentId}\`
+
+📅 *Date:* ${dateFormatted}
+🕐 *Time:* ${timeFormatted}
+
+⏱️ *Time at School:* ${hours}h ${minutes}m
+
+🎓 ${student.gradeLevel} - Section ${student.section}
+${student.shift === 'Morning' ? '🌅' : '🌆'} ${student.shift} Shift
+
+✅ Your child has checked out from school.
+            `.trim();
+        }
+
+        await telegramService.sendMessage(chatId, message);
+        console.log(`✅ Sent ${attendanceType} notification (legacy Chat ID: ${chatId})`);
+        
+    } catch (error) {
+        console.error('Error sending Telegram notification (legacy):', error.message);
+        throw error;
+    }
+}
 
 module.exports = {
     createAttendanceRecord,

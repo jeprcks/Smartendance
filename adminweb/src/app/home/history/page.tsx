@@ -42,7 +42,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}'s Attendance History</h2>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}&apos;s Attendance History</h2>
             <p className="text-sm text-gray-500">Detailed attendance records and statistics</p>
           </div>
           <div className="flex items-center gap-2">
@@ -201,7 +201,10 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
-                        {record.attendanceType === 'In' && record.checkInTime
+                        {/* Show teacher update time if available, otherwise show attendance-specific time */}
+                        {record.statusHistory && record.statusHistory.length > 0
+                          ? format(new Date(record.statusHistory[record.statusHistory.length - 1].changedAt), 'HH:mm')
+                          : record.attendanceType === 'In' && record.checkInTime
                           ? format(new Date(record.checkInTime), 'HH:mm')
                           : record.attendanceType === 'Out' && record.checkOutTime
                           ? format(new Date(record.checkOutTime), 'HH:mm')
@@ -264,6 +267,8 @@ export default function HistoryPage() {
     recentAttendance: AttendanceRecord[];
   };
   const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
+  const [autoRefresh, setAutoRefresh] = useState(true);
 
   // State for API data
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([
@@ -398,10 +403,28 @@ export default function HistoryPage() {
     }
   };
 
+  // Manual refresh function
+  const handleManualRefresh = async () => {
+    await fetchData();
+    setLastRefreshTime(new Date());
+  };
+
   // Load data on component mount and when filters change
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Auto-refresh every 30 seconds if enabled
+  useEffect(() => {
+    if (!autoRefresh) return;
+
+    const interval = setInterval(() => {
+      fetchData();
+      setLastRefreshTime(new Date());
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [autoRefresh, fetchData]);
 
   return (
     <div className="page-container">
@@ -412,17 +435,55 @@ export default function HistoryPage() {
             <p>View and search attendance records</p>
           </div>
           <div className="dashboard-header-refresh-box">
-            <button
-              type="button"
-              onClick={() => exportAttendanceToPDF(attendanceRecords)}
-              disabled={isLoading || attendanceRecords.length === 0}
-              className="inline-flex items-center gap-2"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-              </svg>
-              Export PDF
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Refresh button */}
+              <button
+                type="button"
+                onClick={handleManualRefresh}
+                disabled={isLoading}
+                className="inline-flex items-center gap-2"
+                title="Refresh data"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} 
+                  viewBox="0 0 20 20" 
+                  fill="currentColor"
+                >
+                  <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
+                </svg>
+                Refresh
+              </button>
+
+              {/* Export PDF button */}
+              <button
+                type="button"
+                onClick={() => exportAttendanceToPDF(attendanceRecords)}
+                disabled={isLoading || attendanceRecords.length === 0}
+                className="inline-flex items-center gap-2"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                </svg>
+                Export PDF
+              </button>
+
+              {/* Auto-refresh toggle */}
+              <div className="ml-2 pl-2 border-l border-gray-300">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={autoRefresh}
+                    onChange={(e) => setAutoRefresh(e.target.checked)}
+                    className="sr-only peer"
+                  />
+                  <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
+                  <span className="ml-2 text-xs text-gray-600 font-medium">
+                    Auto-refresh
+                  </span>
+                </label>
+              </div>
+            </div>
           </div>
         </div>
       </header>
@@ -435,6 +496,23 @@ export default function HistoryPage() {
           late={stats.late}
           cutting={stats.cutting}
         />
+      </div>
+
+      {/* Last refresh indicator */}
+      <div className="mb-4 flex items-center justify-between px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+          </svg>
+          <span className="text-sm text-blue-700">
+            Last updated: <strong>{format(lastRefreshTime, 'HH:mm:ss')}</strong>
+          </span>
+        </div>
+        {autoRefresh && (
+          <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded">
+            Auto-refreshing every 30s
+          </span>
+        )}
       </div>
 
       {error && (
@@ -564,7 +642,12 @@ export default function HistoryPage() {
                       )}
                     </td>
                     <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'MMM dd, yyyy')}</td>
-                    <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'HH:mm')}</td>
+                    <td className="whitespace-nowrap">
+                      {/* Show teacher update time if available, otherwise show scan time */}
+                      {record.statusHistory && record.statusHistory.length > 0
+                        ? format(new Date(record.statusHistory[record.statusHistory.length - 1].changedAt), 'HH:mm')
+                        : format(new Date(record.scanTime), 'HH:mm')}
+                    </td>
                     <td className="whitespace-nowrap">
                       <span className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
                         record.status === 'Present' ? 'bg-green-50 text-green-700 ring-green-200/50' :

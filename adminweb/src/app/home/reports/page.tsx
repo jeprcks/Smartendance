@@ -87,9 +87,12 @@ export default function ReportsPage() {
         endDate = format(endOfYear(new Date()), 'yyyy-MM-dd');
       }
 
-      // Fetch students for total count
+      // Fetch students for total count (excluding graduated)
       const students = await studentService.getAllStudents().catch(() => []);
-      const totalStudents = Array.isArray(students) ? students.length : 0;
+      const activeStudents = Array.isArray(students) 
+        ? students.filter((s: any) => s.gradeLevel?.toLowerCase() !== 'graduated')
+        : [];
+      const totalStudents = activeStudents.length;
 
       // Fetch attendance records
       const response = await historyService.getAllRecords({
@@ -189,8 +192,8 @@ export default function ReportsPage() {
         cutting: number;
       }>>();
 
-      // Initialize from students list to capture totalStudents per section
-      students.forEach((student: any) => {
+      // Initialize from active students list to capture totalStudents per section
+      activeStudents.forEach((student: any) => {
         const grade = student.gradeLevel || 'Unknown';
         const sectionVal = student.section || 'Unknown';
         if (!gradeMap.has(grade)) gradeMap.set(grade, new Map());
@@ -256,7 +259,12 @@ export default function ReportsPage() {
         });
       });
 
-      setGradeLevelStats(gradeStatsArr.sort((a, b) => a.gradeLevel.localeCompare(b.gradeLevel)));
+      // Filter out "Graduated" grade level
+      const filteredGradeStats = gradeStatsArr
+        .filter(stat => stat.gradeLevel.toLowerCase() !== 'graduated')
+        .sort((a, b) => a.gradeLevel.localeCompare(b.gradeLevel));
+      
+      setGradeLevelStats(filteredGradeStats);
 
     } catch (error) {
       console.error('Error fetching report data:', error);
@@ -336,7 +344,8 @@ export default function ReportsPage() {
         yPosition += 6;
 
         pdf.setFont('helvetica', 'normal');
-        gradeLevelStats.forEach(stat => {
+        // Filter out "Graduated" from PDF
+        gradeLevelStats.filter(stat => stat.gradeLevel.toLowerCase() !== 'graduated').forEach(stat => {
           if (yPosition > 270) {
             pdf.addPage();
             yPosition = 20;
@@ -555,6 +564,17 @@ export default function ReportsPage() {
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">Absent</p>
                   <p className="text-3xl font-bold text-yellow-700">{overallStats.absent}</p>
+                </div>
+              </div>
+            </div>
+            <div className="stat-card">
+              <div className="flex items-start justify-between mb-4">
+                <div className="p-3 bg-purple-50 rounded-lg">
+                  <BarChart3 className="text-purple-700" size={24} />
+                </div>
+                <div className="text-right">
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Classes</p>
+                  <p className="text-3xl font-bold text-purple-700">{gradeLevelStats.length}</p>
                 </div>
               </div>
             </div>

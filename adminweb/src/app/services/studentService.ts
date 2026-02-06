@@ -31,12 +31,17 @@ export interface Student {
     email?: string;
     password?: string;
     contactNumber?: string;
+    telegramChatId?: string;
   };
+  // Legacy compatibility fields
+  parentTelegramChatId?: string;
+  telegramChatId?: string;
   // Emergency contact information
   emergencyContact?: {
     name?: string;
     contactNumber?: string;
     relationship?: string;
+    telegramChatId?: string;
   };
   emergencyContactName?: string;
   relationship?: string;

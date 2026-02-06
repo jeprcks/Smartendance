@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Telegram Chat ID</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #0088cc;
+            color: white;
+            padding: 12px 30px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover { background: #006699; }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Test Telegram Chat ID</h1>
+        
+        <div class="info">
+            <strong>Before testing:</strong><br>
+            1. Start @SmartendanceBot on Telegram<br>
+            2. Send /start command<br>
+            3. Get your Chat ID from the getUpdates URL<br>
+            4. Test it here!
+        </div>
+
+        <h3>Step 1: Get Your Chat ID</h3>
+        <button onclick="window.open('https://api.telegram.org/bot8316357624:AAGVRFRafzyBEX4eWZVwcVISnPE1osaY_Qo/getUpdates', '_blank')">
+            📋 Open getUpdates URL
+        </button>
+        <p style="font-size: 12px; color: #666;">Look for: "chat":{"id":YOUR_NUMBER}</p>
+
+        <h3>Step 2: Test Your Chat ID</h3>
+        <label>Enter Your Chat ID:</label>
+        <input type="text" id="chatId" placeholder="e.g., 1234567890">
+
+        <label>Test Message:</label>
+        <textarea id="message" rows="3" placeholder="Enter a test message...">Hello! This is a test message from Smartendance Bot.</textarea>
+
+        <button onclick="testChatId()">🚀 Send Test Message</button>
+        <button onclick="verifyChatId()">✅ Verify Chat ID</button>
+
+        <div id="result" class="result"></div>
+
+        <div class="info" style="margin-top: 30px;">
+            <strong>Common Issues:</strong><br>
+            • "chat not found" = Wrong Chat ID or didn't start the bot<br>
+            • Make sure Chat ID is numbers only<br>
+            • Make sure you sent /start to the bot first
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:4000/api/telegram';
+
+        function showResult(message, isSuccess) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = 'result ' + (isSuccess ? 'success' : 'error');
+            resultDiv.innerHTML = message;
+            resultDiv.style.display = 'block';
+        }
+
+        async function testChatId() {
+            const chatId = document.getElementById('chatId').value.trim();
+            const message = document.getElementById('message').value.trim();
+
+            if (!chatId) {
+                showResult('❌ Please enter a Chat ID', false);
+                return;
+            }
+
+            if (!message) {
+                showResult('❌ Please enter a message', false);
+                return;
+            }
+
+            showResult('⏳ Sending message...', true);
+
+            try {
+                const response = await fetch(`${API_BASE}/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ chatId, message })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showResult(`✅ Success! Message sent to Chat ID: ${chatId}<br>Check your Telegram app!`, true);
+                } else {
+                    showResult(`❌ Error: ${result.error || result.message}<br><br>
+                        <strong>Possible solutions:</strong><br>
+                        • Make sure you started @SmartendanceBot first<br>
+                        • Verify the Chat ID is correct<br>
+                        • Try getting a new Chat ID from getUpdates`, false);
+                }
+            } catch (error) {
+                showResult(`❌ Network Error: ${error.message}<br>Make sure the server is running on port 4000`, false);
+            }
+        }
+
+        async function verifyChatId() {
+            const chatId = document.getElementById('chatId').value.trim();
+
+            if (!chatId) {
+                showResult('❌ Please enter a Chat ID', false);
+                return;
+            }
+
+            showResult('⏳ Verifying Chat ID...', true);
+
+            try {
+                const response = await fetch(`${API_BASE}/verify-chat-id`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ chatId })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showResult(`✅ Chat ID is valid!<br>The bot can send messages to this Chat ID.`, true);
+                } else {
+                    showResult(`❌ Chat ID is invalid!<br>${result.error}<br><br>
+                        Make sure you:<br>
+                        1. Started @SmartendanceBot<br>
+                        2. Sent /start command<br>
+                        3. Got the Chat ID from the correct location`, false);
+                }
+            } catch (error) {
+                showResult(`❌ Network Error: ${error.message}`, false);
+            }
+        }
+    </script>
+</body>
+</html>

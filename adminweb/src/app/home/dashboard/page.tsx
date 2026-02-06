@@ -5,9 +5,9 @@ import { studentService } from '@/app/services/studentService';
 import { historyService, AttendanceRecord } from '@/app/services/historyService';
 import { teacherService } from '@/app/services/teacherService';
 import { scheduleService } from '@/app/services/scheduleService';
-import { format, formatDistanceToNow } from 'date-fns';
+import { format, formatDistanceToNow, subDays, startOfDay } from 'date-fns';
 import LoadingSkeleton from '@/app/components/loading/LoadingSkeleton';
-import { Users, CheckCircle, XCircle, BookOpen, Clock, TrendingUp, AlertCircle, Activity, ArrowRight } from 'lucide-react';
+import { Users, CheckCircle, XCircle, BookOpen, Clock, TrendingUp, AlertCircle, Activity, ArrowRight, Calendar } from 'lucide-react';
 import Link from 'next/link';
 import {
   BarChart,
@@ -21,6 +21,8 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
 } from 'recharts';
 
 interface DashboardStats {
@@ -32,6 +34,16 @@ interface DashboardStats {
   totalTeachers: number;
   attendanceRate: number;
   onTimeRate: number;
+}
+
+interface WeeklyTrendData {
+  date: string;
+  day: string;
+  present: number;
+  absent: number;
+  late: number;
+  total: number;
+  attendanceRate: number;
 }
 
 export default function DashboardPage() {
@@ -46,6 +58,7 @@ export default function DashboardPage() {
     onTimeRate: 0,
   });
   const [recentActivity, setRecentActivity] = useState<AttendanceRecord[]>([]);
+  const [weeklyTrends, setWeeklyTrends] = useState<WeeklyTrendData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -59,34 +72,114 @@ export default function DashboardPage() {
       const today = format(new Date(), 'yyyy-MM-dd');
 
       // Fetch all data in parallel
-      const [students, attendanceStats, teacherStats, schedules] = await Promise.all([
+      const [students, todayRecords, teacherStats, schedules] = await Promise.all([
         studentService.getAllStudents().catch(() => []),
-        historyService.getStats({ startDate: today, endDate: today }).catch(() => ({ success: false, stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 } })),
+        historyService.getHistoryPageData({ 
+          startDate: today, 
+          endDate: today,
+          limit: 1000 // Get all today's records
+        }).catch(() => ({ success: false, records: [], stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 }, pagination: {} })),
         teacherService.getTeacherStats().catch(() => ({ success: false, stats: { active: 0, inactive: 0, suspended: 0, total: 0 } })),
         scheduleService.getAllSchedules({ isActive: true }).catch(() => []),
       ]);
 
-      // Fetch recent activity
+      // Fetch recent activity (only In/Out records for activity feed)
       const recentRecords = await historyService.getHistoryPageData({
         limit: 10,
         page: 1,
       }).catch(() => ({ success: false, records: [], stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 }, pagination: {} }));
 
-      // Calculate statistics
-      const totalStudents = Array.isArray(students) ? students.length : 0;
-      const attendanceData = attendanceStats.success ? attendanceStats.stats : { present: 0, absent: 0, late: 0, cutting: 0, total: 0 };
-      const presentToday = attendanceData.present || 0;
-      const absentToday = attendanceData.absent || 0;
-      const lateToday = attendanceData.late || 0;
+      // Debug: Log ALL records first
+      console.log('📊 Dashboard Debug:');
+      console.log('Total records today:', todayRecords.records.length);
+      console.log('\n🔍 ALL Today\'s Records:');
+      todayRecords.records.forEach((record, index) => {
+        console.log(`${index + 1}. ${record.studentName} - Status: "${record.status}" - Type: "${record.attendanceType}" - Time: ${format(new Date(record.scanTime), 'HH:mm:ss')}`);
+      });
+      
+      // Filter to only get check-in/check-out records (QR scanner), not subject-specific
+      const checkInOutRecords = todayRecords.records.filter(record => 
+        record.attendanceType === 'In' || record.attendanceType === 'Out'
+      );
+
+      console.log('\n✅ Check-in/out records (filtered):', checkInOutRecords.length);
+      if (checkInOutRecords.length === 0) {
+        console.log('⚠️ WARNING: No check-in/out records found! Check attendanceType values above.');
+      }
+
+      // Track students: Get the LATEST status for each student
+      const studentLatestStatus = new Map<string, { status: string; studentName: string; scanTime: Date }>();
+      
+      console.log('🔍 Processing student records to find LATEST status...');
+      checkInOutRecords.forEach(record => {
+        const studentId = record.studentId;
+        const scanTime = new Date(record.scanTime);
+        
+        // Keep only the LATEST record for each student
+        const existing = studentLatestStatus.get(studentId);
+        if (!existing || scanTime > existing.scanTime) {
+          studentLatestStatus.set(studentId, {
+            status: record.status,
+            studentName: record.studentName,
+            scanTime: scanTime
+          });
+          console.log(`  📝 ${record.studentName} - Latest status: "${record.status}" at ${format(scanTime, 'HH:mm:ss')}`);
+        }
+      });
+      
+      console.log('\n📊 Student Latest Status Summary:');
+      studentLatestStatus.forEach((data, studentId) => {
+        console.log(`${data.studentName}: Status="${data.status}" at ${format(data.scanTime, 'HH:mm:ss')}`);
+      });
+
+      // Calculate statistics - only count ACTIVE students
+      const activeStudents = Array.isArray(students) 
+        ? students.filter(student => student.status === 'Active')
+        : [];
+      const totalStudents = activeStudents.length;
+      
+      // Present Today = Students whose LATEST status is NOT "Out"
+      let presentToday = 0;
+      console.log('\n🎯 Calculating Present Today:');
+      studentLatestStatus.forEach((data, studentId) => {
+        if (data.status !== 'Out') {
+          presentToday++;
+          console.log(`  ✅ PRESENT: ${data.studentName} (Status: "${data.status}")`);
+        } else {
+          console.log(`  ❌ NOT PRESENT: ${data.studentName} (Status: "Out" - checked out)`);
+        }
+      });
+      console.log(`\n🎯 TOTAL PRESENT TODAY: ${presentToday}`);
+
+      // Absent Today = Students who did NOT scan their QR code at all today
+      const studentsWhoScanned = studentLatestStatus.size;
+      const absentToday = totalStudents - studentsWhoScanned;
+
+      // Debug: Log calculated values
+      console.log('=== Dashboard Stats ===');
+      console.log('Total active students:', totalStudents);
+      console.log('Students who scanned (checked in):', studentsWhoScanned);
+      console.log('Present today (IN school now):', presentToday);
+      console.log('Absent today (never scanned):', absentToday);
+      console.log('Student status details:', Array.from(studentLatestStatus.entries()).slice(0, 5).map(([id, data]) => ({
+        id,
+        name: data.studentName,
+        status: data.status,
+        time: format(data.scanTime, 'HH:mm:ss')
+      })));
+      
+      // Late Today = 0 for now (no late time cutoff set up yet)
+      const lateToday = 0;
+
       const totalClasses = Array.isArray(schedules) ? schedules.length : 0;
       const totalTeachers = teacherStats.success ? (teacherStats.stats?.total || 0) : 0;
 
-      // Calculate rates
+      // Calculate rates based on students who scanned QR
       const attendanceRate = totalStudents > 0 
-        ? Math.round((presentToday / totalStudents) * 100) 
+        ? Math.round((studentsWhoScanned / totalStudents) * 100) 
         : 0;
-      const onTimeRate = (presentToday + absentToday) > 0
-        ? Math.round((presentToday / (presentToday + absentToday + lateToday)) * 100)
+      const onTimeRate = studentsWhoScanned > 0
+        ? Math.round((presentToday / studentsWhoScanned) * 100)
         : 0;
 
       setStats({
@@ -101,6 +194,101 @@ export default function DashboardPage() {
       });
 
       setRecentActivity(recentRecords.records || []);
+
+      // Fetch weekly trends (last 7 days) - only check-in/check-out records
+      const weeklyData: WeeklyTrendData[] = [];
+      const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+      
+      for (let i = 6; i >= 0; i--) {
+        const date = subDays(new Date(), i);
+        const dateStr = format(date, 'yyyy-MM-dd');
+        const dayName = days[date.getDay()];
+        
+        try {
+          // Fetch all records for this day
+          const dayRecords = await historyService.getHistoryPageData({ 
+            startDate: dateStr, 
+            endDate: dateStr,
+            limit: 1000
+          });
+          
+          if (dayRecords.success && dayRecords.records) {
+            // Filter to only check-in/check-out records
+            const dayCheckInOuts = dayRecords.records.filter(
+              record => record.attendanceType === 'In' || record.attendanceType === 'Out'
+            );
+            
+            // Track students: Get LATEST status for each student this day
+            const dayStudentLatestStatus = new Map<string, { status: string; scanTime: Date }>();
+            
+            dayCheckInOuts.forEach(record => {
+              const studentId = record.studentId;
+              const scanTime = new Date(record.scanTime);
+              
+              // Keep only the LATEST record for each student
+              const existing = dayStudentLatestStatus.get(studentId);
+              if (!existing || scanTime > existing.scanTime) {
+                dayStudentLatestStatus.set(studentId, {
+                  status: record.status,
+                  scanTime: scanTime
+                });
+              }
+            });
+            
+            // For historical data: count students whose latest status is NOT "Out"
+            // This shows who attended (checked in) on that day
+            let dayPresent = 0;
+            dayStudentLatestStatus.forEach((data) => {
+              // For past days, count anyone who checked in (even if they checked out later)
+              // For real-time (Today), this is handled by the main dashboard logic above
+              if (data.status !== 'Out') {
+                dayPresent++;
+              }
+            });
+            
+            const studentsWhoCheckedIn = dayStudentLatestStatus.size; // Total who scanned
+            const absent = totalStudents - studentsWhoCheckedIn;
+            const present = studentsWhoCheckedIn; // Count all who attended
+            const late = 0; // No late tracking yet
+            const total = totalStudents;
+            const rate = total > 0 ? Math.round((studentsWhoCheckedIn / total) * 100) : 0;
+            
+            weeklyData.push({
+              date: dateStr,
+              day: i === 0 ? 'Today' : dayName,
+              present,
+              absent,
+              late,
+              total,
+              attendanceRate: rate,
+            });
+          } else {
+            // Add empty data for days with no records
+            weeklyData.push({
+              date: dateStr,
+              day: i === 0 ? 'Today' : dayName,
+              present: 0,
+              absent: 0,
+              late: 0,
+              total: 0,
+              attendanceRate: 0,
+            });
+          }
+        } catch {
+          // If fetch fails, add empty data
+          weeklyData.push({
+            date: dateStr,
+            day: i === 0 ? 'Today' : dayName,
+            present: 0,
+            absent: 0,
+            late: 0,
+            total: 0,
+            attendanceRate: 0,
+          });
+        }
+      }
+      
+      setWeeklyTrends(weeklyData);
       setLastUpdated(new Date());
     } catch (err) {
       console.error('Error fetching dashboard data:', err);
@@ -112,8 +300,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
-    // Refresh data every 30 seconds
-    const interval = setInterval(fetchDashboardData, 30000);
+    // Refresh data every 10 seconds for real-time updates
+    const interval = setInterval(() => {
+      fetchDashboardData();
+      setLastUpdated(new Date());
+    }, 10000); // 10 seconds
     return () => clearInterval(interval);
   }, []);
 
@@ -226,8 +417,9 @@ export default function DashboardPage() {
               disabled={isLoading}
               type="button"
             >
-              {isLoading ? 'Refreshing...' : 'Refresh'}
+              {isLoading ? 'Refreshing...' : 'Refresh Now'}
             </button>
+            <span className="text-white/90 text-sm font-semibold">⚡ Auto-refresh: 10s</span>
           </div>
         </div>
       </header>
@@ -366,8 +558,162 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      {/* Weekly Trends */}
+      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate mb-8" style={{ animationDelay: '600ms' }}>
+        <div className="flex items-center gap-2 mb-6">
+          <Calendar className="text-green-600" size={24} />
+          <h2 className="text-xl font-semibold text-gray-900">Weekly Attendance Trends</h2>
+          <span className="ml-auto text-sm text-gray-500">Last 7 days</span>
+        </div>
+        
+        {isLoading ? (
+          <LoadingSkeleton type="table" count={3} />
+        ) : weeklyTrends.length === 0 || weeklyTrends.every(d => d.total === 0) ? (
+          <div className="flex items-center justify-center h-80 text-gray-500 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
+            <div className="text-center">
+              <Calendar className="mx-auto text-gray-400 mb-3" size={40} />
+              <p className="font-medium">No weekly data available</p>
+              <p className="text-sm mt-1">Attendance trends will appear as data is collected</p>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Line Chart */}
+            <div className="h-80">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart
+                  data={weeklyTrends}
+                  margin={{ top: 12, right: 24, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                  <XAxis 
+                    dataKey="day" 
+                    tick={{ fontSize: 12 }} 
+                    stroke="#6b7280"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }} 
+                    stroke="#6b7280"
+                    label={{ value: 'Students', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }}
+                  />
+                  <Tooltip
+                    contentStyle={{ 
+                      borderRadius: '8px', 
+                      border: '1px solid #e5e7eb',
+                      boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                    }}
+                    formatter={(value: number | undefined) => [(value ?? 0).toLocaleString(), '']}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: '20px' }}
+                    iconType="circle"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="present"
+                    stroke="#43a047"
+                    strokeWidth={3}
+                    dot={{ fill: '#43a047', r: 5 }}
+                    activeDot={{ r: 7 }}
+                    name="Present"
+                    animationDuration={800}
+                    animationEasing="ease-in-out"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="late"
+                    stroke="#fbbf24"
+                    strokeWidth={3}
+                    dot={{ fill: '#fbbf24', r: 5 }}
+                    activeDot={{ r: 7 }}
+                    name="Late"
+                    animationDuration={800}
+                    animationEasing="ease-in-out"
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="absent"
+                    stroke="#e53935"
+                    strokeWidth={3}
+                    dot={{ fill: '#e53935', r: 5 }}
+                    activeDot={{ r: 7 }}
+                    name="Absent"
+                    animationDuration={800}
+                    animationEasing="ease-in-out"
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-1">Avg. Present</p>
+                <p className="text-2xl font-bold text-green-600">
+                  {weeklyTrends.length > 0 
+                    ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.present, 0) / weeklyTrends.length)
+                    : 0}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-1">Avg. Late</p>
+                <p className="text-2xl font-bold text-yellow-600">
+                  {weeklyTrends.length > 0 
+                    ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.late, 0) / weeklyTrends.length)
+                    : 0}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-1">Avg. Absent</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {weeklyTrends.length > 0 
+                    ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.absent, 0) / weeklyTrends.length)
+                    : 0}
+                </p>
+              </div>
+              <div className="text-center">
+                <p className="text-sm text-gray-600 mb-1">Avg. Rate</p>
+                <p className="text-2xl font-bold text-indigo-600">
+                  {weeklyTrends.length > 0 
+                    ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.attendanceRate, 0) / weeklyTrends.length)
+                    : 0}%
+                </p>
+              </div>
+            </div>
+
+            {/* Trend Indicator */}
+            {weeklyTrends.length >= 2 && (
+              <div className="flex items-center justify-center gap-2 p-3 bg-gray-50 rounded-lg">
+                {(() => {
+                  const recentRate = weeklyTrends[weeklyTrends.length - 1].attendanceRate;
+                  const previousRate = weeklyTrends[weeklyTrends.length - 2].attendanceRate;
+                  const diff = recentRate - previousRate;
+                  const isPositive = diff > 0;
+                  const isNeutral = diff === 0;
+                  
+                  return (
+                    <>
+                      <TrendingUp 
+                        className={`${isPositive ? 'text-green-600' : isNeutral ? 'text-gray-600' : 'text-red-600'} ${!isPositive && !isNeutral ? 'rotate-180' : ''}`} 
+                        size={20} 
+                      />
+                      <span className={`text-sm font-medium ${isPositive ? 'text-green-600' : isNeutral ? 'text-gray-600' : 'text-red-600'}`}>
+                        {isNeutral 
+                          ? 'Attendance rate unchanged from yesterday'
+                          : `Attendance ${isPositive ? 'improved' : 'decreased'} by ${Math.abs(diff).toFixed(1)}% from yesterday`
+                        }
+                      </span>
+                    </>
+                  );
+                })()}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '550ms' }}>
+      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '650ms' }}>
         <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Activity className="text-green-600" size={24} />

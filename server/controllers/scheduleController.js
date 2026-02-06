@@ -1,4 +1,5 @@
 const Schedule = require('../models/scheduleSchema');
+const telegramService = require('../services/telegramService');
 
 const ALLOWED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
 
@@ -517,6 +518,23 @@ exports.updateStudentAttendance = async (req, res) => {
         await historyRecord.save();
         console.log('Created new history record for student:', studentId);
       }
+
+      // Send Telegram notification to parent (non-blocking)
+      const Students = require('../models/studentsSchema');
+      const student = await Students.findOne({ studentId: studentId });
+      
+      if (student && student.parentInfo && student.parentInfo.telegramChatId) {
+        sendTeacherUpdateNotification(student, status, schedule, historyRecord).catch(err => {
+          console.error('Telegram notification error:', err.message);
+        });
+      } else if (student && (student.parentTelegramChatId || student.telegramChatId)) {
+        const chatId = student.parentTelegramChatId || student.telegramChatId;
+        sendTeacherUpdateNotificationLegacy(chatId, student, status, schedule, historyRecord).catch(err => {
+          console.error('Telegram notification error (legacy):', err.message);
+        });
+      } else {
+        console.log(`No Telegram Chat ID found for student ${studentId} - skipping teacher update notification`);
+      }
     } catch (historyError) {
       console.error('Error updating history record:', historyError.message);
       // Don't throw error, continue even if history update fails
@@ -537,3 +555,125 @@ exports.updateStudentAttendance = async (req, res) => {
     });
   }
 };
+
+// Helper function to send Telegram notification when teacher updates attendance
+async function sendTeacherUpdateNotification(student, newStatus, schedule, historyRecord) {
+  try {
+    const chatId = student.parentInfo.telegramChatId;
+    
+    if (!chatId) {
+      console.log(`No Chat ID for student ${student.studentId}`);
+      return;
+    }
+
+    const timeFormatted = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const dateFormatted = new Date().toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric'
+    });
+
+    const statusEmoji = newStatus === 'Present' ? '✅' : 
+                       newStatus === 'Late' ? '⏰' : 
+                       newStatus === 'Absent' ? '❌' :
+                       newStatus === 'Cutting' ? '⚠️' : '📝';
+
+    const message = `
+👨‍🏫 *Teacher Updated Attendance*
+
+${statusEmoji} *Status Changed to: ${newStatus}*
+
+👤 *Student:* ${student.fullName}
+🆔 *Student ID:* \`${student.studentId}\`
+
+📚 *Class Details:*
+• Subject: ${schedule.subject || 'General'}
+• Grade: ${schedule.gradeLevel} - Section ${schedule.section}
+• ${schedule.shift === 'Morning' ? '🌅' : '🌆'} ${schedule.shift} Shift
+• Teacher: ${schedule.teacher || 'Unknown'}
+
+📅 *Date:* ${dateFormatted}
+🕐 *Updated:* ${timeFormatted}
+
+${newStatus === 'Absent' ? '⚠️ Your child was marked absent for this class.' : 
+  newStatus === 'Late' ? '⏰ Your child was marked late for this class.' :
+  newStatus === 'Cutting' ? '⚠️ Your child was marked as cutting this class.' :
+  '✅ Attendance status has been updated.'}
+
+💡 Use /history to see full attendance records
+    `.trim();
+
+    await telegramService.sendMessage(chatId, message);
+    console.log(`✅ Sent teacher update notification to parent (Chat ID: ${chatId}) - Status: ${newStatus}`);
+    
+  } catch (error) {
+    console.error('Error sending teacher update notification:', error.message);
+    throw error;
+  }
+}
+
+// Helper function for legacy Chat ID format
+async function sendTeacherUpdateNotificationLegacy(chatId, student, newStatus, schedule, historyRecord) {
+  try {
+    if (!chatId) {
+      console.log(`No Chat ID for student ${student.studentId}`);
+      return;
+    }
+
+    const timeFormatted = new Date().toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    const dateFormatted = new Date().toLocaleDateString('en-US', {
+      weekday: 'short',
+      month: 'short',
+      day: '2-digit',
+      year: 'numeric'
+    });
+
+    const statusEmoji = newStatus === 'Present' ? '✅' : 
+                       newStatus === 'Late' ? '⏰' : 
+                       newStatus === 'Absent' ? '❌' :
+                       newStatus === 'Cutting' ? '⚠️' : '📝';
+
+    const message = `
+👨‍🏫 *Teacher Updated Attendance*
+
+${statusEmoji} *Status Changed to: ${newStatus}*
+
+👤 *Student:* ${student.fullName}
+🆔 *Student ID:* \`${student.studentId}\`
+
+📚 *Class Details:*
+• Subject: ${schedule.subject || 'General'}
+• Grade: ${schedule.gradeLevel} - Section ${schedule.section}
+• ${schedule.shift === 'Morning' ? '🌅' : '🌆'} ${schedule.shift} Shift
+• Teacher: ${schedule.teacher || 'Unknown'}
+
+📅 *Date:* ${dateFormatted}
+🕐 *Updated:* ${timeFormatted}
+
+${newStatus === 'Absent' ? '⚠️ Your child was marked absent for this class.' : 
+  newStatus === 'Late' ? '⏰ Your child was marked late for this class.' :
+  newStatus === 'Cutting' ? '⚠️ Your child was marked as cutting this class.' :
+  '✅ Attendance status has been updated.'}
+
+💡 Use /history to see full attendance records
+    `.trim();
+
+    await telegramService.sendMessage(chatId, message);
+    console.log(`✅ Sent teacher update notification (legacy Chat ID: ${chatId}) - Status: ${newStatus}`);
+    
+  } catch (error) {
+    console.error('Error sending teacher update notification (legacy):', error.message);
+    throw error;
+  }
+}
