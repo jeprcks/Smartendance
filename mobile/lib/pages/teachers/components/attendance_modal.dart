@@ -76,6 +76,7 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
   final Map<String, String> _scheduleDay = {}; // Store schedule day
   final Map<String, String> _scheduleTimeSlot = {}; // Store schedule time
   final Map<String, String> _scheduleTeacher = {}; // Store schedule teacher
+  final Map<String, bool> _individualUpdating = {}; // Track individual updates
 
   @override
   void initState() {
@@ -321,6 +322,94 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
     }
   }
 
+  Future<void> _updateSingleStudent(
+    String studentId,
+    String studentName,
+  ) async {
+    // Skip students with "Out" status
+    final scannedStatus = _scannedStatus[studentId] ?? 'Not Scanned';
+    if (scannedStatus == 'Out') {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Cannot update student with "Out" status'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    final newStatus = _statusUpdates[studentId];
+    if (newStatus == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('No status change detected'),
+            backgroundColor: Colors.orange,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+      return;
+    }
+
+    setState(() {
+      _individualUpdating[studentId] = true;
+    });
+
+    try {
+      await TeacherService.updateStudentAttendance(
+        token: widget.token,
+        studentId: studentId,
+        scheduleId: widget.scheduleId,
+        status: newStatus,
+        subject: widget.subject ?? 'General',
+        gradeLevel: widget.gradeLevel,
+        section: widget.section,
+      );
+
+      if (mounted) {
+        setState(() {
+          _individualUpdating[studentId] = false;
+          // Remove from pending updates after successful save
+          _statusUpdates.remove(studentId);
+          // Update scanned status to reflect the saved change
+          _scannedStatus[studentId] = newStatus;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ Updated $studentName to $newStatus'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+
+        // Refetch attendance data to sync with backend
+        await _fetchAttendanceData();
+
+        // Call callback if provided
+        widget.onStatusUpdated?.call();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _individualUpdating[studentId] = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating $studentName: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final filteredStudents = _getFilteredStudents();
@@ -476,29 +565,28 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                         color: Colors.blue.withValues(alpha: 0.3),
                       ),
                     ),
-                    child: Text(
-                      '${_statusUpdates.length} student(s) will be updated',
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue,
-                        fontWeight: FontWeight.w600,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.people, size: 14, color: Colors.blue),
+                        const SizedBox(width: 6),
+                        Text(
+                          '${_statusUpdates.length} student(s) pending',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.blue,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
-                    child: ElevatedButton(
+                    child: ElevatedButton.icon(
                       onPressed: _isUpdating ? null : _updateAllStatuses,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        disabledBackgroundColor: Colors.grey[300],
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: _isUpdating
+                      icon: _isUpdating
                           ? const SizedBox(
                               height: 20,
                               width: 20,
@@ -509,14 +597,25 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                                 ),
                               ),
                             )
-                          : const Text(
-                              'Save Changes',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                              ),
-                            ),
+                          : const Icon(Icons.save_alt, size: 20),
+                      label: Text(
+                        _isUpdating
+                            ? 'Saving All...'
+                            : 'Save All (${_statusUpdates.length})',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        disabledBackgroundColor: Colors.grey[300],
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
                 ],
@@ -817,6 +916,54 @@ class _StudentStatusEditSheetState extends State<_StudentStatusEditSheet> {
                           );
                         }).toList(),
                       ),
+                      // Individual Save Button (only show if status changed)
+                      if (isUpdated) ...[
+                        const SizedBox(height: 8),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: (_individualUpdating[studentId] ?? false)
+                                ? null
+                                : () => _updateSingleStudent(
+                                    studentId,
+                                    studentName,
+                                  ),
+                            icon: (_individualUpdating[studentId] ?? false)
+                                ? const SizedBox(
+                                    height: 14,
+                                    width: 14,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : const Icon(Icons.save, size: 16),
+                            label: Text(
+                              (_individualUpdating[studentId] ?? false)
+                                  ? 'Saving...'
+                                  : 'Save This Student',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              disabledBackgroundColor: Colors.grey[400],
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 8,
+                                horizontal: 12,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ],
                   ],
                 )

@@ -77,6 +77,7 @@ interface EditStudentFormData {
   parentEmail?: string;
   parentPassword?: string;
   parentContact?: string;
+  parentTelegramChatId?: string;
   emergencyContact?: {
     name?: string;
     contactNumber?: string;
@@ -122,6 +123,7 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
         parentEmail: student.parentInfo?.email || '',
         parentPassword: student.parentInfo?.password || '',
         parentContact: student.parentInfo?.contactNumber || student.parentContact || '',
+        parentTelegramChatId: (student.parentInfo as any)?.telegramChatId || (student as any).parentTelegramChatId || (student as any).telegramChatId || '',
         emergencyContact: {
           name: student.emergencyContact?.name || '',
           contactNumber: student.emergencyContact?.contactNumber || '',
@@ -197,7 +199,8 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
           name: formData.parentName || '',
           email: formData.parentEmail || '',
           password: formData.parentPassword || '',
-          contactNumber: formData.parentContact || ''
+          contactNumber: formData.parentContact || '',
+          telegramChatId: formData.parentTelegramChatId || ''
         }
       };
       if (formData.status === 'Graduated') {
@@ -208,6 +211,7 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
       delete transformedData.parentEmail;
       delete transformedData.parentPassword;
       delete transformedData.parentContact;
+      delete transformedData.parentTelegramChatId;
       
       await onUpdate(student.studentId, transformedData);
       toast.success('Student updated successfully');
@@ -711,6 +715,31 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                         onChange={handleChange}
                         className="block w-full rounded-lg border-gray-200 bg-gray-50/50 py-2 px-3 text-gray-700 shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
                       />
+                    </div>
+
+                    {/* Parent Telegram Chat ID */}
+                    <div className="space-y-1.5 col-span-2">
+                      <label htmlFor="parentTelegramChatId" className="block text-sm font-medium text-gray-700">
+                        <span className="inline-flex items-center gap-2">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                            <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                          </svg>
+                          Parent Telegram Chat ID
+                        </span>
+                      </label>
+                      <input
+                        type="text"
+                        id="parentTelegramChatId"
+                        name="parentTelegramChatId"
+                        value={formData.parentTelegramChatId || ''}
+                        onChange={handleChange}
+                        placeholder="e.g., 123456789"
+                        className="block w-full rounded-lg border-gray-200 bg-blue-50/30 py-2 px-3 text-gray-700 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm"
+                      />
+                      <p className="text-xs text-gray-500 mt-1">
+                        Parent must start @SmartendanceBot on Telegram to get their Chat ID
+                      </p>
                     </div>
                   </div>
                 </div>

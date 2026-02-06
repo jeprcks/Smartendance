@@ -79,14 +79,21 @@ const studentSchema = new Schema(
             name: { type: String },
             email: { type: String },
             password: { type: String },
-            contactNumber: { type: String }
+            contactNumber: { type: String },
+            telegramChatId: { type: String }
         },
         // Emergency Contact Information
         emergencyContact: {
             name: { type: String },
             contactNumber: { type: String },
-            relationship: { type: String }
+            relationship: { type: String },
+            telegramChatId: { type: String }
         },
+        // Legacy fields for backward compatibility
+        parentTelegramChatId: { type: String },
+        telegramChatId: { type: String },
+        // Parent contact shortcut (backward compatibility)
+        parentContact: { type: String },
         // QR Code Information
         qrCode: {
             data: { type: String }, // QR code data/content

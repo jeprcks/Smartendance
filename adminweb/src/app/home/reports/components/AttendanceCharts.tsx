@@ -50,8 +50,11 @@ export default function AttendanceCharts({
       <div className="content-section">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Grade Level Comparison</h3>
         <div className="space-y-2">
-          {gradeLevelStats.map((stat, index) => {
-            const maxStudents = Math.max(...gradeLevelStats.map(s => s.totalStudents), 1);
+          {gradeLevelStats
+            .filter(stat => stat.gradeLevel.toLowerCase() !== 'graduated')
+            .map((stat, index) => {
+            const filteredStats = gradeLevelStats.filter(s => s.gradeLevel.toLowerCase() !== 'graduated');
+            const maxStudents = Math.max(...filteredStats.map(s => s.totalStudents), 1);
             const percentage = (stat.totalStudents / maxStudents) * 100;
             return (
               <div key={index} className="space-y-1">
