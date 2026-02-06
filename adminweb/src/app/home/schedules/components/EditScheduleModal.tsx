@@ -133,8 +133,10 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, e
         teacher: form.teacher,
         timeSlot: form.timeSlot,
         room: form.room,
-        days: form.days as any,
-        day: form.days.length > 0 ? form.days[0] : undefined,
+        days: form.days as Schedule['days'],
+        day: form.days.length > 0 && ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].includes(form.days[0])
+          ? form.days[0] as Schedule['day']
+          : undefined,
         shift: form.shift as Schedule['shift']
       };
 
