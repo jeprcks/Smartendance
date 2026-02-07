@@ -30,15 +30,18 @@ app.use(
         "http://localhost:5001",     // Flutter web (alternate)
         "http://10.0.2.2:4000",     // Android emulator
         "http://localhost:4000",     // iOS simulator
+        "https://umapadelementaryschool.vercel.app",  // Production admin web
       ];
-      
-      // Check if origin matches allowed patterns
-      const isAllowed = !origin || 
-        allowedOrigins.includes(origin) ||
+      // Optional: allow extra origins from env (comma-separated)
+      const extra = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+      const allOrigins = [...allowedOrigins, ...extra];
+
+      const isAllowed = !origin ||
+        allOrigins.includes(origin) ||
         /^http:\/\/localhost:\d+$/.test(origin) ||
         /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
         /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin);
-      
+
       if (isAllowed) {
         callback(null, true);
       } else {

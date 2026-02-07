@@ -1,4 +1,10 @@
 {
+  "name": "smartendance",
+  "private": true,
+  "scripts": {
+    "install": "cd server && npm install",
+    "start": "cd server && node index.js"
+  },
   "devDependencies": {
     "nodemon": "^3.1.10"
   }

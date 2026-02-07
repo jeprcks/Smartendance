@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://localhost:4000';
+import { API_BASE_URL } from '@/app/config/api';
 
 export interface Parent {
   _id: string;

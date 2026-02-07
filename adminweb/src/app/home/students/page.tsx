@@ -10,6 +10,7 @@ import EditStudentModal from './components/EditStudentModal';
 import StudentScheduleModal from './components/StudentScheduleModal';
 import AdvancedSearch, { SearchFilters } from '@/app/components/search/AdvancedSearch';
 import BulkActions from '@/app/components/bulk/BulkActions';
+import { API_BASE_URL } from '@/app/config/api';
 import { studentService, Student } from '@/app/services/studentService';
 import { exportStudentsToPDF } from './components/exportStudentsToPDF';
 import toast from 'react-hot-toast';
@@ -188,7 +189,7 @@ export default function StudentsPage() {
       const studentsToDelete = students.filter(s => ids.includes(s.studentId));
       const deletePromises = studentsToDelete.map(async (student) => {
         if (student._id) {
-          const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api/students/${student._id}`, {
+          const response = await fetch(`${API_BASE_URL}/api/students/${student._id}`, {
             method: 'DELETE',
             headers: {
               'Content-Type': 'application/json',

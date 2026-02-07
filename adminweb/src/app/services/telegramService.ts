@@ -1,4 +1,6 @@
-const API_BASE_URL = 'http://localhost:4000/api/telegram';
+import { API_BASE_URL } from '@/app/config/api';
+
+const TELEGRAM_API_URL = `${API_BASE_URL}/api/telegram`;
 
 export interface TelegramSendResult {
   success: boolean;
@@ -29,7 +31,7 @@ class TelegramService {
    */
   async sendMessage(chatId: string, message: string): Promise<TelegramSendResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/send`, {
+      const response = await fetch(`${TELEGRAM_API_URL}/send`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -53,7 +55,7 @@ class TelegramService {
    */
   async broadcastMessage(chatIds: string[], message: string): Promise<BroadcastResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/broadcast`, {
+      const response = await fetch(`${TELEGRAM_API_URL}/broadcast`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -81,7 +83,7 @@ class TelegramService {
     contactType: 'contact' | 'emergency'
   ): Promise<TelegramSendResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/send-to-student`, {
+      const response = await fetch(`${TELEGRAM_API_URL}/send-to-student`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,7 +114,7 @@ class TelegramService {
     }
   ): Promise<BroadcastResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/send-to-all`, {
+      const response = await fetch(`${TELEGRAM_API_URL}/send-to-all`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -136,7 +138,7 @@ class TelegramService {
    */
   async verifyChatId(chatId: string): Promise<TelegramSendResult> {
     try {
-      const response = await fetch(`${API_BASE_URL}/verify-chat-id`, {
+      const response = await fetch(`${TELEGRAM_API_URL}/verify-chat-id`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -160,7 +162,7 @@ class TelegramService {
    */
   async getBotInfo(): Promise<any> {
     try {
-      const response = await fetch(`${API_BASE_URL}/bot-info`, {
+      const response = await fetch(`${TELEGRAM_API_URL}/bot-info`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
