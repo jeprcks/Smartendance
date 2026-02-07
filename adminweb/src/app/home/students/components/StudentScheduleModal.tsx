@@ -64,9 +64,18 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
     schedulesList
       .filter(schedule => schedule.isActive !== false)
       .forEach(schedule => {
-        if (grouped[schedule.day]) {
-          grouped[schedule.day].push(schedule);
-        }
+        // Handle both single day (legacy) and days array
+        const daysToProcess = schedule.days && schedule.days.length > 0 
+          ? schedule.days 
+          : schedule.day 
+            ? [schedule.day] 
+            : [];
+        
+        daysToProcess.forEach(day => {
+          if (day && grouped[day]) {
+            grouped[day].push(schedule);
+          }
+        });
       });
 
     // Sort by timeSlot within each day
