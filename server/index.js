@@ -77,9 +77,6 @@ mongoose.connect(process.env.MONGODB_URI, {
   socketTimeoutMS: 45000,
   // Prefer IPv4 in environments with IPv6/DNS issues
   family: 4,
-  // Use modern topology parsing (defaults in newer mongoose versions)
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
   // Retryable writes / write concern
   retryWrites: true,
   w: 'majority'

@@ -8,9 +8,12 @@ class TelegramService {
     
     if (this.botToken) {
       try {
-        // Initialize bot with polling enabled to receive commands
-        this.bot = new TelegramBot(this.botToken, { polling: true });
-        console.log('Telegram bot initialized successfully');
+        // Only one instance per bot token can use polling (getUpdates). On Railway we disable
+        // polling so the API can still send messages; run one instance with
+        // TELEGRAM_POLLING_ENABLED=true (e.g. local) to receive /start, /mychatid, etc.
+        const polling = process.env.TELEGRAM_POLLING_ENABLED === 'true';
+        this.bot = new TelegramBot(this.botToken, { polling });
+        console.log('Telegram bot initialized successfully' + (polling ? ' (polling enabled)' : ' (polling disabled, send-only)'));
         console.log('Bot token:', this.botToken.substring(0, 15) + '...');
         
         // Test the bot immediately

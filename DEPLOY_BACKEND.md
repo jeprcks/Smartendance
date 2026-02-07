@@ -31,6 +31,7 @@ Your backend is the **server** folder (Node/Express with MongoDB). Deploy it to 
    | `PORT` | Optional; Railway sets this automatically | `4000` |
    | `NODE_ENV` | Use `production` on Railway | `production` |
    | `TELEGRAM_BOT_TOKEN` | Optional; for Telegram notifications | From BotFather |
+   | `TELEGRAM_POLLING_ENABLED` | Set to `true` only on **one** instance (e.g. local). Leave unset on Railway to avoid 409 conflicts. | `true` or omit |
    | `TELEGRAM_NOTIFICATION_ENABLED` | Optional | `true` or `false` |
    | `TELEGRAM_ADMIN_CHAT_ID` | Optional | Your Telegram chat ID |
    | `JWT_SECRET` or `SECRET` | If your app uses it for sessions/tokens | Any long random string |
