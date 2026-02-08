@@ -719,18 +719,15 @@ body::before {
   overflow: hidden;
 }
 
-.login-watermark {
+.login-watermark-img {
   position: absolute;
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
   width: min(100vmin, 960px);
   height: min(100vmin, 960px);
-  background-image: url("/logo/umapadlogo.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.28;
+  object-fit: contain;
+  opacity: 0.25;
   pointer-events: none;
   z-index: 0;
 }

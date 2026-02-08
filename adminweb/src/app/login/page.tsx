@@ -66,8 +66,15 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Watermark background – logo in CSS so it shows on both /login and /login?from= */}
-      <div className="login-watermark" aria-hidden="true" />
+      {/* Background logo watermark */}
+      <img
+        src="/logo/umapadlogo.png"
+        alt=""
+        className="login-watermark-img"
+        aria-hidden="true"
+        loading="eager"
+        fetchPriority="high"
+      />
 
       <div className="login-card">
         <header className="login-card-header">
