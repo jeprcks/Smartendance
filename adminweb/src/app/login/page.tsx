@@ -1,17 +1,19 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/app/config/api';
 
 const LOGO_PATH = '/logo/umapadlogo.png';
-const LOGO_SRC =
-  typeof process !== 'undefined' && process.env.NEXT_PUBLIC_VERCEL_URL
-    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}${LOGO_PATH}`
-    : LOGO_PATH;
 
 export default function LoginPage() {
   const router = useRouter();
+  const [logoSrc, setLogoSrc] = useState(LOGO_PATH);
+
+  useEffect(() => {
+    setLogoSrc(`${window.location.origin}${LOGO_PATH}`);
+  }, []);
+
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -72,9 +74,9 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Background logo watermark – absolute URL in prod so it loads on /login and /login?from= */}
+      {/* Background logo watermark – full URL from origin so it always loads */}
       <img
-        src={LOGO_SRC}
+        src={logoSrc}
         alt=""
         className="login-watermark-img"
         aria-hidden="true"

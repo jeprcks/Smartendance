@@ -724,10 +724,10 @@ body::before {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  width: min(100vmin, 960px);
-  height: min(100vmin, 960px);
+  width: min(90vmin, 800px);
+  height: min(90vmin, 800px);
   object-fit: contain;
-  opacity: 0.25;
+  opacity: 0.35;
   pointer-events: none;
   z-index: 0;
 }
