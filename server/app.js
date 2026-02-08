@@ -6,6 +6,42 @@ const rateLimit = require('express-rate-limit');
 
 const app = express();
 
+const allowedOriginsList = [
+  "http://localhost:3000",
+  "http://localhost:5000",
+  "http://localhost:5001",
+  "http://10.0.2.2:4000",
+  "http://localhost:4000",
+  "https://umapadelementaryschool.vercel.app",
+  "https://smartendance-api.vercel.app",
+  "https://smartendance-lilac.vercel.app",
+];
+
+function isOriginAllowed(origin) {
+  if (!origin) return true;
+  const extra = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+  const all = [...allowedOriginsList, ...extra];
+  return all.includes(origin) ||
+    /^http:\/\/localhost:\d+$/.test(origin) ||
+    /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
+    /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin);
+}
+
+// CORS first: set headers on every response and handle preflight so errors (503, etc.) still have CORS
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin && isOriginAllowed(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+  }
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  if (req.method === "OPTIONS") {
+    return res.status(204).end();
+  }
+  next();
+});
+
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100
@@ -19,24 +55,7 @@ if (process.env.NODE_ENV === 'production') {
 app.use(
   cors({
     origin: (origin, callback) => {
-      const allowedOrigins = [
-        "http://localhost:3000",
-        "http://localhost:5000",
-        "http://localhost:5001",
-        "http://10.0.2.2:4000",
-        "http://localhost:4000",
-        "https://umapadelementaryschool.vercel.app",
-        "https://smartendance-api.vercel.app",
-        "https://smartendance-lilac.vercel.app",
-      ];
-      const extra = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
-      const allOrigins = [...allowedOrigins, ...extra];
-      const isAllowed = !origin ||
-        allOrigins.includes(origin) ||
-        /^http:\/\/localhost:\d+$/.test(origin) ||
-        /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
-        /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin);
-      if (isAllowed) callback(null, true);
+      if (isOriginAllowed(origin)) callback(null, true);
       else callback(new Error('Not allowed by CORS'));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
