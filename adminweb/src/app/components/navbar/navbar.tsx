@@ -69,7 +69,7 @@ export default function Navbar() {
             <Link href="/home/dashboard" className="flex items-center gap-1.5 min-w-0 group">
               <span className="navbar-logo-wrap">
                 <img
-                  src="/logo/umapadlogo.png"
+                  src="/logo/backgroundlogo.png"
                   alt="Umapad Elementary School Logo"
                   className="navbar-logo"
                 />

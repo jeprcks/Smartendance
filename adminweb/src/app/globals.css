@@ -689,6 +689,24 @@ body {
   transform: scale(1.05) !important;
 }
 
+/* Global Watermark Logo Background for all pages */
+body::before {
+  content: "";
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 800px;
+  height: 800px;
+  background-image: url("/logo/backgroundlogo.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  opacity: 0.08;
+  pointer-events: none;
+  z-index: 0;
+}
+
 /* Login page – theme and watermark */
 .login-page {
   min-height: 100vh;
