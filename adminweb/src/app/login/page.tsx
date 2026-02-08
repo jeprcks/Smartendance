@@ -1,19 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/app/config/api';
 
-const LOGO_PATH = '/logo/umapadlogo.png';
-
 export default function LoginPage() {
   const router = useRouter();
-  const [logoSrc, setLogoSrc] = useState(LOGO_PATH);
-
-  useEffect(() => {
-    setLogoSrc(`${window.location.origin}${LOGO_PATH}`);
-  }, []);
-
   const [formData, setFormData] = useState({
     username: '',
     password: '',
@@ -74,16 +66,29 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Background logo watermark – full URL from origin so it always loads */}
-      <img
-        src={logoSrc}
-        alt=""
-        className="login-watermark-img"
-        aria-hidden="true"
-        loading="eager"
-        fetchPriority="high"
-      />
-
+      {/* Watermark layer */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 0.12,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      >
+        <img 
+          src="/logo/backgroundlogo.png"
+          alt="School Logo"
+          style={{
+            width: '700px',
+            height: '700px',
+            objectFit: 'contain',
+          }}
+        />
+      </div>
       <div className="login-card">
         <header className="login-card-header">
           <h1>Welcome Back</h1>

@@ -689,24 +689,6 @@ body {
   transform: scale(1.05) !important;
 }
 
-/* Watermark Logo Background */
-body::before {
-  content: "";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 1000px;
-  height: 1000px;
-  background-image: url("/logo/umapadlogo.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.08;
-  pointer-events: none;
-  z-index: 0;
-}
-
 /* Login page – theme and watermark */
 .login-page {
   min-height: 100vh;
@@ -715,26 +697,15 @@ body::before {
   align-items: center;
   justify-content: center;
   padding: 2rem 1rem;
-  background: linear-gradient(135deg, var(--background) 0%, var(--muted) 50%, var(--secondary) 100%);
+  background-color: #f7fbf7;
   overflow: hidden;
 }
 
-.login-watermark-img {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: min(90vmin, 800px);
-  height: min(90vmin, 800px);
-  object-fit: contain;
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: 0;
-}
+/* Login background logo removed - now using inline styles in page.tsx for simplicity */
 
 .login-card {
   position: relative;
-  z-index: 1;
+  z-index: 10;
   width: 100%;
   max-width: 22rem;
   background: var(--card);

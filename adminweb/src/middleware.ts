@@ -13,13 +13,19 @@ const STATIC_PATHS = new Set([
   '/_next',
   '/images',
   '/static',
+  '/logo',
 ])
 
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
   // Check if the path is a static resource
-  if (STATIC_PATHS.has(pathname) || pathname.startsWith('/_next/')) {
+  for (const staticPath of STATIC_PATHS) {
+    if (pathname.startsWith(staticPath)) {
+      return NextResponse.next()
+    }
+  }
+  if (pathname.startsWith('/_next/')) {
     return NextResponse.next()
   }
 
