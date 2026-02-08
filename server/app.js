@@ -58,13 +58,17 @@ app.use((err, req, res, next) => {
 
 // MongoDB: reuse connection (required for Vercel serverless)
 function connectMongo() {
+  const uri = process.env.MONGODB_URI;
+  if (!uri || typeof uri !== 'string') {
+    return Promise.reject(new Error('MONGODB_URI is not set. Add it in Vercel → Settings → Environment Variables.'));
+  }
   if (mongoose.connection.readyState === 1) return Promise.resolve();
   if (mongoose.connection.readyState === 2) {
     return new Promise((resolve) => mongoose.connection.once('open', resolve));
   }
   const dns = require('dns');
   dns.setServers(['8.8.8.8', '8.8.4.4']);
-  return mongoose.connect(process.env.MONGODB_URI, {
+  return mongoose.connect(uri, {
     serverSelectionTimeoutMS: 30000,
     connectTimeoutMS: 30000,
     socketTimeoutMS: 45000,
