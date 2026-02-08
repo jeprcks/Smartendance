@@ -726,6 +726,7 @@ body::before {
   transform: translate(-50%, -50%);
   width: min(100vmin, 960px);
   height: min(100vmin, 960px);
+  background-image: url("/logo/umapadlogo.png");
   background-size: contain;
   background-repeat: no-repeat;
   background-position: center;

@@ -66,12 +66,8 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Watermark background – inline style so the image path resolves correctly */}
-      <div
-        className="login-watermark"
-        aria-hidden="true"
-        style={{ backgroundImage: 'url(/logo/umapadlogo.png)' }}
-      />
+      {/* Watermark background – logo in CSS so it shows on both /login and /login?from= */}
+      <div className="login-watermark" aria-hidden="true" />
 
       <div className="login-card">
         <header className="login-card-header">
