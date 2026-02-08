@@ -4,6 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { API_BASE_URL } from '@/app/config/api';
 
+const LOGO_PATH = '/logo/umapadlogo.png';
+const LOGO_SRC =
+  typeof process !== 'undefined' && process.env.NEXT_PUBLIC_VERCEL_URL
+    ? `https://${process.env.NEXT_PUBLIC_VERCEL_URL}${LOGO_PATH}`
+    : LOGO_PATH;
+
 export default function LoginPage() {
   const router = useRouter();
   const [formData, setFormData] = useState({
@@ -66,9 +72,9 @@ export default function LoginPage() {
 
   return (
     <div className="login-page">
-      {/* Background logo watermark */}
+      {/* Background logo watermark – absolute URL in prod so it loads on /login and /login?from= */}
       <img
-        src="/logo/umapadlogo.png"
+        src={LOGO_SRC}
         alt=""
         className="login-watermark-img"
         aria-hidden="true"
