@@ -1,27 +1,25 @@
 /**
  * Backend API base URL.
  *
- * Production (Vercel):
- * - Set NEXT_PUBLIC_API_URL in Vercel to your backend (e.g. https://your-api.railway.app).
- * - Requests from the app use same origin (your Vercel domain); next.config rewrites
- *   proxy /api/* to your backend so CORS is not needed and localhost is never called.
+ * Production: Set NEXT_PUBLIC_API_URL to your backend URL (e.g. https://your-backend.vercel.app).
+ * The app will call that URL for /api/* (login, students, etc.). Backend CORS must allow your frontend origin.
  *
- * Development:
- * - Falls back to http://localhost:4000 when not set.
+ * Development: Falls back to http://localhost:4000 when not set.
  */
 function getApiBaseUrl(): string {
-  // In browser on production: use same origin so rewrites proxy to backend (no CORS, no localhost)
-  if (typeof window !== 'undefined') {
-    const o = window.location.origin;
-    if (o && !o.includes('localhost')) return o;
-  }
-
   const envUrl =
     typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL
-      ? process.env.NEXT_PUBLIC_API_URL
+      ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
       : '';
 
+  // Prefer explicit backend URL so login/API work even if rewrites aren't configured
   if (envUrl) return envUrl;
+
+  if (typeof window !== 'undefined') {
+    const o = window.location.origin;
+    // On production (same origin), rewrites in next.config proxy /api/* to backend when NEXT_PUBLIC_API_URL was set at build
+    if (o && !o.includes('localhost')) return o;
+  }
 
   return 'http://localhost:4000';
 }
