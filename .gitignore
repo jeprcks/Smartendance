@@ -1,0 +1,67 @@
+# Environment Variables (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+*.env
+
+# Server environment files
+server/.env
+server/.env.local
+server/.env.production
+
+# Admin web environment files
+adminweb/.env
+adminweb/.env.local
+adminweb/.env.production
+
+# Node modules
+node_modules/
+*/node_modules/
+
+# Build outputs
+build/
+dist/
+*.apk
+*.aab
+*.ipa
+
+# Flutter/Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.lock
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+*.log
+
+# Vercel
+.vercel
+
+# Testing
+coverage/
+*.test.js
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Credentials and keys
+*.pem
+*.key
+*.cert
+credentials.json
+serviceAccount.json
