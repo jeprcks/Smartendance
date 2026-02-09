@@ -1,24 +1,12 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint;
+import '../config/environment.dart';
 
 class AuthService {
-  // URL configuration based on platform
+  // Use environment configuration
   static String get baseUrl {
-    if (kIsWeb) {
-      // Web platform: use the server IP address
-      return 'http://192.168.0.151:4000/api/auth';
-    } else if (Platform.isAndroid) {
-      // Android: use your computer's IP address
-      return 'http://192.168.0.151:4000/api/auth';
-    } else if (Platform.isIOS) {
-      // iOS: use your computer's IP address
-      return 'http://192.168.0.151:4000/api/auth';
-    } else {
-      // Fallback for other platforms (desktop)
-      return 'http://192.168.0.151:4000/api/auth';
-    }
+    return '${Environment.baseUrl}/api/auth';
   }
 
   // Student login

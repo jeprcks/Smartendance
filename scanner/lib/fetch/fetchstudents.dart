@@ -1,49 +1,49 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../config/environment.dart';
 
 class StudentService {
-  // Network configuration
-  // static const List<String> possibleUrls = [
-  //   'http://10.0.2.2:4000',  // Android Emulator
-  //   'http://localhost:4000',  // iOS Simulator
-  //   'http://192.168.1.52:4000',  // Physical device (replace with your IP)
-  //   'http://192.168.0.100:4000',  // Alternative IP range
-  // ];
-  static const List<String> possibleUrls = [
-    'http://10.0.2.2:4000', // Android Emulator
-    'http://localhost:4000', // iOS Simulator
-    'http://192.168.0.151:4000', // Physical device (replace with your IP)
-    'http://192.168.0.100:4000', // Alternative IP range
-  ];
-
+  // Use environment configuration
+  static String get serverUrl => Environment.baseUrl;
+  
+  // Cache the working URL to avoid repeated connection tests
   String? workingUrl;
+  static bool _isInitialized = false;
+  static DateTime? _lastRateLimitTime;
 
-  // Find working URL by testing all possibilities
+  // Initialize URL once (no connection test to avoid rate limiting)
   Future<String?> findWorkingUrl() async {
-    print('=== TESTING NETWORK CONNECTIVITY ===');
-
-    for (String url in possibleUrls) {
-      try {
-        print('Testing: $url');
-        final response = await http
-            .get(
-              Uri.parse('$url/api/students'),
-              headers: {'Content-Type': 'application/json'},
-            )
-            .timeout(const Duration(seconds: 3));
-
-        if (response.statusCode == 200) {
-          workingUrl = url;
-          print('✅ Working URL found: $url');
-          return url;
-        }
-      } catch (e) {
-        print('❌ Failed: $url - $e');
-      }
+    // Only initialize once
+    if (_isInitialized && workingUrl != null) {
+      return workingUrl;
     }
 
-    print('❌ No working URL found');
-    return null;
+    print('=== INITIALIZING SERVER CONNECTION ===');
+    print('Server URL: $serverUrl');
+    
+    // Check if we were recently rate limited
+    if (_lastRateLimitTime != null) {
+      final timeSinceLimit = DateTime.now().difference(_lastRateLimitTime!);
+      if (timeSinceLimit.inSeconds < 60) {
+        print('⏳ Rate limited recently. Waiting before retry...');
+        // Wait at least 60 seconds after rate limit
+        await Future.delayed(Duration(seconds: 60 - timeSinceLimit.inSeconds));
+      }
+      _lastRateLimitTime = null;
+    }
+
+    // Simply use the configured URL without testing
+    // Testing causes extra requests and triggers rate limiting
+    workingUrl = serverUrl;
+    _isInitialized = true;
+    print('✅ Using server URL: $serverUrl');
+    return serverUrl;
+  }
+
+  // Handle rate limiting
+  void _handleRateLimit() {
+    _lastRateLimitTime = DateTime.now();
+    print('⚠️ Rate limit detected. Will wait before next request.');
   }
 
   // Function to create attendance record (In/Out)
@@ -101,6 +101,15 @@ class StudentService {
 
       print('Response Status: ${response.statusCode}');
       print('Response Body: ${response.body}');
+
+      // Handle rate limiting
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return {
+          'success': false,
+          'error': 'Too many requests. Please wait a moment and try again.',
+        };
+      }
 
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
@@ -191,6 +200,16 @@ class StudentService {
       print('Response Status: ${response.statusCode}');
       print('Response Headers: ${response.headers}');
       print('Response Body: ${response.body}');
+
+      // Handle rate limiting
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return {
+          'success': false,
+          'error': 'Too many requests. Please wait a moment and try again.',
+          'student': null,
+        };
+      }
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -313,6 +332,15 @@ class StudentService {
       print('Validation Response Status: ${response.statusCode}');
       print('Validation Response: ${response.body}');
 
+      // Handle rate limiting
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return {
+          'hasOpenCheckIn': false,
+          'error': 'Too many requests. Please wait a moment.',
+        };
+      }
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         return {
@@ -357,6 +385,16 @@ class StudentService {
 
       print('Checkout Validation Response Status: ${response.statusCode}');
       print('Checkout Validation Response: ${response.body}');
+
+      // Handle rate limiting
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return {
+          'alreadyCheckedOut': false,
+          'checkInCount': 0,
+          'error': 'Too many requests. Please wait a moment.',
+        };
+      }
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -403,6 +441,15 @@ class StudentService {
 
       print('Check-In Count Response Status: ${response.statusCode}');
       print('Check-In Count Response: ${response.body}');
+
+      // Handle rate limiting
+      if (response.statusCode == 429) {
+        _handleRateLimit();
+        return {
+          'checkInCount': 0,
+          'error': 'Too many requests. Please wait a moment.',
+        };
+      }
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

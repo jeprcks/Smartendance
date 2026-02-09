@@ -77,7 +77,14 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
 
   Future<void> _loadScheduleData() async {
     try {
-      setState(() => _isLoading = true);
+      setState(() {
+        _isLoading = true;
+        // Reset animation states for proper display
+        _contentEntered = false;
+        _visibleScheduleCount = 0;
+        // Clear cached students to force reload
+        _classStudents.clear();
+      });
 
       debugPrint('\n========== LOADING SCHEDULE ==========');
       debugPrint('Teacher ID: ${widget.teacherId}');
@@ -595,21 +602,26 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                     children: [
                       // Background Logo
                       const BackgroundLogo(),
-                      // Main Content
-                      SingleChildScrollView(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: AnimatedOpacity(
-                            opacity: _contentEntered ? 1.0 : 0.0,
-                            duration: kAnimationEnterDuration,
-                            curve: kAnimationEnterCurve,
-                            child: AnimatedSlide(
-                              offset: _contentEntered
-                                  ? Offset.zero
-                                  : const Offset(0, 0.05),
+                      // Main Content with Pull-to-Refresh
+                      RefreshIndicator(
+                        onRefresh: _loadScheduleData,
+                        color: kPrimary,
+                        backgroundColor: Colors.white,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: AnimatedOpacity(
+                              opacity: _contentEntered ? 1.0 : 0.0,
                               duration: kAnimationEnterDuration,
                               curve: kAnimationEnterCurve,
-                              child: Column(
+                              child: AnimatedSlide(
+                                offset: _contentEntered
+                                    ? Offset.zero
+                                    : const Offset(0, 0.05),
+                                duration: kAnimationEnterDuration,
+                                curve: kAnimationEnterCurve,
+                                child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   // Filter Section
@@ -719,6 +731,7 @@ class _TeacherScheduleState extends State<TeacherSchedule> {
                             ),
                           ),
                         ),
+                      ),
                       ),
                     ],
                   );

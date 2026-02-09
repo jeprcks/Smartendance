@@ -195,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
             e.toString().contains('Failed host lookup') ||
             e.toString().contains('Connection refused')) {
           errorMessage =
-              'Cannot connect to server. Please check:\n1. Server is running\n2. Network connection\n3. Server URL: http://192.168.0.151:4000';
+              'Cannot connect to server. Please check:\n1. Internet connection (WiFi or mobile data)\n2. Server is online\n3. Try again in a moment';
         } else if (e.toString().contains('401') ||
             e.toString().contains('Unauthorized')) {
           errorMessage = 'Invalid email or password. Please try again.';

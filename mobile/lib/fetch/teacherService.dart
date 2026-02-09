@@ -1,25 +1,12 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'dart:io' show Platform;
-import 'package:flutter/foundation.dart' show debugPrint, kIsWeb;
+import 'package:flutter/foundation.dart' show debugPrint;
+import '../config/environment.dart';
 
 class TeacherService {
-  // URL configuration based on platform
+  // Use environment configuration
   static String get baseUrl {
-    if (kIsWeb) {
-      // Web platform: use the server IP address
-      return 'http://192.168.0.151:4000/api';
-    } else if (Platform.isAndroid) {
-      // Android emulator: try actual IP first, fallback to 10.0.2.2
-      return 'http://192.168.0.151:4000/api';
-    } else if (Platform.isIOS) {
-      // iOS simulator uses localhost
-      // Physical iPhone uses computer IP on network
-      return 'http://192.168.0.151:4000/api';
-    } else {
-      // Fallback for other platforms (desktop)
-      return 'http://192.168.0.151:4000/api';
-    }
+    return '${Environment.baseUrl}/api';
   }
 
   /// Get teacher profile information
