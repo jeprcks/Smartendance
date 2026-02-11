@@ -48,8 +48,8 @@ export default function NotificationsPage() {
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh every 2 minutes (silent)
-    const interval = setInterval(() => fetchNotifications(true), 120000); // 2 minutes
+    // Refresh every 30 seconds (silent) for faster notification updates
+    const interval = setInterval(() => fetchNotifications(true), 30000); // 30 seconds
     return () => clearInterval(interval);
   }, []);
 

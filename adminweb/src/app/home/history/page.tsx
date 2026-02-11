@@ -258,6 +258,7 @@ export default function HistoryPage() {
   const [selectedStatus, setSelectedStatus] = useState<AttendanceRecord['status'] | ''>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isSilentRefresh, setIsSilentRefresh] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   type SelectedStudent = {
@@ -358,9 +359,13 @@ export default function HistoryPage() {
   });
 
   // Fetch data from API
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      } else {
+        setIsSilentRefresh(true);
+      }
       setError(null);
       
       const response = await historyService.getHistoryPageData({
@@ -382,6 +387,7 @@ export default function HistoryPage() {
       // Keep dummy data as fallback
     } finally {
       setIsLoading(false);
+      setIsSilentRefresh(false);
     }
   }, [searchQuery, selectedStatus, selectedDate]);
 
@@ -413,6 +419,15 @@ export default function HistoryPage() {
     fetchData();
   }, [fetchData]);
 
+  // Auto-refresh every 10 seconds (silent background update for near real-time)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchData(true); // Silent refresh - no loading spinner
+    }, 10000); // 10 seconds - faster updates
+
+    return () => clearInterval(interval);
+  }, [fetchData]);
+
   return (
     <div className="page-container">
       <header className="dashboard-header">
@@ -427,20 +442,23 @@ export default function HistoryPage() {
               <button
                 type="button"
                 onClick={handleManualRefresh}
-                disabled={isLoading}
+                disabled={isLoading || isSilentRefresh}
                 className="inline-flex items-center gap-2"
                 title="Refresh data"
               >
                 <svg 
                   xmlns="http://www.w3.org/2000/svg" 
-                  className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} 
+                  className={`h-4 w-4 ${isLoading || isSilentRefresh ? 'animate-spin' : ''}`} 
                   viewBox="0 0 20 20" 
                   fill="currentColor"
                 >
                   <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                 </svg>
-                {isLoading ? 'Refreshing...' : 'Refresh'}
+                {isLoading ? 'Refreshing...' : isSilentRefresh ? 'Updating...' : 'Refresh'}
               </button>
+              {isSilentRefresh && (
+                <span className="text-white/90 text-xs animate-pulse ml-2">🔄 Live</span>
+              )}
 
               {/* Export PDF button */}
               <button
