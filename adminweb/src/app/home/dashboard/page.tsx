@@ -62,16 +62,10 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [isSilentRefresh, setIsSilentRefresh] = useState(false);
 
-  const fetchDashboardData = async (silent = false) => {
+  const fetchDashboardData = async () => {
     try {
-      // Only show loading state on initial load, not on refreshes
-      if (!silent) {
-        setIsLoading(true);
-      } else {
-        setIsSilentRefresh(true);
-      }
+      setIsLoading(true);
       setError(null);
 
       // Get today's date in YYYY-MM-DD format
@@ -301,19 +295,11 @@ export default function DashboardPage() {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
     } finally {
       setIsLoading(false);
-      setIsSilentRefresh(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
-    
-    // Auto-refresh silently every 5 seconds for near real-time updates
-    const interval = setInterval(() => {
-      fetchDashboardData(true); // Silent refresh
-    }, 5000); // 5 seconds - near real-time updates
-    
-    return () => clearInterval(interval);
   }, []);
 
   const statCards = [
@@ -422,14 +408,11 @@ export default function DashboardPage() {
             <span>Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             <button
               onClick={() => fetchDashboardData()}
-              disabled={isLoading || isSilentRefresh}
+              disabled={isLoading}
               type="button"
             >
-              {isLoading ? 'Refreshing...' : isSilentRefresh ? 'Updating...' : 'Refresh Now'}
+              {isLoading ? 'Refreshing...' : 'Refresh Now'}
             </button>
-            {isSilentRefresh && (
-              <span className="text-white/90 text-xs animate-pulse">🔄 Live</span>
-            )}
           </div>
         </div>
       </header>
