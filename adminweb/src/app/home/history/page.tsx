@@ -267,8 +267,7 @@ export default function HistoryPage() {
     recentAttendance: AttendanceRecord[];
   };
   const [selectedStudent, setSelectedStudent] = useState<SelectedStudent | null>(null);
-  const [lastRefreshTime, setLastRefreshTime] = useState<Date>(new Date());
-  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [refreshKey, setRefreshKey] = useState(0); // Force re-render key
 
   // State for API data
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([
@@ -376,6 +375,7 @@ export default function HistoryPage() {
       setAttendanceRecords(response.records);
       setStats(response.stats);
       setPagination(response.pagination);
+      setRefreshKey(prev => prev + 1); // Force UI update
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to fetch data');
       console.error('Error fetching history data:', err);
@@ -406,25 +406,12 @@ export default function HistoryPage() {
   // Manual refresh function
   const handleManualRefresh = async () => {
     await fetchData();
-    setLastRefreshTime(new Date());
   };
 
   // Load data on component mount and when filters change
   useEffect(() => {
     fetchData();
   }, [fetchData]);
-
-  // Auto-refresh every 30 seconds if enabled
-  useEffect(() => {
-    if (!autoRefresh) return;
-
-    const interval = setInterval(() => {
-      fetchData();
-      setLastRefreshTime(new Date());
-    }, 30000); // 30 seconds
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, fetchData]);
 
   return (
     <div className="page-container">
@@ -452,7 +439,7 @@ export default function HistoryPage() {
                 >
                   <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
                 </svg>
-                Refresh
+                {isLoading ? 'Refreshing...' : 'Refresh'}
               </button>
 
               {/* Export PDF button */}
@@ -467,28 +454,12 @@ export default function HistoryPage() {
                 </svg>
                 Export PDF
               </button>
-
-              {/* Auto-refresh toggle */}
-              <div className="ml-2 pl-2 border-l border-gray-300">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={autoRefresh}
-                    onChange={(e) => setAutoRefresh(e.target.checked)}
-                    className="sr-only peer"
-                  />
-                  <div className="w-9 h-5 bg-gray-300 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-green-500 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-green-600"></div>
-                  <span className="ml-2 text-xs text-gray-600 font-medium">
-                    Auto-refresh
-                  </span>
-                </label>
-              </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="mb-6">
+      <div className="mb-6" key={`stats-${refreshKey}`}>
         <AttendanceStatsComponent 
           totalRecords={stats.total}
           present={stats.present}
@@ -498,22 +469,6 @@ export default function HistoryPage() {
         />
       </div>
 
-      {/* Last refresh indicator */}
-      <div className="mb-4 flex items-center justify-between px-4 py-2 bg-blue-50 border border-blue-200 rounded-lg">
-        <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
-          </svg>
-          <span className="text-sm text-blue-700">
-            Last updated: <strong>{format(lastRefreshTime, 'HH:mm:ss')}</strong>
-          </span>
-        </div>
-        {autoRefresh && (
-          <span className="text-xs text-blue-600 font-medium bg-blue-100 px-2 py-1 rounded">
-            Auto-refreshing every 30s
-          </span>
-        )}
-      </div>
 
       {error && (
         <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
@@ -596,7 +551,7 @@ export default function HistoryPage() {
           </div>
         </div>
 
-        <div className="table-container">
+        <div className="table-container" key={`table-${refreshKey}`}>
           <table className="data-table">
             <thead>
               <tr>

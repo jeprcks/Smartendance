@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, memo } from 'react';
 import { studentService } from '@/app/services/studentService';
 import { historyService, AttendanceRecord } from '@/app/services/historyService';
 import { teacherService } from '@/app/services/teacherService';
@@ -62,10 +62,16 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isSilentRefresh, setIsSilentRefresh] = useState(false);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = async (silent = false) => {
     try {
-      setIsLoading(true);
+      // Only show loading state on initial load, not on refreshes
+      if (!silent) {
+        setIsLoading(true);
+      } else {
+        setIsSilentRefresh(true);
+      }
       setError(null);
 
       // Get today's date in YYYY-MM-DD format
@@ -295,16 +301,18 @@ export default function DashboardPage() {
       setError(err instanceof Error ? err.message : 'Failed to load dashboard data');
     } finally {
       setIsLoading(false);
+      setIsSilentRefresh(false);
     }
   };
 
   useEffect(() => {
     fetchDashboardData();
-    // Refresh data every 10 seconds for real-time updates
+    
+    // Optional: Auto-refresh silently every 30 seconds (without UI flicker)
     const interval = setInterval(() => {
-      fetchDashboardData();
-      setLastUpdated(new Date());
-    }, 10000); // 10 seconds
+      fetchDashboardData(true); // Silent refresh
+    }, 30000); // 30 seconds
+    
     return () => clearInterval(interval);
   }, []);
 
@@ -413,13 +421,15 @@ export default function DashboardPage() {
           <div className="dashboard-header-refresh-box">
             <span>Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             <button
-              onClick={fetchDashboardData}
-              disabled={isLoading}
+              onClick={() => fetchDashboardData(false)}
+              disabled={isLoading || isSilentRefresh}
               type="button"
             >
-              {isLoading ? 'Refreshing...' : 'Refresh Now'}
+              {isLoading ? 'Refreshing...' : isSilentRefresh ? 'Updating...' : 'Refresh Now'}
             </button>
-            <span className="text-white/90 text-sm font-semibold">⚡ Auto-refresh: 10s</span>
+            {isSilentRefresh && (
+              <span className="text-white/90 text-xs animate-pulse">🔄 Live</span>
+            )}
           </div>
         </div>
       </header>
@@ -462,7 +472,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
-                  <p className={`text-3xl font-bold ${stat.textColor}`}>
+                  <p className={`text-3xl font-bold ${stat.textColor} stat-value-transition`} key={stat.value}>
                     {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                   </p>
                 </div>
@@ -758,7 +768,7 @@ export default function DashboardPage() {
                 {recentActivity.map((record, index) => (
                   <tr
                     key={record._id}
-                    className={`border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors ${index % 2 === 1 ? 'bg-gray-50/50' : ''}`}
+                    className={`dashboard-activity-row border-b border-gray-100 last:border-0 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-gray-50/50' : ''}`}
                   >
                     <td className="px-4 py-3 text-sm">
                       <span className="font-medium text-gray-900">{format(new Date(record.scanTime), 'hh:mm a')}</span>

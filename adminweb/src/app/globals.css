@@ -707,6 +707,57 @@ body::before {
   z-index: 0;
 }
 
+/* Smooth data updates without UI flicker */
+.stat-card p,
+.stat-card span {
+  transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth number transitions */
+@keyframes numberChange {
+  0% {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.stat-value-transition {
+  animation: numberChange 0.4s ease-out;
+}
+
+/* Smooth progress bar transitions */
+.stat-card .h-2 > div {
+  transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Prevent layout shift during data updates */
+.stat-card {
+  contain: layout style;
+}
+
+/* Smooth table row transitions */
+.dashboard-activity-row {
+  transition: background-color 0.2s ease;
+}
+
+/* Live update indicator pulse */
+@keyframes livePulse {
+  0%, 100% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 /* Login page – theme and watermark */
 .login-page {
   min-height: 100vh;

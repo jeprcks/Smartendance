@@ -17,12 +17,17 @@ export default function NotificationsPage() {
     noTimeOut: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isSilentRefresh, setIsSilentRefresh] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<'all' | 'late' | 'absent' | 'cutting' | 'no_time_out'>('all');
 
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) {
+        setIsLoading(true);
+      } else {
+        setIsSilentRefresh(true);
+      }
       setError(null);
       const result = await notificationService.getNotifications(30);
       
@@ -37,13 +42,14 @@ export default function NotificationsPage() {
       setError(err instanceof Error ? err.message : 'Failed to load notifications');
     } finally {
       setIsLoading(false);
+      setIsSilentRefresh(false);
     }
   };
 
   useEffect(() => {
     fetchNotifications();
-    // Refresh every 5 minutes
-    const interval = setInterval(fetchNotifications, 300000);
+    // Refresh every 2 minutes (silent)
+    const interval = setInterval(() => fetchNotifications(true), 120000); // 2 minutes
     return () => clearInterval(interval);
   }, []);
 
@@ -110,13 +116,16 @@ export default function NotificationsPage() {
           <div className="dashboard-header-refresh-box">
             <button
               type="button"
-              onClick={fetchNotifications}
-              disabled={isLoading}
+              onClick={() => fetchNotifications(false)}
+              disabled={isLoading || isSilentRefresh}
               className="inline-flex items-center gap-2"
             >
-              <RefreshCw className={isLoading ? 'animate-spin' : ''} size={16} />
-              Refresh
+              <RefreshCw className={isLoading || isSilentRefresh ? 'animate-spin' : ''} size={16} />
+              {isLoading ? 'Refreshing...' : isSilentRefresh ? 'Updating...' : 'Refresh'}
             </button>
+            {isSilentRefresh && (
+              <span className="text-white/90 text-xs animate-pulse">🔄 Live</span>
+            )}
           </div>
         </div>
       </header>
