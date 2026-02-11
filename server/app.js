@@ -76,82 +76,36 @@ app.use((err, req, res, next) => {
 });
 
 // MongoDB: reuse connection (required for Vercel serverless)
-// Cache connection promise to prevent multiple simultaneous connections
-let mongoConnectionPromise = null;
-
 function connectMongo() {
   const uri = process.env.MONGODB_URI;
   if (!uri || typeof uri !== 'string') {
     return Promise.reject(new Error('MONGODB_URI is not set. Add it in Vercel → Settings → Environment Variables.'));
   }
-  
-  // Already connected
-  if (mongoose.connection.readyState === 1) {
-    return Promise.resolve();
-  }
-  
-  // Connection in progress, wait for it
+  if (mongoose.connection.readyState === 1) return Promise.resolve();
   if (mongoose.connection.readyState === 2) {
-    return mongoConnectionPromise || Promise.resolve();
+    return new Promise((resolve) => mongoose.connection.once('open', resolve));
   }
-  
-  // Reuse existing connection promise if available
-  if (mongoConnectionPromise) {
-    return mongoConnectionPromise;
-  }
-  
-  // Create new connection with optimized settings for serverless
   const dns = require('dns');
   dns.setServers(['8.8.8.8', '8.8.4.4']);
-  
-  mongoConnectionPromise = mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 10000, // Reduced from 30s for faster failure
-    connectTimeoutMS: 10000, // Reduced from 30s
+  return mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 30000,
+    connectTimeoutMS: 30000,
     socketTimeoutMS: 45000,
-    maxPoolSize: 10, // Connection pool size
-    minPoolSize: 2, // Keep minimum connections alive
-    maxIdleTimeMS: 30000, // Close idle connections after 30s
     family: 4,
     retryWrites: true,
-    w: 'majority',
-    // Optimize for serverless
-    bufferCommands: false, // Don't buffer commands if not connected
-    bufferMaxEntries: 0 // Don't buffer commands
-  }).then(() => {
-    console.log('MongoDB connected (serverless optimized)');
-    return mongoose.connection;
-  }).catch((err) => {
-    mongoConnectionPromise = null; // Reset on error so we can retry
-    throw err;
+    w: 'majority'
   });
-  
-  return mongoConnectionPromise;
 }
 
 // On Vercel: ensure DB is connected before handling (no long-running process)
 if (process.env.VERCEL) {
-  app.use(async (req, res, next) => {
-    try {
-      await connectMongo();
-      // Double-check connection is ready before proceeding
-      if (mongoose.connection.readyState !== 1) {
-        // Wait for connection if it's still connecting
-        await new Promise((resolve, reject) => {
-          if (mongoose.connection.readyState === 1) {
-            resolve();
-          } else {
-            mongoose.connection.once('connected', resolve);
-            mongoose.connection.once('error', reject);
-            // Timeout after 10 seconds
-            setTimeout(() => reject(new Error('Connection timeout')), 10000);
-          }
-        });
-      }
-      next();
-    } catch (err) {
-      console.error('MongoDB connect error:', err);
-      res.status(503).json({ message: 'Database unavailable', error: err.message });
-    }
+  app.use((req, res, next) => {
+    connectMongo()
+      .then(() => next())
+      .catch((err) => {
+        console.error('MongoDB connect error:', err);
+        res.status(503).json({ message: 'Database unavailable', error: err.message });
+      });
   });
 } else {
   connectMongo()
@@ -175,20 +129,6 @@ if (process.env.VERCEL) {
     } catch (err) {}
   });
 }
-
-// Keep-alive endpoint to prevent cold starts (call this every 5 minutes)
-app.get('/api/keepalive', async (req, res) => {
-  try {
-    await connectMongo();
-    res.json({ 
-      status: 'ok', 
-      timestamp: new Date().toISOString(),
-      dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
-    });
-  } catch (err) {
-    res.status(503).json({ status: 'error', message: err.message });
-  }
-});
 
 // Routes
 const userRoutes = require("./routes/userRoutes");
