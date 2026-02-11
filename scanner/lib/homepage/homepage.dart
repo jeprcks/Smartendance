@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'components/qr_code_icon_container.dart';
 import 'components/title_section.dart';
 import 'components/camera_scanner_button.dart';
 import '../fetch/fetchstudents.dart';
@@ -79,133 +78,159 @@ class _HomePageState extends State<HomePage> {
                         height: 24,
                         child: CircularProgressIndicator(
                           strokeWidth: 2,
-                          valueColor:
-                              AlwaysStoppedAnimation<Color>(Colors.black87),
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.black87,
+                          ),
                         ),
                       )
                     : Icon(
                         _isConnected ? Icons.cloud_done : Icons.cloud_off,
-                        color:
-                            _isConnected ? successGreen : errorRed,
+                        color: _isConnected ? successGreen : errorRed,
                       ),
               ),
             ),
           ),
         ],
       ),
-      body: Center(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              mainAxisAlignment: MainAxisAlignment.center,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const QRCodeIconContainer(),
-                const SizedBox(height: 24),
-                const TitleSection(),
-                const SizedBox(height: 16),
-                // Server Connection Status Card
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: _isConnected
-                        ? const Color(0xFFE8F5E9)
-                        : const Color(0xFFFFEBEE),
-                    border: Border.all(
-                      color: _isConnected ? successGreen : errorRed,
-                      width: 2,
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _isConnected ? Icons.check_circle : Icons.error,
-                        color: _isConnected ? successGreen : errorRed,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _connectionStatus,
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: _isConnected ? successGreen : errorRed,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
+      body: Stack(
+        children: [
+          Center(
+            child: SingleChildScrollView(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24,
+                  vertical: 32,
                 ),
-                const SizedBox(height: 32),
-                CameraScannerButton(isEnabled: _isConnected),
-                if (!_isConnected)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: Container(
-                      padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Logo (replacing QR code container) - No background
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final screenWidth = MediaQuery.of(context).size.width;
+
+                        // Responsive logo size: 35% of screen width, with constraints (increased size)
+                        final logoSize = (screenWidth * 0.35).clamp(
+                          200.0,
+                          280.0,
+                        );
+
+                        return Image.asset(
+                          'asset/logo/umapadlogo.png',
+                          width: logoSize,
+                          height: logoSize,
+                          fit: BoxFit.contain,
+                          // Logo with transparent background - displays cleanly
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 24),
+                    const TitleSection(),
+                    const SizedBox(height: 16),
+                    // Server Connection Status Card
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFFEBEE),
+                        color: _isConnected
+                            ? const Color(0xFFE8F5E9)
+                            : const Color(0xFFFFEBEE),
+                        border: Border.all(
+                          color: _isConnected ? successGreen : errorRed,
+                          width: 2,
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Column(
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Connection Issues?',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              color: errorRed,
-                              fontSize: 14,
-                            ),
+                          Icon(
+                            _isConnected ? Icons.check_circle : Icons.error,
+                            color: _isConnected ? successGreen : errorRed,
+                            size: 20,
                           ),
-                          const SizedBox(height: 8),
-                          const Text(
-                            '1. Check server is running\n2. Verify network connection\n3. Ensure device and server are on same network',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.black87,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 12),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: errorRed,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                              ),
-                              onPressed: () {
-                                setState(() => _isChecking = true);
-                                _checkServerConnection();
-                              },
-                              child: const Text(
-                                'Retry Connection',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.w600,
-                                ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _connectionStatus,
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: _isConnected ? successGreen : errorRed,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                  ),
-              ],
+                    const SizedBox(height: 32),
+                    CameraScannerButton(isEnabled: _isConnected),
+                    if (!_isConnected)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 16),
+                        child: Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFEBEE),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Column(
+                            children: [
+                              const Text(
+                                'Connection Issues?',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: errorRed,
+                                  fontSize: 14,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                '1. Check server is running\n2. Verify network connection\n3. Ensure device and server are on same network',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.black87,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 12),
+                              SizedBox(
+                                width: double.infinity,
+                                child: ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: errorRed,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                  ),
+                                  onPressed: () {
+                                    setState(() => _isChecking = true);
+                                    _checkServerConnection();
+                                  },
+                                  child: const Text(
+                                    'Retry Connection',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

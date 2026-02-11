@@ -23,6 +23,7 @@ flutter:
   
   assets:
     - asset/logo/backgroundlogo.png
+    - asset/logo/umapadlogo.png
 
 flutter_launcher_icons:
   android: true
