@@ -76,25 +76,56 @@ app.use((err, req, res, next) => {
 });
 
 // MongoDB: reuse connection (required for Vercel serverless)
+// Cache connection promise to prevent multiple simultaneous connections
+let mongoConnectionPromise = null;
+
 function connectMongo() {
   const uri = process.env.MONGODB_URI;
   if (!uri || typeof uri !== 'string') {
     return Promise.reject(new Error('MONGODB_URI is not set. Add it in Vercel → Settings → Environment Variables.'));
   }
-  if (mongoose.connection.readyState === 1) return Promise.resolve();
-  if (mongoose.connection.readyState === 2) {
-    return new Promise((resolve) => mongoose.connection.once('open', resolve));
+  
+  // Already connected
+  if (mongoose.connection.readyState === 1) {
+    return Promise.resolve();
   }
+  
+  // Connection in progress, wait for it
+  if (mongoose.connection.readyState === 2) {
+    return mongoConnectionPromise || Promise.resolve();
+  }
+  
+  // Reuse existing connection promise if available
+  if (mongoConnectionPromise) {
+    return mongoConnectionPromise;
+  }
+  
+  // Create new connection with optimized settings for serverless
   const dns = require('dns');
   dns.setServers(['8.8.8.8', '8.8.4.4']);
-  return mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 30000,
-    connectTimeoutMS: 30000,
+  
+  mongoConnectionPromise = mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 10000, // Reduced from 30s for faster failure
+    connectTimeoutMS: 10000, // Reduced from 30s
     socketTimeoutMS: 45000,
+    maxPoolSize: 10, // Connection pool size
+    minPoolSize: 2, // Keep minimum connections alive
+    maxIdleTimeMS: 30000, // Close idle connections after 30s
     family: 4,
     retryWrites: true,
-    w: 'majority'
+    w: 'majority',
+    // Optimize for serverless
+    bufferCommands: false, // Don't buffer commands if not connected
+    bufferMaxEntries: 0 // Don't buffer commands
+  }).then(() => {
+    console.log('MongoDB connected (serverless optimized)');
+    return mongoose.connection;
+  }).catch((err) => {
+    mongoConnectionPromise = null; // Reset on error so we can retry
+    throw err;
   });
+  
+  return mongoConnectionPromise;
 }
 
 // On Vercel: ensure DB is connected before handling (no long-running process)
@@ -129,6 +160,20 @@ if (process.env.VERCEL) {
     } catch (err) {}
   });
 }
+
+// Keep-alive endpoint to prevent cold starts (call this every 5 minutes)
+app.get('/api/keepalive', async (req, res) => {
+  try {
+    await connectMongo();
+    res.json({ 
+      status: 'ok', 
+      timestamp: new Date().toISOString(),
+      dbState: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected'
+    });
+  } catch (err) {
+    res.status(503).json({ status: 'error', message: err.message });
+  }
+});
 
 // Routes
 const userRoutes = require("./routes/userRoutes");
