@@ -421,7 +421,7 @@ export default function DashboardPage() {
           <div className="dashboard-header-refresh-box">
             <span>Last updated: {formatDistanceToNow(lastUpdated, { addSuffix: true })}</span>
             <button
-              onClick={() => fetchDashboardData(false)}
+              onClick={() => fetchDashboardData()}
               disabled={isLoading || isSilentRefresh}
               type="button"
             >
@@ -439,7 +439,7 @@ export default function DashboardPage() {
           <AlertCircle className="text-red-600" size={20} />
           <p className="text-red-700">{error}</p>
           <button
-            onClick={fetchDashboardData}
+            onClick={() => fetchDashboardData()}
             className="ml-auto text-red-700 hover:text-red-900 underline text-sm"
           >
             Retry
