@@ -160,13 +160,14 @@ Both should show similar ping times if regions match.
 
 | Region | Vercel Code | MongoDB Code | Best For |
 |--------|-------------|--------------|----------|
-| **Singapore** | `sin1` | `ap-southeast-1` | **Philippines** ✅ |
+| **Hong Kong** | `hkg1` | `ap-east-1` | **Philippines** ✅ (Current) |
+| Singapore | `sin1` | `ap-southeast-1` | Philippines (alternative) |
 | US East | `iad1` | `us-east-1` | US East Coast |
 | US West | `sfo1` | `us-west-1` | US West Coast |
 | Europe | `fra1` | `eu-central-1` | Europe |
 | Tokyo | `hnd1` | `ap-northeast-1` | Japan |
 
-**For Philippines:** Use **Singapore (sin1)** - closest region! ✅
+**Current Setup:** **Hong Kong (hkg1)** - matches MongoDB free tier! ✅
 
 ---
 
