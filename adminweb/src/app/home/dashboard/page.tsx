@@ -308,10 +308,10 @@ export default function DashboardPage() {
   useEffect(() => {
     fetchDashboardData();
     
-    // Auto-refresh silently every 10 seconds for near real-time updates
+    // Auto-refresh silently every 5 seconds for near real-time updates
     const interval = setInterval(() => {
       fetchDashboardData(true); // Silent refresh
-    }, 10000); // 10 seconds - faster updates
+    }, 5000); // 5 seconds - near real-time updates
     
     return () => clearInterval(interval);
   }, []);

@@ -419,11 +419,11 @@ export default function HistoryPage() {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh every 10 seconds (silent background update for near real-time)
+  // Auto-refresh every 5 seconds (silent background update for near real-time)
   useEffect(() => {
     const interval = setInterval(() => {
       fetchData(true); // Silent refresh - no loading spinner
-    }, 10000); // 10 seconds - faster updates
+    }, 5000); // 5 seconds - near real-time updates
 
     return () => clearInterval(interval);
   }, [fetchData]);
@@ -503,7 +503,7 @@ export default function HistoryPage() {
               </div>
               <div className="mt-4">
                 <button
-                  onClick={fetchData}
+                  onClick={() => fetchData()}
                   className="bg-red-100 px-3 py-2 rounded-md text-sm font-medium text-red-800 hover:bg-red-200 transition-colors"
                 >
                   Try again
