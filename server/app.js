@@ -130,13 +130,28 @@ function connectMongo() {
 
 // On Vercel: ensure DB is connected before handling (no long-running process)
 if (process.env.VERCEL) {
-  app.use((req, res, next) => {
-    connectMongo()
-      .then(() => next())
-      .catch((err) => {
-        console.error('MongoDB connect error:', err);
-        res.status(503).json({ message: 'Database unavailable', error: err.message });
-      });
+  app.use(async (req, res, next) => {
+    try {
+      await connectMongo();
+      // Double-check connection is ready before proceeding
+      if (mongoose.connection.readyState !== 1) {
+        // Wait for connection if it's still connecting
+        await new Promise((resolve, reject) => {
+          if (mongoose.connection.readyState === 1) {
+            resolve();
+          } else {
+            mongoose.connection.once('connected', resolve);
+            mongoose.connection.once('error', reject);
+            // Timeout after 10 seconds
+            setTimeout(() => reject(new Error('Connection timeout')), 10000);
+          }
+        });
+      }
+      next();
+    } catch (err) {
+      console.error('MongoDB connect error:', err);
+      res.status(503).json({ message: 'Database unavailable', error: err.message });
+    }
   });
 } else {
   connectMongo()
