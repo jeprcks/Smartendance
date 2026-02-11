@@ -114,32 +114,12 @@ function connectMongo() {
     family: 4,
     retryWrites: true,
     w: 'majority',
-    // Enable buffering for serverless to prevent errors
-    bufferCommands: true, // Buffer commands until connected
-    bufferMaxEntries: 50 // Allow some buffering
+    // Optimize for serverless
+    bufferCommands: false, // Don't buffer commands if not connected
+    bufferMaxEntries: 0 // Don't buffer commands
   }).then(() => {
-    // Ensure connection is fully ready
-    return new Promise((resolve, reject) => {
-      const checkConnection = () => {
-        if (mongoose.connection.readyState === 1) {
-          console.log('MongoDB connected (serverless optimized)');
-          resolve(mongoose.connection);
-        } else if (mongoose.connection.readyState === 0) {
-          // Not connected, wait for connection event
-          mongoose.connection.once('connected', () => {
-            console.log('MongoDB connected (serverless optimized)');
-            resolve(mongoose.connection);
-          });
-          mongoose.connection.once('error', reject);
-          // Timeout after 10 seconds
-          setTimeout(() => reject(new Error('MongoDB connection timeout')), 10000);
-        } else {
-          // Connecting (state 2), wait a bit and check again
-          setTimeout(checkConnection, 100);
-        }
-      };
-      checkConnection();
-    });
+    console.log('MongoDB connected (serverless optimized)');
+    return mongoose.connection;
   }).catch((err) => {
     mongoConnectionPromise = null; // Reset on error so we can retry
     throw err;
