@@ -42,8 +42,8 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
       <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}&apos;s Attendance History</h2>
-            <p className="text-sm text-gray-500">Detailed attendance records and statistics</p>
+            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}&apos;s </h2>
+            <p className="text-sm text-gray-500">Detailed attendance records and statistics</p>Attendance History
           </div>
           <div className="flex items-center gap-2">
             <button

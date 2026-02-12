@@ -66,7 +66,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center navbar-row">
           {/* Logo & brand */}
           <div className="flex items-center min-w-0 flex-shrink-0">
-            <Link href="/home/dashboard" className="flex items-center gap-1.5 min-w-0 group">
+            <Link href="/home/dashboard" className="flex items-center gap-2.5 min-w-0 group">
               <span className="navbar-logo-wrap">
                 <img
                   src="/logo/backgroundlogo.png"
