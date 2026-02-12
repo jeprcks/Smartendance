@@ -15,6 +15,15 @@ export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const token = request.cookies.get('teacher_token')?.value;
 
+    // Skip middleware for static files and API routes
+    if (
+      pathname.startsWith('/_next') ||
+      pathname.startsWith('/api') ||
+      pathname.match(/\.(ico|png|jpg|jpeg|svg|gif|webp|css|js|woff|woff2|ttf|eot)$/)
+    ) {
+      return NextResponse.next();
+    }
+
     // Login page - if already logged in, redirect to dashboard
     if (pathname === '/login') {
       if (token) {
