@@ -15,6 +15,7 @@ const allowedOriginsList = [
   "https://umapadelementaryschool.vercel.app",
   "https://smartendance-api.vercel.app",
   "https://smartendance-lilac.vercel.app",
+  "https://umapad-teacherportal.vercel.app",
 ];
 
 function isOriginAllowed(origin) {
