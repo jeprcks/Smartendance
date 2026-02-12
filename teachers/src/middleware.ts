@@ -4,6 +4,7 @@ import type { NextRequest } from 'next/server';
 const PROTECTED_PATHS = ['/dashboard', '/attendance', '/schedule', '/students', '/reports'];
 
 function isProtected(pathname: string): boolean {
+  // Check if path matches protected routes (including nested routes)
   return PROTECTED_PATHS.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
@@ -43,5 +44,15 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/((?!_next|favicon|api).*)'],
+  matcher: [
+    /*
+     * Match all request paths except for the ones starting with:
+     * - api (API routes)
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - favicon.ico (favicon file)
+     * - public files (public folder)
+     */
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)).*)',
+  ],
 };
