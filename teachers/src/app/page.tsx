@@ -1,4 +1,7 @@
+'use client';
+
 // Root page - middleware handles redirects to /login or /dashboard
+// This component is just a fallback in case middleware doesn't catch it
 export default function Home() {
   return (
     <div className="flex min-h-screen items-center justify-center" style={{ background: 'var(--background)' }}>
