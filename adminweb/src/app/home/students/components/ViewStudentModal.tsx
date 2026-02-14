@@ -129,8 +129,8 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 (student.status ?? '') === 'Graduated'
                   ? 'bg-gray-100 text-gray-600 ring-1 ring-gray-200/50'
                   : student.gender === 'Male'
-                    ? 'bg-green-50 text-green-700 ring-1 ring-green-200/50'
-                    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/50'
+                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/50'
+                    : 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/50'
               }`}>
                 {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}
               </span>
@@ -240,7 +240,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </div>
               <div>
                 <p className="text-sm text-gray-500">Gender</p>
-                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}</p>
+                <p className={`text-base font-medium ${(student.status ?? '') === 'Graduated' ? 'text-gray-900' : student.gender === 'Male' ? 'text-blue-700' : 'text-pink-700'}`}>{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Shift</p>

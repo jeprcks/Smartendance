@@ -192,9 +192,15 @@ const getTeacherByTeacherId = async (req, res) => {
             return res.status(404).json({ error: "Teacher not found" });
         }
 
+        // Include plainPassword if it exists (for profile display)
+        const teacherData = teacher.toObject();
+        if (teacherData.plainPassword) {
+            // plainPassword is already included since we only excluded 'password'
+        }
+
         res.status(200).json({
             success: true,
-            teacher
+            teacher: teacherData
         });
     } catch (error) {
         console.error('Error getting teacher by teacherId:', error);

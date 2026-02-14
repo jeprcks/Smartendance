@@ -263,20 +263,4 @@ a:hover .navbar-teacher-brand {
 .animate-delay-7 { animation-delay: 0.35s; }
 .animate-delay-8 { animation-delay: 0.4s; }
 
-/* Watermark logo background */
-body::before {
-  content: "";
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 600px;
-  height: 600px;
-  background-image: url("/logo/umapadlogo.png");
-  background-size: contain;
-  background-repeat: no-repeat;
-  background-position: center;
-  opacity: 0.06;
-  pointer-events: none;
-  z-index: 0;
-}
+/* Watermark only on login page via <img> (sharp, same as adminweb). No body::before to avoid blur. */

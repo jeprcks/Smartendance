@@ -511,7 +511,7 @@ export default function StudentsPage() {
                         (student.status ?? '') === 'Graduated'
                           ? 'bg-indigo-50 text-indigo-700 ring-indigo-200/50'
                           : student.gender === 'Male'
-                            ? 'bg-green-50 text-green-700 ring-green-200/50'
+                            ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
                             : 'bg-pink-50 text-pink-700 ring-pink-200/50'
                       } transition-colors duration-200`}>
                         {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}

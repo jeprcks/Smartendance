@@ -71,10 +71,30 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--background)' }}>
-      <div className="w-full max-w-md relative z-10">
+    <div className="min-h-screen flex items-center justify-center px-4 relative" style={{ background: 'var(--background)' }}>
+      {/* Watermark layer - same as adminweb: img for sharpness, 700px, opacity 0.12 */}
+      <div
+        style={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 0.12,
+          pointerEvents: 'none',
+          zIndex: 0,
+        }}
+      >
+        <img
+          src="/logo/backgroundlogo.png"
+          alt=""
+          aria-hidden
+          className="max-w-full max-h-full w-[700px] h-[700px] object-contain"
+        />
+      </div>
+      <div className="w-full max-w-sm relative z-10">
         <div
-          className="rounded-2xl p-8 border shadow-lg"
+          className="rounded-2xl p-6 border shadow-lg"
           style={{
             background: 'var(--surface)',
             borderColor: 'var(--border)',
@@ -82,7 +102,7 @@ export default function LoginPage() {
           }}
         >
           <header
-            className="text-center mb-8 rounded-t-xl -mx-8 -mt-8 px-8 pt-8 pb-6"
+            className="text-center mb-6 rounded-t-xl -mx-6 -mt-6 px-6 pt-6 pb-5"
             style={{
               background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
               boxShadow: '0 2px 8px rgba(46, 125, 50, 0.2)',
@@ -233,10 +253,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm" style={{ color: 'var(--muted-foreground)' }}>
-            Don&apos;t have an account?{' '}
-            <span style={{ color: 'var(--muted-foreground)' }}>Sign up feature coming soon</span>
-          </p>
         </div>
       </div>
     </div>

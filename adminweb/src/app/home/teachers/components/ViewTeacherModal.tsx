@@ -91,7 +91,7 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
               </div>
               <div>
                 <p className="text-sm text-gray-500">Gender</p>
-                <p className="text-base text-gray-900">{teacher.gender || 'Not specified'}</p>
+                <p className={`text-base font-medium ${teacher.gender === 'Male' ? 'text-blue-700' : teacher.gender === 'Female' ? 'text-pink-700' : 'text-gray-900'}`}>{teacher.gender || 'Not specified'}</p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Status</p>

@@ -18,6 +18,15 @@ export default function TeacherLayout({
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [teacherId, setTeacherId] = useState('');
   const [teacherEmail, setTeacherEmail] = useState('');
+  const [teacherProfilePicture, setTeacherProfilePicture] = useState<string | null>(null);
+
+  const refreshTeacherDisplay = () => {
+    const data = getTeacherData();
+    setTeacherName(data.teacherName ?? '');
+    setTeacherId(data.teacherId ?? '');
+    setTeacherEmail(data.teacherEmail ?? '');
+    setTeacherProfilePicture(data.profilePicture ?? null);
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -26,10 +35,14 @@ export default function TeacherLayout({
       router.push('/login');
       return;
     }
-    setTeacherName(data.teacherName ?? '');
-    setTeacherId(data.teacherId ?? '');
-    setTeacherEmail(data.teacherEmail ?? '');
+    refreshTeacherDisplay();
   }, [router]);
+
+  useEffect(() => {
+    const handler = () => refreshTeacherDisplay();
+    window.addEventListener('teacher-profile-updated', handler);
+    return () => window.removeEventListener('teacher-profile-updated', handler);
+  }, []);
 
   if (!mounted) {
     return (
@@ -48,14 +61,15 @@ export default function TeacherLayout({
         teacherName={teacherName}
         teacherId={teacherId}
         teacherEmail={teacherEmail}
+        profilePicture={teacherProfilePicture}
         onClose={() => setSidebarOpen(false)}
         isOpen={sidebarOpen}
         collapsed={sidebarCollapsed}
         onToggleCollapse={() => setSidebarCollapsed((p) => !p)}
       />
       <div className="flex-1 flex flex-col min-w-0">
-        <Navbar />
-        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
+        <Navbar onOpenMenu={() => setSidebarOpen(true)} />
+        <main className="flex-1 p-4 md:p-6 overflow-auto min-h-0">{children}</main>
       </div>
     </div>
   );

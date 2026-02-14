@@ -42,6 +42,7 @@ export function getTeacherData(): {
   teacherEmail: string | null;
   teacherSubject: string | null;
   teacherRole: string | null;
+  profilePicture: string | null;
 } {
   if (typeof window === 'undefined') {
     return {
@@ -51,6 +52,7 @@ export function getTeacherData(): {
       teacherEmail: null,
       teacherSubject: null,
       teacherRole: null,
+      profilePicture: null,
     };
   }
   return {
@@ -60,7 +62,29 @@ export function getTeacherData(): {
     teacherEmail: localStorage.getItem(TEACHER_EMAIL),
     teacherSubject: localStorage.getItem(TEACHER_SUBJECT),
     teacherRole: localStorage.getItem(TEACHER_ROLE),
+    profilePicture: localStorage.getItem('teacher_profile_picture'),
   };
+}
+
+/** Update only display data in localStorage (e.g. after profile edit). Dispatches 'teacher-profile-updated' so layout/sidebar can refresh. */
+export function updateTeacherDisplay(updates: {
+  teacherName?: string;
+  teacherEmail?: string;
+  teacherSubject?: string;
+  profilePicture?: string | null;
+}): void {
+  if (typeof window === 'undefined') return;
+  if (updates.teacherName !== undefined) localStorage.setItem(TEACHER_NAME, updates.teacherName);
+  if (updates.teacherEmail !== undefined) localStorage.setItem(TEACHER_EMAIL, updates.teacherEmail);
+  if (updates.teacherSubject !== undefined) localStorage.setItem(TEACHER_SUBJECT, updates.teacherSubject);
+  if (updates.profilePicture !== undefined) {
+    if (updates.profilePicture === null || updates.profilePicture === '') {
+          localStorage.removeItem('teacher_profile_picture');
+        } else {
+          localStorage.setItem('teacher_profile_picture', updates.profilePicture);
+        }
+  }
+  window.dispatchEvent(new CustomEvent('teacher-profile-updated'));
 }
 
 export function removeToken(): void {
@@ -71,6 +95,7 @@ export function removeToken(): void {
   localStorage.removeItem(TEACHER_EMAIL);
   localStorage.removeItem(TEACHER_SUBJECT);
   localStorage.removeItem(TEACHER_ROLE);
+  localStorage.removeItem('teacher_profile_picture');
   document.cookie = 'teacher_token=;path=/;expires=Thu, 01 Jan 1970 00:00:01 GMT';
 }
 

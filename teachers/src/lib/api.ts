@@ -48,12 +48,12 @@ export async function teacherLogin(
   return data;
 }
 
-// Get teacher profile - GET /api/teachers/:teacherId
+// Get teacher profile - GET /api/teachers/teacher-id/:teacherId
 export async function getTeacherProfile(
   teacherId: string,
   token: string
 ): Promise<Record<string, unknown>> {
-  const res = await fetch(`${API_BASE}/teachers/${teacherId}`, {
+  const res = await fetch(`${API_BASE}/teachers/teacher-id/${encodeURIComponent(teacherId)}`, {
     headers: getHeaders(token),
   });
   const data = await res.json();
@@ -61,6 +61,67 @@ export async function getTeacherProfile(
     throw new Error((data.error as string) ?? 'Failed to fetch teacher profile');
   }
   return (data.teacher ?? data) as Record<string, unknown>;
+}
+
+// Update teacher profile - PUT /api/teachers/:id (needs MongoDB _id)
+export async function updateTeacherProfile({
+  teacherId,
+  token,
+  updates,
+}: {
+  teacherId: string;
+  token: string;
+  updates: Record<string, unknown>;
+}): Promise<Record<string, unknown>> {
+  // First get the teacher to get the MongoDB _id
+  const profile = await getTeacherProfile(teacherId, token);
+  const mongoId = String(profile._id ?? profile.id ?? '');
+  
+  if (!mongoId) {
+    throw new Error('Teacher ID not found');
+  }
+
+  const res = await fetch(`${API_BASE}/teachers/${mongoId}`, {
+    method: 'PUT',
+    headers: getHeaders(token),
+    body: JSON.stringify(updates),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error((data.error as string) ?? 'Failed to update teacher profile');
+  }
+  return (data.teacher ?? data) as Record<string, unknown>;
+}
+
+// Change teacher password - PUT /api/teachers/:id/change-password (needs MongoDB _id)
+export async function changeTeacherPassword({
+  teacherId,
+  token,
+  currentPassword,
+  newPassword,
+}: {
+  teacherId: string;
+  token: string;
+  currentPassword: string;
+  newPassword: string;
+}): Promise<void> {
+  // First get the teacher to get the MongoDB _id
+  const profile = await getTeacherProfile(teacherId, token);
+  const mongoId = String(profile._id ?? profile.id ?? '');
+  
+  if (!mongoId) {
+    throw new Error('Teacher ID not found');
+  }
+
+  const res = await fetch(`${API_BASE}/teachers/${mongoId}/change-password`, {
+    method: 'PUT',
+    headers: getHeaders(token),
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error((data.error as string) ?? 'Failed to change password');
+  }
 }
 
 // Get attendance records - GET /api/history

@@ -7,6 +7,7 @@ import {
   getTeacherSchedule,
 } from '../../../lib/api';
 import PageHeader from '../../../components/PageHeader';
+import { printWeeklyBreakdown, printClassPerformance } from './components/reportprint';
 
 const ReportsIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -473,8 +474,22 @@ export default function ReportsPage() {
     downloadCSV(csv, `class-report-${date}.csv`);
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrintWeeklyBreakdown = () => {
+    const week = getWeekRange();
+    const weeklyRecords = filterRecordsByDateRange(records, week.start, week.end);
+    const weeklyBreakdownRows = calcWeeklyBreakdown(weeklyRecords, week.days);
+    printWeeklyBreakdown(weeklyBreakdownRows, `Breakdown by day · ${week.label}`);
+  };
+
+  const handlePrintMonthly = () => {
+    const month = getMonthRange();
+    const monthlyRecords = filterRecordsByDateRange(records, month.start, month.end);
+    const monthlyPerf = calcClassPerformance(monthlyRecords);
+    printClassPerformance(monthlyPerf, 'Monthly Class Performance Summary', month.label);
+  };
+
+  const handlePrintAllTime = () => {
+    printClassPerformance(classPerf, 'Class Performance Summary (All time)', 'All records loaded');
   };
 
   if (loading) {
@@ -570,19 +585,19 @@ export default function ReportsPage() {
             <WeeklyBreakdownTable
               rows={weeklyBreakdownRows}
               periodLabel={`Breakdown by day · ${week.label}`}
-              onPrint={handlePrint}
+              onPrint={handlePrintWeeklyBreakdown}
             />
             <ClassPerfTable
               title="Monthly Class Performance Summary"
               periodLabel={month.label}
               perf={monthlyPerf}
-              onPrint={handlePrint}
+              onPrint={handlePrintMonthly}
             />
             <ClassPerfTable
               title="Class Performance Summary (All time)"
               periodLabel="All records loaded"
               perf={classPerf}
-              onPrint={handlePrint}
+              onPrint={handlePrintAllTime}
             />
           </>
         );

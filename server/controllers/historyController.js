@@ -448,7 +448,8 @@ const getStudentAttendanceHistory = async (req, res) => {
                 name: student.fullName,
                 gradeLevel: student.gradeLevel,
                 section: student.section,
-                shift: student.shift
+                shift: student.shift,
+                gender: student.gender
             },
             stats,
             records

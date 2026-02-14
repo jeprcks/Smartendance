@@ -308,10 +308,6 @@ export default function ScheduleDetailsPage({
       </div>
 
       <div className="animate-fade-in-up animate-delay-3">
-        <label className="flex items-center gap-2 text-sm font-bold mb-3" style={{ color: 'var(--primary-dark)' }}>
-          <SearchIcon />
-          <span>Search Students</span>
-        </label>
         <div className="relative max-w-md">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted-foreground)' }}>
             <SearchIcon />

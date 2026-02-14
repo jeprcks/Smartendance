@@ -151,7 +151,9 @@ export default function ViewScheduleModal({ isOpen, onClose, schedule }: ViewSch
                       <td className="px-4 py-2 text-sm text-gray-700">{student.fullName}</td>
                       <td className="px-4 py-2 text-sm text-gray-700">{student.gradeLevel}</td>
                       <td className="px-4 py-2 text-sm text-gray-700">{student.section}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{student.gender}</td>
+                      <td className="px-4 py-2 text-sm">
+                        <span className={student.gender === 'Male' ? 'text-blue-700 font-medium' : 'text-gray-700'}>{student.gender}</span>
+                      </td>
                     </tr>
                   ))}
                 </tbody>

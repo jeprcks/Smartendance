@@ -357,8 +357,8 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
               <p className="text-gray-600 mb-3 text-center">{student.studentId}</p>
               <span className={`px-5 py-1.5 rounded-full text-sm font-medium ${
                 student.gender === 'Male' 
-                  ? 'bg-green-50 text-green-700 ring-1 ring-green-200/60' 
-                  : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200/60'
+                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/60' 
+                  : 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/60'
               }`}>
                 {student.gender}
               </span>

@@ -49,11 +49,16 @@
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
-  transition: background-color 0.2s;
+  transition: background-color 0.2s, transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.btn-primary:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .nav-item {
@@ -68,27 +73,39 @@
 .card {
   background-color: var(--background);
   border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: 0;
   border-radius: 0.5rem;
   padding: 1rem;
-  box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 3px rgba(46, 125, 50, 0.08);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease, outline-color 0.2s ease, background-color 0.2s ease;
 }
 
 .card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(46, 125, 50, 0.15);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
+  outline-color: var(--primary-light);
+  border-color: var(--primary-light);
 }
 
 .input {
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   padding: 0.5rem;
-  transition: border-color 0.2s;
+  background: var(--surface);
+  color: var(--foreground);
+  transition: border-color 0.2s, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.input:hover:not(:focus) {
+  border-color: var(--primary-light);
 }
 
 .input:focus {
   border-color: var(--primary);
   outline: none;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
+  transform: translateY(-1px);
 }
 
 .table {
@@ -110,9 +127,14 @@
   border-bottom: 1px solid var(--border);
 }
 
-.table tr:hover {
+.table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
   background-color: var(--surface);
-  transition: background-color 0.2s ease;
+  transform: translateX(4px);
+  box-shadow: -4px 0 0 0 var(--primary);
 }
 
 /* Remove dark mode for consistent branding */
@@ -134,6 +156,8 @@
   border-radius: 0.5rem;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
   border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: 0;
 }
 
 .page-title {
@@ -156,6 +180,8 @@
   border-radius: var(--radius);
   box-shadow: 0 4px 14px rgba(46, 125, 50, 0.25);
   border: 1px solid rgba(255, 255, 255, 0.15);
+  outline: 1px solid var(--primary-dark);
+  outline-offset: 0;
   overflow: hidden;
 }
 
@@ -435,14 +461,24 @@
   box-shadow: 0 2px 8px rgba(211, 47, 21, 0.35);
 }
 
-/* Section Styles */
+/* Section Styles – match teacher portal card hover */
 .content-section {
   background: white;
   border-radius: 0.5rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 1px 3px rgba(46, 125, 50, 0.08);
   border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: 0;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease, outline-color 0.2s ease, background-color 0.2s ease;
+}
+
+.content-section:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
+  border-color: var(--primary-light);
+  outline-color: var(--primary-light);
 }
 
 /* Dashboard Cards */
@@ -471,20 +507,24 @@
   border-radius: 0.5rem;
   padding: 1.5rem;
   border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: 0;
   transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), 
               box-shadow 0.3s ease, 
               background-color 0.2s ease, 
-              border-color 0.2s ease;
+              border-color 0.2s ease,
+              outline-color 0.2s ease;
   box-shadow: 0 2px 4px rgba(46, 125, 50, 0.1);
   opacity: 0;
   animation: dashboard-card-enter 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .stat-card:hover {
-  transform: translateY(-6px) scale(1.02);
-  background-color: var(--secondary);
-  border-color: var(--primary);
-  box-shadow: 0 8px 20px rgba(46, 125, 50, 0.3);
+  transform: translateY(-2px);
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-color: var(--primary-light);
+  outline-color: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
 }
 
 @keyframes dashboard-section-enter {
@@ -503,12 +543,17 @@
 .dashboard-section-animate {
   opacity: 0;
   animation: dashboard-section-enter 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: 0;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.2s ease, outline-color 0.2s ease;
 }
 
 .dashboard-section-animate:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 8px 24px rgba(46, 125, 50, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
+  border-color: var(--primary-light);
+  outline-color: var(--primary-light);
 }
 
 /* Table Enhancements */
@@ -516,6 +561,8 @@
   overflow-x: auto;
   border-radius: 0.5rem;
   border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+  outline-offset: 0;
 }
 
 .data-table {
@@ -539,8 +586,14 @@
   color: var(--foreground);
 }
 
-.data-table tr:hover {
+.data-table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.data-table tbody tr:hover {
   background-color: var(--surface);
+  transform: translateX(4px);
+  box-shadow: -4px 0 0 0 var(--primary);
 }
 
 /* Form Controls */
@@ -556,16 +609,23 @@
   border: 1px solid var(--border);
   border-radius: 0.375rem;
   font-size: 1rem;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background: var(--surface);
+  color: var(--foreground);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.input-field:hover:not(:focus) {
+  border-color: var(--primary-light);
 }
 
 .input-field:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 2px rgba(46, 125, 50, 0.1);
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
   outline: none;
+  transform: translateY(-1px);
 }
 
-/* Buttons */
+/* Buttons – match teacher portal hover/active */
 .btn {
   padding: 0.75rem 1.5rem;
   border-radius: 0.375rem;
@@ -578,14 +638,23 @@
   gap: 0.5rem;
 }
 
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: white;
   border: none;
 }
 
-.btn-primary:hover {
+.btn-primary:hover:not(:disabled) {
   background-color: var(--primary-dark);
+  transform: translateY(-1px);
 }
 
 .btn-secondary {
@@ -594,12 +663,22 @@
   border: 1px solid var(--primary);
 }
 
-.btn-secondary:hover {
+.btn-secondary:hover:not(:disabled) {
   background-color: var(--surface);
+  transform: translateY(-1px);
 }
 
 body {
   background: var(--surface);
+}
+
+/* Global link hover – match teacher portal */
+a {
+  transition: all 0.2s ease;
+}
+
+a:hover {
+  transform: translateX(2px);
 }
 
 @theme inline {
@@ -771,161 +850,4 @@ body::before {
   }
 }
 
-/* Login page – theme and watermark */
-.login-page {
-  min-height: 100vh;
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-  background-color: #f7fbf7;
-  overflow: hidden;
-}
-
-/* Login background logo removed - now using inline styles in page.tsx for simplicity */
-
-.login-card {
-  position: relative;
-  z-index: 10;
-  width: 100%;
-  max-width: 22rem;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-lg);
-  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.15), 0 0 0 1px rgba(255, 255, 255, 0.5);
-  overflow: hidden;
-  animation: dashboard-card-enter 0.4s ease-out forwards;
-}
-
-.login-card-header {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-  padding: 0.875rem 1.25rem;
-  text-align: center;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.2);
-}
-
-.login-card-header h1 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: white;
-  margin: 0 0 0.125rem 0;
-  letter-spacing: -0.02em;
-}
-
-.login-card-header p {
-  font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.9);
-  margin: 0;
-}
-
-.login-card-body {
-  padding: 1.25rem 1.5rem;
-}
-
-.login-error {
-  margin-bottom: 1rem;
-  padding: 0.75rem 1rem;
-  background: rgba(232, 81, 0, 0.1);
-  border-left: 4px solid var(--error);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  font-size: 0.875rem;
-  color: var(--error);
-}
-
-.login-form .form-control {
-  margin-bottom: 1.25rem;
-}
-
-.login-form label {
-  display: block;
-  font-size: 0.875rem;
-  font-weight: 500;
-  color: var(--foreground);
-  margin-bottom: 0.375rem;
-}
-
-.login-form .input-field {
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.login-password-wrap {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-
-.login-password-input {
-  padding-right: 2.75rem;
-}
-
-.login-password-toggle {
-  position: absolute;
-  right: 0.5rem;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: var(--muted-foreground);
-  cursor: pointer;
-  border-radius: var(--radius-sm);
-  transition: color 0.2s ease, background-color 0.2s ease;
-}
-
-.login-password-toggle:hover {
-  color: var(--primary);
-  background: var(--muted);
-}
-
-.login-form-options {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
-}
-
-.login-remember {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.875rem;
-  line-height: 1;
-  color: var(--muted-foreground);
-  cursor: pointer;
-}
-
-.login-remember input {
-  width: 1rem;
-  height: 1rem;
-  margin: 0;
-  flex-shrink: 0;
-  accent-color: var(--primary);
-  cursor: pointer;
-  vertical-align: middle;
-}
-
-.login-submit {
-  width: 100%;
-  padding: 0.75rem 1.5rem;
-  font-size: 1rem;
-  border: none;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-}
-
-.login-submit:disabled {
-  opacity: 0.75;
-  cursor: not-allowed;
-}
+/* Login page uses Tailwind utilities + Lucide icons in src/app/login/page.tsx */
