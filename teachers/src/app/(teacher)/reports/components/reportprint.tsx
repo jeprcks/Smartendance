@@ -13,7 +13,7 @@ interface WeeklyBreakdownRow {
   total: number;
 }
 
-interface ClassPerformanceRow {
+export interface ClassPerformanceRow {
   gradeLevel: unknown;
   section: unknown;
   subject: unknown;

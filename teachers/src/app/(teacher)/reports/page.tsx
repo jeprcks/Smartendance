@@ -7,7 +7,7 @@ import {
   getTeacherSchedule,
 } from '../../../lib/api';
 import PageHeader from '../../../components/PageHeader';
-import { printWeeklyBreakdown, printClassPerformance } from './components/reportprint';
+import { printWeeklyBreakdown, printClassPerformance, type ClassPerformanceRow } from './components/reportprint';
 
 const ReportsIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -66,20 +66,8 @@ function filterRecordsBySchedules(
 
 function calcClassPerformance(
   records: Record<string, unknown>[]
-): Record<string, unknown>[] {
-  const byClass: Record<
-    string,
-    {
-      gradeLevel: unknown;
-      section: unknown;
-      subject: unknown;
-      present: number;
-      absent: number;
-      late: number;
-      cutting: number;
-      total: number;
-    }
-  > = {};
+): ClassPerformanceRow[] {
+  const byClass: Record<string, ClassPerformanceRow> = {};
   for (const r of records) {
     const key = `${r.gradeLevel}-${r.section}-${r.subject}`;
     if (!byClass[key]) {
@@ -295,7 +283,7 @@ function ClassPerfTable({
 }: {
   title: string;
   periodLabel: string;
-  perf: Record<string, unknown>[];
+  perf: ClassPerformanceRow[];
   onPrint?: () => void;
 }) {
   return (
@@ -379,7 +367,7 @@ export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [records, setRecords] = useState<Record<string, unknown>[]>([]);
-  const [classPerf, setClassPerf] = useState<Record<string, unknown>[]>([]);
+  const [classPerf, setClassPerf] = useState<ClassPerformanceRow[]>([]);
 
   const load = async () => {
     const token = getToken();
