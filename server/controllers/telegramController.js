@@ -323,13 +323,17 @@ const webhookHandler = async (req, res) => {
       return res.sendStatus(400);
     }
 
-    // Respond immediately - Telegram expects fast 200 response
-    res.sendStatus(200);
-
-    // Process update async (triggers command handlers)
-    telegramService.processUpdate(update).catch(err => {
+    // Process update - triggers command handlers (onText callbacks).
+    // node-telegram-bot-api processUpdate returns immediately; handlers run async.
+    // On Vercel serverless, we must wait for handlers (DB + sendMessage) to complete
+    // before the function exits. Add delay so /history, /studentinfo have time to finish.
+    try {
+      telegramService.processUpdate(update);
+      await new Promise(r => setTimeout(r, 8000)); // 8s for handlers to complete
+    } catch (err) {
       console.error('Telegram webhook processUpdate error:', err);
-    });
+    }
+    res.sendStatus(200);
   } catch (err) {
     console.error('Telegram webhook error:', err);
     if (!res.headersSent) res.sendStatus(200); // 200 to avoid Telegram retries

@@ -65,7 +65,7 @@ I can send you notifications about student attendance.
 
 That's it! You'll start receiving attendance updates.
       `.trim();
-      this.bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
+      this.bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram /start error:', err.message));
     });
 
     // /mychatid command
@@ -85,7 +85,7 @@ That's it! You'll start receiving attendance updates.
 
 ✅ Once added, you'll receive attendance notifications here!
       `.trim();
-      this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram /mychatid error:', err.message));
     });
 
     // /history command
@@ -237,7 +237,7 @@ ${statusEmoji} *Status:* ${student.status}
 3. They will add it to your student's record
 4. You'll receive attendance updates automatically!
       `.trim();
-      this.bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
+      this.bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram /help error:', err.message));
     });
 
     // Handle other messages
@@ -245,7 +245,7 @@ ${statusEmoji} *Status:* ${student.status}
       if (msg.text?.startsWith('/')) return;
       const chatId = msg.chat.id;
       const message = `👋 Hi! I'm the Smartendance notification bot.\n\nYour Chat ID: \`${chatId}\`\n\n📌 *Quick Commands:*\n/mychatid - Get your Chat ID\n/studentinfo - View student details\n/history - View attendance history\n/help - See all commands`;
-      this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
+      this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram message handler error:', err.message));
     });
   }
 
