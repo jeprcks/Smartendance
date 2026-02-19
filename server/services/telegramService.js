@@ -32,7 +32,10 @@ class TelegramService {
    * @returns {Promise<void>}
    */
   async handleWebhookUpdate(update) {
-    if (!this.bot) return;
+    if (!this.bot) {
+      console.error('[Telegram] Bot not initialized - TELEGRAM_BOT_TOKEN missing in environment?');
+      return 'BOT_NOT_CONFIGURED';
+    }
     const msg = update?.message;
     if (!msg?.chat?.id) return;
     const chatId = msg.chat.id;

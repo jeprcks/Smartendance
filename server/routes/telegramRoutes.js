@@ -18,6 +18,16 @@ router.get('/webhook', (req, res) => {
   res.json({ ok: true, message: 'Telegram webhook endpoint. Send POST from Telegram.' });
 });
 
+// Diagnostic: check if bot is configured (TELEGRAM_BOT_TOKEN set on Vercel)
+router.get('/status', (req, res) => {
+  const telegramService = require('../services/telegramService');
+  res.json({
+    ok: true,
+    botConfigured: !!telegramService.bot,
+    hasToken: !!process.env.TELEGRAM_BOT_TOKEN,
+  });
+});
+
 // Send message to a specific chat ID
 router.post('/send', sendMessage);
 

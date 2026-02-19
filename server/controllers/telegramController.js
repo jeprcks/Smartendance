@@ -331,7 +331,10 @@ const webhookHandler = async (req, res) => {
       }
     }
 
-    await telegramService.handleWebhookUpdate(update);
+    const result = await telegramService.handleWebhookUpdate(update);
+    if (result === 'BOT_NOT_CONFIGURED') {
+      console.error('[Telegram webhook] TELEGRAM_BOT_TOKEN not set in Vercel env - add it in Settings > Environment Variables');
+    }
     res.sendStatus(200);
   } catch (err) {
     console.error('Telegram webhook error:', err);
