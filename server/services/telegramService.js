@@ -8,23 +8,16 @@ class TelegramService {
     
     if (this.botToken) {
       try {
-        // Only one instance per bot token can use polling (getUpdates). On Railway we disable
-        // polling so the API can still send messages; run one instance with
-        // TELEGRAM_POLLING_ENABLED=true (e.g. local) to receive /start, /mychatid, etc.
-        const polling = process.env.TELEGRAM_POLLING_ENABLED === 'true';
-        this.bot = new TelegramBot(this.botToken, { polling });
-        console.log('Telegram bot initialized successfully' + (polling ? ' (polling enabled)' : ' (polling disabled, send-only)'));
-        console.log('Bot token:', this.botToken.substring(0, 15) + '...');
+        // No polling - webhook mode on Vercel (POST /api/telegram/webhook receives updates)
+        this.bot = new TelegramBot(this.botToken, { polling: false });
+        this.setupCommands();
+        console.log('Telegram bot initialized (webhook mode)');
         
-        // Test the bot immediately
         this.bot.getMe().then(botInfo => {
           console.log('Bot info:', botInfo.username);
         }).catch(err => {
           console.error('Bot verification failed:', err.message);
         });
-
-        // Set up command handlers
-        this.setupCommands();
       } catch (error) {
         console.error('Failed to initialize Telegram bot:', error.message);
       }
@@ -34,7 +27,16 @@ class TelegramService {
   }
 
   /**
-   * Set up bot command handlers
+   * Process incoming webhook update (triggers command handlers)
+   * @param {object} update - Telegram update object from webhook POST body
+   */
+  processUpdate(update) {
+    if (!this.bot) return Promise.resolve();
+    return Promise.resolve(this.bot.processUpdate(update));
+  }
+
+  /**
+   * Set up bot command handlers (triggered via webhook processUpdate)
    */
   setupCommands() {
     if (!this.bot) return;
@@ -42,8 +44,7 @@ class TelegramService {
     // /start command
     this.bot.onText(/\/start/, (msg) => {
       const chatId = msg.chat.id;
-      const firstName = msg.from.first_name || 'there';
-      
+      const firstName = msg.from?.first_name || 'there';
       const welcomeMessage = `
 👋 Welcome to *Smartendance Bot*, ${firstName}!
 
@@ -63,20 +64,14 @@ I can send you notifications about student attendance.
 3. They will add it to your student's record
 
 That's it! You'll start receiving attendance updates.
-
-💡 *Tips:*
-• Use /studentinfo to view student details
-• Use /history to see attendance records
       `.trim();
-
       this.bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' });
     });
 
     // /mychatid command
     this.bot.onText(/\/mychatid/, (msg) => {
       const chatId = msg.chat.id;
-      const firstName = msg.from.first_name || 'User';
-      
+      const firstName = msg.from?.first_name || 'User';
       const message = `
 👤 *${firstName}'s Chat ID*
 
@@ -89,23 +84,16 @@ That's it! You'll start receiving attendance updates.
 3. They will add it to your student's record in the system
 
 ✅ Once added, you'll receive attendance notifications here!
-
-💡 *Tip:* Save this Chat ID somewhere safe in case you need it again.
       `.trim();
-
       this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
     });
 
     // /history command
     this.bot.onText(/\/history/, async (msg) => {
       const chatId = msg.chat.id;
-      
       try {
-        // Import models dynamically
         const Student = require('../models/studentsSchema');
         const History = require('../models/historySchema');
-        
-        // Find student(s) associated with this Chat ID
         const students = await Student.find({
           $or: [
             { 'parentInfo.telegramChatId': chatId.toString() },
@@ -115,304 +103,150 @@ That's it! You'll start receiving attendance updates.
           status: { $ne: 'Graduated' }
         }).select('studentId fullName');
 
-        if (!students || students.length === 0) {
-          const notFoundMessage = `
-❌ *No Student Found*
-
-Your Chat ID (\`${chatId}\`) is not linked to any student record yet.
-
-📝 *To link your account:*
-Use /mychatid to get your Chat ID and give it to your school administrator.
-
-💡 *Available commands:* /help
-          `.trim();
-          
+        if (!students?.length) {
+          const notFoundMessage = `❌ *No Student Found*\n\nYour Chat ID (\`${chatId}\`) is not linked to any student record yet.\n\n📝 Use /mychatid to get your Chat ID and give it to your school administrator.`;
           this.bot.sendMessage(chatId, notFoundMessage, { parse_mode: 'Markdown' });
           return;
         }
 
-        // Get attendance history for each student
         for (const student of students) {
-          // Get last 15 attendance records
-          const records = await History.find({
-            studentId: student.studentId
-          })
+          const records = await History.find({ studentId: student.studentId })
             .sort({ scanTime: -1 })
             .limit(15)
             .lean();
 
-          if (!records || records.length === 0) {
-            const noHistoryMessage = `
-📚 *${student.fullName}*
-Student ID: \`${student.studentId}\`
-
-📭 No attendance history found yet.
-
-Your attendance records will appear here once you start checking in and out at school.
-            `.trim();
-            
+          if (!records?.length) {
+            const noHistoryMessage = `📚 *${student.fullName}*\nStudent ID: \`${student.studentId}\`\n\n📭 No attendance history found yet.`;
             await this.bot.sendMessage(chatId, noHistoryMessage, { parse_mode: 'Markdown' });
             continue;
           }
 
-          // Group records by date
           const recordsByDate = {};
           records.forEach(record => {
             const date = new Date(record.scanTime).toISOString().split('T')[0];
-            if (!recordsByDate[date]) {
-              recordsByDate[date] = { in: null, out: null };
-            }
-            if (record.attendanceType === 'In') {
-              recordsByDate[date].in = record;
-            } else if (record.attendanceType === 'Out') {
-              recordsByDate[date].out = record;
-            }
+            if (!recordsByDate[date]) recordsByDate[date] = { in: null, out: null };
+            if (record.attendanceType === 'In') recordsByDate[date].in = record;
+            else if (record.attendanceType === 'Out') recordsByDate[date].out = record;
           });
 
-          // Build history message
-          let historyMessage = `
-📚 *Attendance History*
-👤 ${student.fullName}
-🆔 Student ID: \`${student.studentId}\`
-
-📅 *Last 15 Days:*
-━━━━━━━━━━━━━━━━━━━
-`;
-
+          let historyMessage = `📚 *Attendance History*\n👤 ${student.fullName}\n🆔 Student ID: \`${student.studentId}\`\n\n📅 *Last 15 Days:*\n━━━━━━━━━━━━━━━━━━━\n`;
           const dates = Object.keys(recordsByDate).sort().reverse();
-          
+
           for (const date of dates) {
             const dayRecords = recordsByDate[date];
             const dateObj = new Date(date);
-            const formattedDate = dateObj.toLocaleDateString('en-US', {
-              month: 'short',
-              day: '2-digit',
-              year: 'numeric',
-              weekday: 'short'
-            });
-
+            const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', weekday: 'short' });
             historyMessage += `\n📆 *${formattedDate}*\n`;
 
-            // Check-in
             if (dayRecords.in) {
-              const checkInTime = new Date(dayRecords.in.scanTime).toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              });
-              const statusEmoji = dayRecords.in.status === 'Present' ? '✅' : 
-                                  dayRecords.in.status === 'Late' ? '⏰' : 
-                                  dayRecords.in.status === 'Cutting' ? '⚠️' : '❓';
+              const checkInTime = new Date(dayRecords.in.scanTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+              const statusEmoji = dayRecords.in.status === 'Present' ? '✅' : dayRecords.in.status === 'Late' ? '⏰' : dayRecords.in.status === 'Cutting' ? '⚠️' : '❓';
               historyMessage += `   🟢 In: ${checkInTime} ${statusEmoji} ${dayRecords.in.status}\n`;
             } else {
               historyMessage += `   🟢 In: Not recorded\n`;
             }
 
-            // Check-out
             if (dayRecords.out) {
-              const checkOutTime = new Date(dayRecords.out.scanTime).toLocaleTimeString('en-US', {
-                hour: '2-digit',
-                minute: '2-digit',
-                hour12: true
-              });
+              const checkOutTime = new Date(dayRecords.out.scanTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
               historyMessage += `   🔴 Out: ${checkOutTime}\n`;
-              
-              // Duration
-              if (dayRecords.in && dayRecords.out) {
-                const duration = dayRecords.out.durationMinutes || 
-                  Math.round((new Date(dayRecords.out.scanTime) - new Date(dayRecords.in.scanTime)) / (1000 * 60));
-                const hours = Math.floor(duration / 60);
-                const minutes = duration % 60;
-                historyMessage += `   ⏱️ Duration: ${hours}h ${minutes}m\n`;
+              if (dayRecords.in) {
+                const duration = dayRecords.out.durationMinutes || Math.round((new Date(dayRecords.out.scanTime) - new Date(dayRecords.in.scanTime)) / (1000 * 60));
+                historyMessage += `   ⏱️ Duration: ${Math.floor(duration / 60)}h ${duration % 60}m\n`;
               }
             } else if (dayRecords.in) {
               historyMessage += `   🔴 Out: Not recorded yet\n`;
             }
-
             historyMessage += '\n';
           }
 
-          historyMessage += `━━━━━━━━━━━━━━━━━━━
-📊 *Summary:*
-• Total Records: ${records.length}
-• Check-ins: ${records.filter(r => r.attendanceType === 'In').length}
-• Check-outs: ${records.filter(r => r.attendanceType === 'Out').length}
-
-💡 Use /studentinfo for student details
-          `.trim();
-
+          historyMessage += `━━━━━━━━━━━━━━━━━━━\n📊 *Summary:* ${records.length} records`;
           await this.bot.sendMessage(chatId, historyMessage, { parse_mode: 'Markdown' });
-          
-          // Small delay between multiple students
-          if (students.length > 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+          if (students.length > 1) await new Promise(r => setTimeout(r, 500));
         }
 
         if (students.length > 1) {
           await this.bot.sendMessage(chatId, `✅ Showing attendance history for ${students.length} students.`, { parse_mode: 'Markdown' });
         }
-        
       } catch (error) {
         console.error('Error fetching attendance history:', error);
-        this.bot.sendMessage(chatId, '❌ Sorry, there was an error fetching attendance history. Please try again later or contact your school administrator.', { parse_mode: 'Markdown' });
+        this.bot.sendMessage(chatId, '❌ Sorry, there was an error fetching attendance history. Please try again later.').catch(() => {});
       }
     });
 
     // /studentinfo command
     this.bot.onText(/\/studentinfo/, async (msg) => {
       const chatId = msg.chat.id;
-      
       try {
-        // Import Student model dynamically to avoid circular dependency
         const Student = require('../models/studentsSchema');
-        
-        // Find student(s) associated with this Chat ID
         const students = await Student.find({
           $or: [
             { 'parentInfo.telegramChatId': chatId.toString() },
             { parentTelegramChatId: chatId.toString() },
             { telegramChatId: chatId.toString() }
           ],
-          status: { $ne: 'Graduated' } // Exclude graduated students
+          status: { $ne: 'Graduated' }
         }).select('-password -parentInfo.password');
 
-        if (!students || students.length === 0) {
-          const notFoundMessage = `
-❌ *No Student Found*
-
-Your Chat ID (\`${chatId}\`) is not linked to any student record yet.
-
-📝 *To link your account:*
-1. Make sure the school administrator has added your Chat ID to your student's record
-2. Use /mychatid to verify your Chat ID
-3. Contact the school if you need assistance
-
-💡 *Need your Chat ID?* Use /mychatid
-          `.trim();
-          
+        if (!students?.length) {
+          const notFoundMessage = `❌ *No Student Found*\n\nYour Chat ID is not linked to any student record.\n\n📝 Use /mychatid to get your Chat ID and give it to your school administrator.`;
           this.bot.sendMessage(chatId, notFoundMessage, { parse_mode: 'Markdown' });
           return;
         }
 
-        // Send info for each student (in case parent has multiple children)
         for (const student of students) {
           const statusEmoji = student.status === 'Active' ? '✅' : '⚠️';
           const shiftEmoji = student.shift === 'Morning' ? '🌅' : '🌆';
-          
           const studentInfo = `
 📚 *Student Information*
-
 ${statusEmoji} *Status:* ${student.status}
 
-👤 *Personal Details:*
-• Name: ${student.fullName}
-• Student ID: \`${student.studentId}\`
-• Age: ${student.age} years old
-• Gender: ${student.gender}
-
-🎓 *Academic Information:*
-• Grade: ${student.gradeLevel}
-• Section: ${student.section}
-• Shift: ${shiftEmoji} ${student.shift}
-
-📞 *Contact Information:*
-• Student Phone: ${student.phoneNumber || 'Not provided'}
-• Parent: ${student.parentInfo?.name || 'Not provided'}
-• Parent Phone: ${student.parentInfo?.contactNumber || 'Not provided'}
-
-🚨 *Emergency Contact:*
-• Name: ${student.emergencyContact?.name || 'Not provided'}
-• Phone: ${student.emergencyContact?.contactNumber || 'Not provided'}
-• Relationship: ${student.emergencyContact?.relationship || 'Not provided'}
-
-📍 *Address:*
-${student.address?.street || 'Not provided'}
-${student.address?.city || ''}${student.address?.province ? ', ' + student.address.province : ''}${student.address?.zipCode ? ' ' + student.address.zipCode : ''}
-
----
-_Use /help to see all available commands_
+👤 *Personal:* ${student.fullName} | ID: \`${student.studentId}\` | Age: ${student.age} | ${student.gender}
+🎓 *Grade:* ${student.gradeLevel} - ${student.section} | Shift: ${shiftEmoji} ${student.shift}
+📞 *Parent:* ${student.parentInfo?.name || 'N/A'} | ${student.parentInfo?.contactNumber || 'N/A'}
+📍 *Address:* ${student.address?.street || 'N/A'} ${student.address?.city || ''}
           `.trim();
-
           await this.bot.sendMessage(chatId, studentInfo, { parse_mode: 'Markdown' });
-          
-          // Small delay between multiple students
-          if (students.length > 1) {
-            await new Promise(resolve => setTimeout(resolve, 500));
-          }
+          if (students.length > 1) await new Promise(r => setTimeout(r, 500));
         }
 
         if (students.length > 1) {
           await this.bot.sendMessage(chatId, `✅ Found ${students.length} students linked to your account.`, { parse_mode: 'Markdown' });
         }
-        
       } catch (error) {
         console.error('Error fetching student info:', error);
-        this.bot.sendMessage(chatId, '❌ Sorry, there was an error fetching student information. Please try again later or contact your school administrator.', { parse_mode: 'Markdown' });
+        this.bot.sendMessage(chatId, '❌ Sorry, there was an error. Please try again later.').catch(() => {});
       }
     });
 
     // /help command
     this.bot.onText(/\/help/, (msg) => {
       const chatId = msg.chat.id;
-      
       const helpMessage = `
 🤖 *Smartendance Bot Help*
 
-*Available Commands:*
-
-/start - Start the bot and see your Chat ID
+*Commands:*
+/start - Start & see your Chat ID
 /mychatid - Get your Telegram Chat ID
-/studentinfo - View your student's information
+/studentinfo - View student information
 /history - View attendance history (last 15 days)
-/help - Show this help message
-
-*What is a Chat ID?*
-Your Chat ID is a unique number that identifies your Telegram account. The school uses it to send you notifications.
+/help - Show this help
 
 *How to get notifications:*
 1. Use /mychatid to get your Chat ID
 2. Share it with your school administrator
 3. They will add it to your student's record
 4. You'll receive attendance updates automatically!
-
-*View Student Info:*
-Use /studentinfo to see your student's details including grade, section, contacts, and more.
-
-*View Attendance History:*
-Use /history to see check-in/check-out records, status, and duration for the last 15 days.
-
-*Need help?*
-Contact your school administrator if you have any questions.
       `.trim();
-
       this.bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' });
     });
 
-    // Handle any other message
+    // Handle other messages
     this.bot.on('message', (msg) => {
-      // Skip if it's a command (starts with /)
-      if (msg.text && msg.text.startsWith('/')) return;
-
+      if (msg.text?.startsWith('/')) return;
       const chatId = msg.chat.id;
-      
-      // Reply with helpful info
-      const message = `
-👋 Hi! I'm the Smartendance notification bot.
-
-Your Chat ID: \`${chatId}\`
-
-📌 *Quick Commands:*
-/mychatid - Get your Chat ID
-/studentinfo - View student details
-/history - View attendance history
-/help - See all commands
-      `.trim();
-
+      const message = `👋 Hi! I'm the Smartendance notification bot.\n\nYour Chat ID: \`${chatId}\`\n\n📌 *Quick Commands:*\n/mychatid - Get your Chat ID\n/studentinfo - View student details\n/history - View attendance history\n/help - See all commands`;
       this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' });
     });
-
-    console.log('Bot commands set up successfully');
   }
 
   /**

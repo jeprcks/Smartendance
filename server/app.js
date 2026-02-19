@@ -48,7 +48,10 @@ const limiter = rateLimit({
   max: 100
 });
 if (process.env.NODE_ENV === 'production') {
-  app.use(limiter);
+  app.use((req, res, next) => {
+    if (req.method === 'POST' && req.originalUrl?.includes('telegram/webhook')) return next();
+    limiter(req, res, next);
+  });
 } else {
   console.log('Rate limiter disabled in non-production (NODE_ENV=%s)', process.env.NODE_ENV);
 }

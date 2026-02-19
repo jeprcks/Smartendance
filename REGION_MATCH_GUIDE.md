@@ -272,7 +272,7 @@ Improvement: 70-90% faster! 🚀
 ### If on Vercel Free:
 1. **Keep MongoDB in Singapore** (free)
 2. **Upgrade Vercel to Pro** ($20/mo) to match region
-3. **Or:** Use alternative hosting (Railway, Render) that allows region selection
+3. **Or:** Use alternative hosting (Render) that allows region selection
 
 ### If on Vercel Pro:
 1. **Change Vercel region to Singapore** (sin1)
@@ -281,14 +281,9 @@ Improvement: 70-90% faster! 🚀
 
 ---
 
-## Alternative: Use Railway/Render (Free Region Selection)
+## Alternative: Use Render (Free Region Selection)
 
 If Vercel Pro is too expensive:
-
-### Railway:
-- **Free tier:** Can choose region
-- **Singapore available:** ✅
-- **Cost:** Free (with limits)
 
 ### Render:
 - **Free tier:** Can choose region

@@ -13,45 +13,7 @@ Your backend is the **server** folder (Node/Express with MongoDB). Deploy it to 
 
 ---
 
-## Option A: Deploy with Railway (recommended, simple)
-
-1. **Sign up:** Go to [railway.app](https://railway.app) and sign in with GitHub.
-
-2. **New project:** Click **New Project** → **Deploy from GitHub repo** → choose **Smartendance**.
-
-3. **Set root directory:** Railway may detect the repo root. You need to deploy only the **server** folder:
-   - In your project, open **Settings** (or the service settings).
-   - Set **Root Directory** (or **Source**) to **`server`** so Railway builds and runs from the `server` folder.
-
-4. **Add environment variables:** In the Railway service → **Variables** (or **Settings → Variables**), add:
-
-   | Variable | Description | Example |
-   |----------|-------------|--------|
-   | `MONGODB_URI` | MongoDB connection string (required) | `mongodb+srv://user:pass@cluster.mongodb.net/smartendance` |
-   | `PORT` | Optional; Railway sets this automatically | `4000` |
-   | `NODE_ENV` | Use `production` on Railway | `production` |
-   | `TELEGRAM_BOT_TOKEN` | Optional; for Telegram notifications | From BotFather |
-   | `TELEGRAM_POLLING_ENABLED` | Set to `true` only on **one** instance (e.g. local). Leave unset on Railway to avoid 409 conflicts. | `true` or omit |
-   | `TELEGRAM_NOTIFICATION_ENABLED` | Optional | `true` or `false` |
-   | `TELEGRAM_ADMIN_CHAT_ID` | Optional | Your Telegram chat ID |
-   | `JWT_SECRET` or `SECRET` | If your app uses it for sessions/tokens | Any long random string |
-
-5. **Build & start commands (if needed):**  
-   - Build: leave empty or `npm install`  
-   - Start: `node index.js` or `npm start` (if you add `"start": "node index.js"` in `server/package.json`).
-
-6. **Deploy:** Railway will build and deploy. Open the **Settings** → **Networking** (or **Generate Domain**) to get a public URL, e.g.  
-   `https://smartendance-production.up.railway.app`
-
-7. **Use this URL in Vercel:**  
-   In your Vercel project (admin web), set **Environment Variable**:  
-   **Key:** `NEXT_PUBLIC_API_URL`  
-   **Value:** `https://your-app.up.railway.app` (no trailing slash)  
-   Then redeploy the frontend.
-
----
-
-## Option B: Deploy with Render
+## Deploy with Render (recommended)
 
 1. **Sign up:** Go to [render.com](https://render.com) and sign in with GitHub.
 
@@ -63,7 +25,17 @@ Your backend is the **server** folder (Node/Express with MongoDB). Deploy it to 
    - **Build Command:** `npm install`
    - **Start Command:** `node index.js` (or `npm start` if defined in `server/package.json`)
 
-4. **Environment:** In the **Environment** section, add the same variables as in the table above (`MONGODB_URI`, `NODE_ENV`, `PORT` if needed, Telegram vars, etc.).
+4. **Environment:** In the **Environment** section, add:
+
+   | Variable | Description | Example |
+   |----------|-------------|---------|
+   | `MONGODB_URI` | MongoDB connection string (required) | `mongodb+srv://user:pass@cluster.mongodb.net/smartendance` |
+   | `PORT` | Optional; Render sets this automatically | `4000` |
+   | `NODE_ENV` | Use `production` on Render | `production` |
+   | `TELEGRAM_BOT_TOKEN` | Optional; for Telegram notifications | From BotFather |
+   | `TELEGRAM_NOTIFICATION_ENABLED` | Optional | `true` or `false` |
+   | `TELEGRAM_ADMIN_CHAT_ID` | Optional | Your Telegram chat ID |
+   | `JWT_SECRET` or `SECRET` | If your app uses it for sessions/tokens | Any long random string |
 
 5. **Deploy:** Click **Create Web Service**. Render will give you a URL like  
    `https://smartendance-xxxx.onrender.com`
@@ -75,7 +47,7 @@ Your backend is the **server** folder (Node/Express with MongoDB). Deploy it to 
 
 ## After deployment
 
-1. **Backend URL:** Copy the URL from Railway or Render (e.g. `https://your-app.up.railway.app`).
+1. **Backend URL:** Copy the URL from Render (e.g. `https://smartendance-xxxx.onrender.com`).
 
 2. **Vercel (admin web):**  
    **Settings** → **Environment Variables** → add  
@@ -99,4 +71,4 @@ If the host runs `npm start`, add this to `server/package.json`:
 }
 ```
 
-Then use **Start Command** `npm start` on Railway/Render.
+Then use **Start Command** `npm start` on Render.

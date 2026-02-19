@@ -6,8 +6,12 @@ const {
   sendToStudent,
   sendToAllStudents,
   verifyChatId,
-  getBotInfo
+  getBotInfo,
+  webhookHandler
 } = require('../controllers/telegramController');
+
+// Telegram webhook - receives updates for bot commands (/start, /mychatid, etc.)
+router.post('/webhook', webhookHandler);
 
 // Send message to a specific chat ID
 router.post('/send', sendMessage);

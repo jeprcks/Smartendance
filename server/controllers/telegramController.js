@@ -306,6 +306,37 @@ const verifyChatId = async (req, res) => {
 };
 
 /**
+ * Webhook handler - receives updates from Telegram (for /start, /mychatid, /history, etc.)
+ * Works on Vercel/serverless where polling cannot run.
+ */
+const webhookHandler = async (req, res) => {
+  try {
+    // Optional: verify secret token if set (Telegram sends X-Telegram-Bot-Api-Secret-Token)
+    const telegramSecret = req.headers['x-telegram-bot-api-secret-token'];
+    const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (webhookSecret && telegramSecret !== webhookSecret) {
+      return res.sendStatus(403);
+    }
+
+    const update = req.body;
+    if (!update) {
+      return res.sendStatus(400);
+    }
+
+    // Respond immediately - Telegram expects fast 200 response
+    res.sendStatus(200);
+
+    // Process update async (triggers command handlers)
+    telegramService.processUpdate(update).catch(err => {
+      console.error('Telegram webhook processUpdate error:', err);
+    });
+  } catch (err) {
+    console.error('Telegram webhook error:', err);
+    if (!res.headersSent) res.sendStatus(200); // 200 to avoid Telegram retries
+  }
+};
+
+/**
  * Get bot information
  */
 const getBotInfo = async (req, res) => {
@@ -340,5 +371,6 @@ module.exports = {
   sendToStudent,
   sendToAllStudents,
   verifyChatId,
-  getBotInfo
+  getBotInfo,
+  webhookHandler
 };

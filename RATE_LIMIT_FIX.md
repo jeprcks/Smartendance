@@ -107,7 +107,7 @@ If you need to scan many students:
 - Only sync when needed
 
 **Option 3: Use a Different Hosting**
-- Deploy to Railway, Render, or DigitalOcean
+- Deploy to Render or DigitalOcean
 - May have different rate limiting policies
 
 ## Testing
