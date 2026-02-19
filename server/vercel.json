@@ -1,5 +1,10 @@
 {
   "version": 2,
   "regions": ["hkg1"],
-  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+  "rewrites": [{"source": "/(.*)", "destination": "/api"}],
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
+  }
 }

@@ -311,6 +311,7 @@ const verifyChatId = async (req, res) => {
  */
 const webhookHandler = async (req, res) => {
   try {
+    console.log('[Telegram webhook] Received request');
     // Optional: verify secret token if set (Telegram sends X-Telegram-Bot-Api-Secret-Token)
     const telegramSecret = req.headers['x-telegram-bot-api-secret-token'];
     const webhookSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
@@ -318,21 +319,19 @@ const webhookHandler = async (req, res) => {
       return res.sendStatus(403);
     }
 
-    const update = req.body;
+    let update = req.body;
     if (!update) {
       return res.sendStatus(400);
     }
-
-    // Process update - triggers command handlers (onText callbacks).
-    // node-telegram-bot-api processUpdate returns immediately; handlers run async.
-    // On Vercel serverless, we must wait for handlers (DB + sendMessage) to complete
-    // before the function exits. Add delay so /history, /studentinfo have time to finish.
-    try {
-      telegramService.processUpdate(update);
-      await new Promise(r => setTimeout(r, 8000)); // 8s for handlers to complete
-    } catch (err) {
-      console.error('Telegram webhook processUpdate error:', err);
+    if (typeof update === 'string') {
+      try {
+        update = JSON.parse(update);
+      } catch (e) {
+        return res.sendStatus(400);
+      }
     }
+
+    await telegramService.handleWebhookUpdate(update);
     res.sendStatus(200);
   } catch (err) {
     console.error('Telegram webhook error:', err);

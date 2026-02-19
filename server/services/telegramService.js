@@ -10,7 +10,6 @@ class TelegramService {
       try {
         // No polling - webhook mode on Vercel (POST /api/telegram/webhook receives updates)
         this.bot = new TelegramBot(this.botToken, { polling: false });
-        this.setupCommands();
         console.log('Telegram bot initialized (webhook mode)');
         
         this.bot.getMe().then(botInfo => {
@@ -27,226 +26,147 @@ class TelegramService {
   }
 
   /**
-   * Process incoming webhook update (triggers command handlers)
+   * Process incoming webhook update - direct command handling (awaitable).
+   * Used on Vercel/serverless where we must complete work before responding.
    * @param {object} update - Telegram update object from webhook POST body
+   * @returns {Promise<void>}
    */
+  async handleWebhookUpdate(update) {
+    if (!this.bot) return;
+    const msg = update?.message;
+    if (!msg?.chat?.id) return;
+    const chatId = msg.chat.id;
+    const text = (msg.text || '').trim();
+    const firstName = msg.from?.first_name || 'there';
+
+    const send = (t, opts = {}) => this.bot.sendMessage(chatId, t, { parse_mode: 'HTML', ...opts });
+
+    if (text === '/start') {
+      await send(`👋 Welcome to <b>Smartendance Bot</b>, ${this._escapeHtml(firstName)}!\n\nI can send you notifications about student attendance.\n\n<b>Commands:</b>\n/mychatid - Get your Chat ID\n/studentinfo - View your student's info\n/history - View attendance history\n/help - Show help\n\n<b>Your Chat ID:</b> <code>${chatId}</code>\n\n📝 Give this Chat ID to your school administrator to receive notifications.`);
+      return;
+    }
+    if (text === '/mychatid') {
+      await send(`👤 <b>${this._escapeHtml(firstName)}'s Chat ID</b>\n\n📱 Your Chat ID: <code>${chatId}</code>\n\n📋 Give this number to your school administrator - they will add it to your student's record.`);
+      return;
+    }
+    if (text === '/help') {
+      await send(`🤖 <b>Smartendance Bot Help</b>\n\n<b>Commands:</b>\n/start - Start & see your Chat ID\n/mychatid - Get your Chat ID\n/studentinfo - View student info\n/history - View attendance history\n/help - Show this help\n\n<b>How to get notifications:</b>\n1. Use /mychatid to get your Chat ID\n2. Share it with your school administrator\n3. They will add it to your student's record\n4. You'll receive attendance updates automatically!`);
+      return;
+    }
+    if (text === '/history') {
+      await this._handleHistory(chatId);
+      return;
+    }
+    if (text === '/studentinfo') {
+      await this._handleStudentInfo(chatId);
+      return;
+    }
+    if (text && !text.startsWith('/')) {
+      await send(`👋 Hi! I'm the Smartendance notification bot.\n\nYour Chat ID: <code>${chatId}</code>\n\n<b>Commands:</b> /mychatid | /studentinfo | /history | /help`);
+    }
+  }
+
+  _escapeHtml(s) {
+    return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  async _handleHistory(chatId) {
+    try {
+      const Student = require('../models/studentsSchema');
+      const History = require('../models/historySchema');
+      const students = await Student.find({
+        $or: [
+          { 'parentInfo.telegramChatId': chatId.toString() },
+          { parentTelegramChatId: chatId.toString() },
+          { telegramChatId: chatId.toString() }
+        ],
+        status: { $ne: 'Graduated' }
+      }).select('studentId fullName');
+
+      if (!students?.length) {
+        await this.bot.sendMessage(chatId, `❌ No student found linked to your Chat ID.\n\nUse /mychatid to get your Chat ID and give it to your school administrator.`, { parse_mode: 'HTML' });
+        return;
+      }
+
+      for (const student of students) {
+        const records = await History.find({ studentId: student.studentId })
+          .sort({ scanTime: -1 })
+          .limit(15)
+          .lean();
+
+        if (!records?.length) {
+          await this.bot.sendMessage(chatId, `📚 ${this._escapeHtml(student.fullName)} (${this._escapeHtml(student.studentId)})\n\nNo attendance history yet.`, { parse_mode: 'HTML' });
+          continue;
+        }
+
+        const recordsByDate = {};
+        records.forEach(record => {
+          const date = new Date(record.scanTime).toISOString().split('T')[0];
+          if (!recordsByDate[date]) recordsByDate[date] = { in: null, out: null };
+          if (record.attendanceType === 'In') recordsByDate[date].in = record;
+          else if (record.attendanceType === 'Out') recordsByDate[date].out = record;
+        });
+
+        let historyMessage = `📚 <b>Attendance History</b>\n👤 ${this._escapeHtml(student.fullName)} | ID: ${this._escapeHtml(student.studentId)}\n\n`;
+        const dates = Object.keys(recordsByDate).sort().reverse();
+
+        for (const date of dates) {
+          const dayRecords = recordsByDate[date];
+          const dateObj = new Date(date);
+          const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', weekday: 'short' });
+          historyMessage += `📆 ${formattedDate}\n`;
+          if (dayRecords.in) {
+            const t = new Date(dayRecords.in.scanTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            historyMessage += `   🟢 In: ${t} ${dayRecords.in.status || ''}\n`;
+          } else historyMessage += `   🟢 In: Not recorded\n`;
+          if (dayRecords.out) {
+            const t = new Date(dayRecords.out.scanTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+            historyMessage += `   🔴 Out: ${t}\n`;
+          } else if (dayRecords.in) historyMessage += `   🔴 Out: Not recorded\n`;
+          historyMessage += '\n';
+        }
+        historyMessage += `📊 ${records.length} records`;
+        await this.bot.sendMessage(chatId, historyMessage, { parse_mode: 'HTML' });
+        if (students.length > 1) await new Promise(r => setTimeout(r, 500));
+      }
+    } catch (error) {
+      console.error('Telegram /history error:', error);
+      await this.bot.sendMessage(chatId, '❌ Error fetching attendance history. Please try again later.').catch(() => {});
+    }
+  }
+
+  async _handleStudentInfo(chatId) {
+    try {
+      const Student = require('../models/studentsSchema');
+      const students = await Student.find({
+        $or: [
+          { 'parentInfo.telegramChatId': chatId.toString() },
+          { parentTelegramChatId: chatId.toString() },
+          { telegramChatId: chatId.toString() }
+        ],
+        status: { $ne: 'Graduated' }
+      }).select('-password -parentInfo.password');
+
+      if (!students?.length) {
+        await this.bot.sendMessage(chatId, `❌ No student found linked to your Chat ID.\n\nUse /mychatid to get your Chat ID and give it to your school administrator.`, { parse_mode: 'HTML' });
+        return;
+      }
+
+      for (const student of students) {
+        const info = `📚 <b>Student Information</b>\n\n👤 ${this._escapeHtml(student.fullName)} | ID: ${this._escapeHtml(student.studentId)}\n📚 Grade: ${this._escapeHtml(student.gradeLevel)} - ${this._escapeHtml(student.section)}\n📞 Parent: ${this._escapeHtml(student.parentInfo?.name || 'N/A')}`;
+        await this.bot.sendMessage(chatId, info, { parse_mode: 'HTML' });
+        if (students.length > 1) await new Promise(r => setTimeout(r, 500));
+      }
+    } catch (error) {
+      console.error('Telegram /studentinfo error:', error);
+      await this.bot.sendMessage(chatId, '❌ Error fetching student info. Please try again later.').catch(() => {});
+    }
+  }
+
+  /** @deprecated Use handleWebhookUpdate instead - processUpdate does not wait for handlers on serverless */
   processUpdate(update) {
     if (!this.bot) return Promise.resolve();
     return Promise.resolve(this.bot.processUpdate(update));
-  }
-
-  /**
-   * Set up bot command handlers (triggered via webhook processUpdate)
-   */
-  setupCommands() {
-    if (!this.bot) return;
-
-    // /start command
-    this.bot.onText(/\/start/, (msg) => {
-      const chatId = msg.chat.id;
-      const firstName = msg.from?.first_name || 'there';
-      const welcomeMessage = `
-👋 Welcome to *Smartendance Bot*, ${firstName}!
-
-I can send you notifications about student attendance.
-
-*Available Commands:*
-/mychatid - Get your Chat ID
-/studentinfo - View your student's info
-/history - View attendance history
-/help - Show this help message
-
-*Your Chat ID:* \`${chatId}\`
-
-📝 *To receive notifications:*
-1. Copy your Chat ID above
-2. Give it to your school administrator
-3. They will add it to your student's record
-
-That's it! You'll start receiving attendance updates.
-      `.trim();
-      this.bot.sendMessage(chatId, welcomeMessage, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram /start error:', err.message));
-    });
-
-    // /mychatid command
-    this.bot.onText(/\/mychatid/, (msg) => {
-      const chatId = msg.chat.id;
-      const firstName = msg.from?.first_name || 'User';
-      const message = `
-👤 *${firstName}'s Chat ID*
-
-📱 Your Telegram Chat ID is:
-\`${chatId}\`
-
-📋 *How to use it:*
-1. Tap on the Chat ID above to copy it
-2. Give this number to your school administrator
-3. They will add it to your student's record in the system
-
-✅ Once added, you'll receive attendance notifications here!
-      `.trim();
-      this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram /mychatid error:', err.message));
-    });
-
-    // /history command
-    this.bot.onText(/\/history/, async (msg) => {
-      const chatId = msg.chat.id;
-      try {
-        const Student = require('../models/studentsSchema');
-        const History = require('../models/historySchema');
-        const students = await Student.find({
-          $or: [
-            { 'parentInfo.telegramChatId': chatId.toString() },
-            { parentTelegramChatId: chatId.toString() },
-            { telegramChatId: chatId.toString() }
-          ],
-          status: { $ne: 'Graduated' }
-        }).select('studentId fullName');
-
-        if (!students?.length) {
-          const notFoundMessage = `❌ *No Student Found*\n\nYour Chat ID (\`${chatId}\`) is not linked to any student record yet.\n\n📝 Use /mychatid to get your Chat ID and give it to your school administrator.`;
-          this.bot.sendMessage(chatId, notFoundMessage, { parse_mode: 'Markdown' });
-          return;
-        }
-
-        for (const student of students) {
-          const records = await History.find({ studentId: student.studentId })
-            .sort({ scanTime: -1 })
-            .limit(15)
-            .lean();
-
-          if (!records?.length) {
-            const noHistoryMessage = `📚 *${student.fullName}*\nStudent ID: \`${student.studentId}\`\n\n📭 No attendance history found yet.`;
-            await this.bot.sendMessage(chatId, noHistoryMessage, { parse_mode: 'Markdown' });
-            continue;
-          }
-
-          const recordsByDate = {};
-          records.forEach(record => {
-            const date = new Date(record.scanTime).toISOString().split('T')[0];
-            if (!recordsByDate[date]) recordsByDate[date] = { in: null, out: null };
-            if (record.attendanceType === 'In') recordsByDate[date].in = record;
-            else if (record.attendanceType === 'Out') recordsByDate[date].out = record;
-          });
-
-          let historyMessage = `📚 *Attendance History*\n👤 ${student.fullName}\n🆔 Student ID: \`${student.studentId}\`\n\n📅 *Last 15 Days:*\n━━━━━━━━━━━━━━━━━━━\n`;
-          const dates = Object.keys(recordsByDate).sort().reverse();
-
-          for (const date of dates) {
-            const dayRecords = recordsByDate[date];
-            const dateObj = new Date(date);
-            const formattedDate = dateObj.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric', weekday: 'short' });
-            historyMessage += `\n📆 *${formattedDate}*\n`;
-
-            if (dayRecords.in) {
-              const checkInTime = new Date(dayRecords.in.scanTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-              const statusEmoji = dayRecords.in.status === 'Present' ? '✅' : dayRecords.in.status === 'Late' ? '⏰' : dayRecords.in.status === 'Cutting' ? '⚠️' : '❓';
-              historyMessage += `   🟢 In: ${checkInTime} ${statusEmoji} ${dayRecords.in.status}\n`;
-            } else {
-              historyMessage += `   🟢 In: Not recorded\n`;
-            }
-
-            if (dayRecords.out) {
-              const checkOutTime = new Date(dayRecords.out.scanTime).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-              historyMessage += `   🔴 Out: ${checkOutTime}\n`;
-              if (dayRecords.in) {
-                const duration = dayRecords.out.durationMinutes || Math.round((new Date(dayRecords.out.scanTime) - new Date(dayRecords.in.scanTime)) / (1000 * 60));
-                historyMessage += `   ⏱️ Duration: ${Math.floor(duration / 60)}h ${duration % 60}m\n`;
-              }
-            } else if (dayRecords.in) {
-              historyMessage += `   🔴 Out: Not recorded yet\n`;
-            }
-            historyMessage += '\n';
-          }
-
-          historyMessage += `━━━━━━━━━━━━━━━━━━━\n📊 *Summary:* ${records.length} records`;
-          await this.bot.sendMessage(chatId, historyMessage, { parse_mode: 'Markdown' });
-          if (students.length > 1) await new Promise(r => setTimeout(r, 500));
-        }
-
-        if (students.length > 1) {
-          await this.bot.sendMessage(chatId, `✅ Showing attendance history for ${students.length} students.`, { parse_mode: 'Markdown' });
-        }
-      } catch (error) {
-        console.error('Error fetching attendance history:', error);
-        this.bot.sendMessage(chatId, '❌ Sorry, there was an error fetching attendance history. Please try again later.').catch(() => {});
-      }
-    });
-
-    // /studentinfo command
-    this.bot.onText(/\/studentinfo/, async (msg) => {
-      const chatId = msg.chat.id;
-      try {
-        const Student = require('../models/studentsSchema');
-        const students = await Student.find({
-          $or: [
-            { 'parentInfo.telegramChatId': chatId.toString() },
-            { parentTelegramChatId: chatId.toString() },
-            { telegramChatId: chatId.toString() }
-          ],
-          status: { $ne: 'Graduated' }
-        }).select('-password -parentInfo.password');
-
-        if (!students?.length) {
-          const notFoundMessage = `❌ *No Student Found*\n\nYour Chat ID is not linked to any student record.\n\n📝 Use /mychatid to get your Chat ID and give it to your school administrator.`;
-          this.bot.sendMessage(chatId, notFoundMessage, { parse_mode: 'Markdown' });
-          return;
-        }
-
-        for (const student of students) {
-          const statusEmoji = student.status === 'Active' ? '✅' : '⚠️';
-          const shiftEmoji = student.shift === 'Morning' ? '🌅' : '🌆';
-          const studentInfo = `
-📚 *Student Information*
-${statusEmoji} *Status:* ${student.status}
-
-👤 *Personal:* ${student.fullName} | ID: \`${student.studentId}\` | Age: ${student.age} | ${student.gender}
-🎓 *Grade:* ${student.gradeLevel} - ${student.section} | Shift: ${shiftEmoji} ${student.shift}
-📞 *Parent:* ${student.parentInfo?.name || 'N/A'} | ${student.parentInfo?.contactNumber || 'N/A'}
-📍 *Address:* ${student.address?.street || 'N/A'} ${student.address?.city || ''}
-          `.trim();
-          await this.bot.sendMessage(chatId, studentInfo, { parse_mode: 'Markdown' });
-          if (students.length > 1) await new Promise(r => setTimeout(r, 500));
-        }
-
-        if (students.length > 1) {
-          await this.bot.sendMessage(chatId, `✅ Found ${students.length} students linked to your account.`, { parse_mode: 'Markdown' });
-        }
-      } catch (error) {
-        console.error('Error fetching student info:', error);
-        this.bot.sendMessage(chatId, '❌ Sorry, there was an error. Please try again later.').catch(() => {});
-      }
-    });
-
-    // /help command
-    this.bot.onText(/\/help/, (msg) => {
-      const chatId = msg.chat.id;
-      const helpMessage = `
-🤖 *Smartendance Bot Help*
-
-*Commands:*
-/start - Start & see your Chat ID
-/mychatid - Get your Telegram Chat ID
-/studentinfo - View student information
-/history - View attendance history (last 15 days)
-/help - Show this help
-
-*How to get notifications:*
-1. Use /mychatid to get your Chat ID
-2. Share it with your school administrator
-3. They will add it to your student's record
-4. You'll receive attendance updates automatically!
-      `.trim();
-      this.bot.sendMessage(chatId, helpMessage, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram /help error:', err.message));
-    });
-
-    // Handle other messages
-    this.bot.on('message', (msg) => {
-      if (msg.text?.startsWith('/')) return;
-      const chatId = msg.chat.id;
-      const message = `👋 Hi! I'm the Smartendance notification bot.\n\nYour Chat ID: \`${chatId}\`\n\n📌 *Quick Commands:*\n/mychatid - Get your Chat ID\n/studentinfo - View student details\n/history - View attendance history\n/help - See all commands`;
-      this.bot.sendMessage(chatId, message, { parse_mode: 'Markdown' }).catch(err => console.error('Telegram message handler error:', err.message));
-    });
   }
 
   /**

@@ -13,6 +13,11 @@ const {
 // Telegram webhook - receives updates for bot commands (/start, /mychatid, etc.)
 router.post('/webhook', webhookHandler);
 
+// GET for testing - verify webhook URL is reachable (Telegram only sends POST)
+router.get('/webhook', (req, res) => {
+  res.json({ ok: true, message: 'Telegram webhook endpoint. Send POST from Telegram.' });
+});
+
 // Send message to a specific chat ID
 router.post('/send', sendMessage);
 
