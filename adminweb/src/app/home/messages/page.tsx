@@ -9,8 +9,10 @@ export default function MessagesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortGrade, setSortGrade] = useState('');
   const [sortSection, setSortSection] = useState('');
+  const [sortShift, setSortShift] = useState('');
   const [students, setStudents] = useState<Student[]>([]);
   const [loading, setLoading] = useState(true);
+  const [imageErrors, setImageErrors] = useState<Set<string>>(new Set());
   const [contactFilter, setContactFilter] = useState<'all' | 'contact' | 'emergency'>('all');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
@@ -42,6 +44,7 @@ export default function MessagesPage() {
   });
 
   const uniqueSections = Array.from(new Set(students.map(s => s.section))).sort();
+  const uniqueShifts = Array.from(new Set(students.map(s => s.shift).filter(Boolean))).sort() as string[];
 
   const filteredStudents = students.filter(student => {
     const query = searchQuery.toLowerCase();
@@ -54,6 +57,7 @@ export default function MessagesPage() {
 
     const matchesGrade = !sortGrade || student.gradeLevel === sortGrade;
     const matchesSection = !sortSection || student.section === sortSection;
+    const matchesShift = !sortShift || student.shift === sortShift;
 
     // Filter by contact type
     let matchesContactFilter = true;
@@ -63,7 +67,7 @@ export default function MessagesPage() {
       matchesContactFilter = !!(student.emergencyContact?.contactNumber);
     }
 
-    return matchesSearch && matchesGrade && matchesSection && matchesContactFilter;
+    return matchesSearch && matchesGrade && matchesSection && matchesShift && matchesContactFilter;
   });
 
   const getContactNumbers = (student: Student) => {
@@ -82,6 +86,7 @@ export default function MessagesPage() {
 
   const LoadingSkeleton = () => (
     <tr className="animate-pulse">
+      <td className="px-6 py-4 whitespace-nowrap"><div className="h-10 w-10 bg-[var(--muted)] rounded-full"/></td>
       <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-[var(--muted)] rounded w-24"/></td>
       <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-[var(--muted)] rounded w-32"/></td>
       <td className="px-6 py-4 whitespace-nowrap"><div className="h-4 bg-[var(--muted)] rounded w-24"/></td>
@@ -199,7 +204,7 @@ export default function MessagesPage() {
               </svg>
               <label className="text-sm font-semibold text-[var(--foreground)]">Filter by:</label>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {/* Grade Filter */}
               <div>
                 <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Grade Level</label>
@@ -230,6 +235,21 @@ export default function MessagesPage() {
                 </select>
               </div>
 
+              {/* Shift Filter */}
+              <div>
+                <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-1">Shift</label>
+                <select
+                  value={sortShift}
+                  onChange={(e) => setSortShift(e.target.value)}
+                  className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300 text-sm text-[var(--foreground)]"
+                >
+                  <option value="">All Shifts</option>
+                  {uniqueShifts.map(shift => (
+                    <option key={shift} value={shift}>{shift}</option>
+                  ))}
+                </select>
+              </div>
+
               {/* Send to All Button */}
               <div className="flex items-end">
                 <button
@@ -245,12 +265,13 @@ export default function MessagesPage() {
               </div>
 
               {/* Clear Filters Button */}
-              {(sortGrade || sortSection || contactFilter !== 'all') && (
+              {(sortGrade || sortSection || sortShift || contactFilter !== 'all') && (
                 <div className="flex items-end">
                   <button
                     onClick={() => {
                       setSortGrade('');
                       setSortSection('');
+                      setSortShift('');
                       setContactFilter('all');
                     }}
                     className="w-full px-4 py-2 text-sm font-medium text-[var(--muted-foreground)] bg-[var(--muted)] rounded-[var(--radius)] hover:bg-[var(--muted)]/80 transition-colors"
@@ -290,10 +311,12 @@ export default function MessagesPage() {
             <table className="data-table">
               <thead>
                 <tr>
+                  <th>Profile</th>
                   <th>Student ID</th>
                   <th>Full Name</th>
                   <th>Grade Level</th>
                   <th>Section</th>
+                  <th>Shift</th>
                   <th>Telegram (Parent)</th>
                   <th>Emergency Phone</th>
                   <th>Actions</th>
@@ -304,7 +327,7 @@ export default function MessagesPage() {
                   [...Array(5)].map((_, index) => <LoadingSkeleton key={index} />)
                 ) : filteredStudents.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
+                    <td colSpan={9} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <svg className="w-8 h-8 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
@@ -319,16 +342,54 @@ export default function MessagesPage() {
                     return (
                       <tr key={student.studentId} className="hover:bg-[var(--secondary)] transition-colors duration-200">
                         <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center justify-center">
+                            {student.photo && student.photo.startsWith('data:image/') && !imageErrors.has(student.studentId) ? (
+                              <img
+                                src={student.photo}
+                                alt={`${student.fullName}'s profile`}
+                                className="h-10 w-10 rounded-full object-cover border-2 border-green-500"
+                                onError={() => {
+                                  setImageErrors(prev => new Set(prev).add(student.studentId));
+                                }}
+                              />
+                            ) : (
+                              <div className="h-10 w-10 rounded-full bg-[var(--muted)] border-2 border-green-500 flex items-center justify-center">
+                                <span className="text-sm font-bold text-[var(--muted-foreground)]">
+                                  {student.fullName.split(' ').map((name: string) => name[0]).join('')}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm font-medium text-[var(--foreground)]">{student.studentId}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="text-sm font-medium text-[var(--foreground)]">{student.fullName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-[var(--foreground)]">{student.fullName}</span>
+                            {student.gender && (
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
+                                  student.gender === 'Male'
+                                    ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                                    : student.gender === 'Female'
+                                      ? 'bg-pink-50 text-pink-700 ring-pink-200/50'
+                                      : 'bg-gray-50 text-gray-700 ring-gray-200/50'
+                                }`}
+                              >
+                                {student.gender}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-[var(--foreground)]">{student.gradeLevel}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-sm text-[var(--foreground)]">{student.section}</span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="text-sm text-[var(--foreground)]">{student.shift || 'N/A'}</span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {chatIds.contact ? (
@@ -435,7 +496,25 @@ export default function MessagesPage() {
               </div>
 
               <div className="mb-4 p-3 bg-[var(--muted)] rounded-lg border border-[var(--border)]">
-                <p className="text-sm text-[var(--muted-foreground)]">To: <span className="font-semibold text-[var(--foreground)]">{selectedStudent.fullName}</span></p>
+                <p className="text-sm text-[var(--muted-foreground)]">
+                  To:{' '}
+                  <span className="font-semibold text-[var(--foreground)]">
+                    {selectedStudent.fullName}
+                  </span>
+                  {selectedStudent.gender && (
+                    <span
+                      className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
+                        selectedStudent.gender === 'Male'
+                          ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                          : selectedStudent.gender === 'Female'
+                            ? 'bg-pink-50 text-pink-700 ring-pink-200/50'
+                            : 'bg-gray-50 text-gray-700 ring-gray-200/50'
+                      }`}
+                    >
+                      {selectedStudent.gender}
+                    </span>
+                  )}
+                </p>
                 <p className="text-xs text-[var(--muted-foreground)] mt-1">Student ID: {selectedStudent.studentId}</p>
               </div>
 

@@ -475,14 +475,14 @@ export default function StudentsPage() {
                           <img
                             src={student.photo}
                             alt={`${student.fullName}'s profile`}
-                            className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                            className="h-10 w-10 rounded-full object-cover border-2 border-green-500"
                             onError={(e) => {
                               console.error('Image failed to load for student:', student.studentId);
                               setImageErrors(prev => new Set(prev).add(student.studentId));
                             }}
                           />
                         ) : (
-                          <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
+                          <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-green-500 flex items-center justify-center">
                             <span className="text-sm font-bold text-gray-600">
                               {student.fullName.split(' ').map((name: string) => name[0]).join('')}
                             </span>

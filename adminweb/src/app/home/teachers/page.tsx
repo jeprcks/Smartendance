@@ -437,10 +437,10 @@ export default function TeachersPage() {
                             <img
                               src={teacher.profilePicture}
                               alt={`${teacher.name}'s profile`}
-                              className="h-10 w-10 rounded-full object-cover border-2 border-gray-200"
+                              className="h-10 w-10 rounded-full object-cover border-2 border-green-500"
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-green-500 flex items-center justify-center">
                               <span className="text-sm font-bold text-gray-600">
                                 {teacher.name.split(' ').map((name: string) => name[0]).join('')}
                               </span>
@@ -577,10 +577,10 @@ export default function TeachersPage() {
                             <img
                               src={teacher.profilePicture}
                               alt={`${teacher.name}'s profile`}
-                              className="h-10 w-10 rounded-full object-cover border-2 border-gray-200 grayscale"
+                              className="h-10 w-10 rounded-full object-cover border-2 border-green-500 grayscale"
                             />
                           ) : (
-                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-gray-300 flex items-center justify-center">
+                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-green-500 flex items-center justify-center">
                               <span className="text-sm font-bold text-gray-600">
                                 {teacher.name.split(' ').map((name: string) => name[0]).join('')}
                               </span>
