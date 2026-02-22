@@ -106,6 +106,11 @@ export default function MessagesPage() {
       toast.error('No Telegram chat ID found for parent contact');
       return;
     }
+    const chatIdValue = String(selectedChatId).trim();
+    if (!/^-?\d+$/.test(chatIdValue)) {
+      toast.error('Invalid Telegram chat ID. It should be numeric (e.g., 123456789).');
+      return;
+    }
 
     setMessageLoading(true);
     try {
@@ -121,7 +126,12 @@ export default function MessagesPage() {
         setIsSendModalOpen(false);
         setSelectedStudent(null);
       } else {
-        toast.error(result.error || 'Failed to send message');
+        const errorMessage = result.error || '';
+        if (/chat not found|chat_id_invalid|bad request/i.test(errorMessage)) {
+          toast.error('Parent Telegram chat ID is invalid. Ask the parent to /start the bot and provide the correct Chat ID.');
+        } else {
+          toast.error(errorMessage || 'Failed to send message');
+        }
       }
     } catch (error) {
       console.error('Error sending message:', error);
