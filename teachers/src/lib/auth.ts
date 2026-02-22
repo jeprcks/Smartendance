@@ -22,6 +22,7 @@ export function setTeacherAuth(data: {
   email: string;
   subject?: string;
   role?: string;
+  profilePicture?: string | null;
 }): void {
   if (typeof window === 'undefined') return;
   localStorage.setItem(TEACHER_TOKEN, data.token);
@@ -30,6 +31,11 @@ export function setTeacherAuth(data: {
   localStorage.setItem(TEACHER_EMAIL, data.email);
   localStorage.setItem(TEACHER_SUBJECT, data.subject ?? '');
   localStorage.setItem(TEACHER_ROLE, data.role ?? 'Teacher');
+  if (data.profilePicture) {
+    localStorage.setItem('teacher_profile_picture', data.profilePicture);
+  } else {
+    localStorage.removeItem('teacher_profile_picture');
+  }
   // Also set cookie for middleware (Secure only on HTTPS)
   const secure = typeof window !== 'undefined' && window.location?.protocol === 'https' ? ';Secure' : '';
   document.cookie = `teacher_token=${data.token};path=/;max-age=86400;SameSite=Lax${secure}`;

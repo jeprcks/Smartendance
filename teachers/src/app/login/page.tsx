@@ -33,6 +33,7 @@ export default function LoginPage() {
       const teacherEmail = (user.email ?? '') as string;
       const subject = (user.subject ?? '') as string;
       const role = (user.role ?? 'Teacher') as string;
+      const profilePicture = (user.profilePicture ?? user.avatar ?? user.photo ?? null) as string | null;
 
       if (!teacherId) {
         throw new Error('Invalid response: Teacher data not found');
@@ -45,6 +46,7 @@ export default function LoginPage() {
         email: teacherEmail,
         subject,
         role,
+        profilePicture,
       });
 
       router.push('/dashboard');
