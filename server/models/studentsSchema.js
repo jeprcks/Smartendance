@@ -20,7 +20,6 @@ const studentSchema = new Schema(
         age: {
             type: Number,
             required: true,
-            min: 12,
             max: 25
         },
         birthDate: {

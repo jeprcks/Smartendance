@@ -60,10 +60,6 @@ const teacherSchema = new Schema(
             required: true,
             minlength: 6
         },
-        plainPassword: {
-            type: String,
-            required: true
-        },
         dateJoined: {
             type: Date,
             required: true,

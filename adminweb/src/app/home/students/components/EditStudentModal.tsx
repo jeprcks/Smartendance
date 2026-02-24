@@ -167,10 +167,10 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
     }
 
     const age = formData.age;
-    if (age !== undefined && (age < 12 || age > 25)) {
+    if (age !== undefined && (age < 0 || age > 25)) {
       errors.push({
         field: 'age',
-        message: 'Age must be between 12 and 25'
+        message: 'Age must be between 0 and 25'
       });
     }
 
