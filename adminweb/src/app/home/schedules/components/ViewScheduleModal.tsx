@@ -62,12 +62,12 @@ export default function ViewScheduleModal({ isOpen, onClose, schedule }: ViewSch
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-black opacity-50"></div>
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
+      <div className="bg-[var(--surface)] rounded-lg shadow-lg border border-[var(--border)] p-6 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Schedule Details</h2>
+          <h2 className="text-2xl font-bold text-[var(--foreground)]">Schedule Details</h2>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors"
           >
             ✕
           </button>
@@ -76,31 +76,31 @@ export default function ViewScheduleModal({ isOpen, onClose, schedule }: ViewSch
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-6">
             <div>
-              <p className="text-sm text-gray-500 mb-1">Schedule ID</p>
-              <p className="text-base font-medium text-gray-900">{schedule._id || schedule.id || 'N/A'}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Schedule ID</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule._id || schedule.id || 'N/A'}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Subject</p>
-              <p className="text-base font-medium text-gray-900">{schedule.subject}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Subject</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.subject}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Grade Level</p>
-              <p className="text-base font-medium text-gray-900">{schedule.gradeLevel}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Grade Level</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.gradeLevel}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Section</p>
-              <p className="text-base font-medium text-gray-900">{schedule.section}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Section</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.section}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Teacher</p>
-              <p className="text-base font-medium text-gray-900">{schedule.teacher}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Teacher</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.teacher}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Room</p>
-              <p className="text-base font-medium text-gray-900">{schedule.room}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Room</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.room}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Days</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Days</p>
               <div className="flex flex-wrap gap-2">
                 {(Array.isArray(schedule.days) ? schedule.days : schedule.day ? [schedule.day] : []).map((day) => (
                   <span
@@ -113,46 +113,46 @@ export default function ViewScheduleModal({ isOpen, onClose, schedule }: ViewSch
               </div>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Time Slot</p>
-              <p className="text-base font-medium text-gray-900">{schedule.timeSlot}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Time Slot</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.timeSlot}</p>
             </div>
             <div>
-              <p className="text-sm text-gray-500 mb-1">Shift</p>
-              <p className="text-base font-medium text-gray-900">{schedule.shift}</p>
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Shift</p>
+              <p className="text-base font-medium text-[var(--foreground)]">{schedule.shift}</p>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 pt-6 border-t border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-800 mb-4">Enrolled Students ({schedule.shift} Shift)</h3>
+        <div className="mt-8 pt-6 border-t border-[var(--border)]">
+          <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Enrolled Students ({schedule.shift} Shift)</h3>
 
           {loadingStudents ? (
-            <p className="text-sm text-gray-500">Loading students...</p>
+            <p className="text-sm text-[var(--muted-foreground)]">Loading students...</p>
           ) : studentError ? (
-            <p className="text-sm text-red-600">{studentError}</p>
+            <p className="text-sm text-[var(--destructive)]">{studentError}</p>
           ) : enrolledStudents.length === 0 ? (
-            <p className="text-sm text-gray-500">No students found for this schedule.</p>
+            <p className="text-sm text-[var(--muted-foreground)]">No students found for this schedule.</p>
           ) : (
             <div className="overflow-x-auto border rounded-md">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-[var(--border)]">
+                <thead className="bg-[var(--muted)]">
                   <tr>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Student ID</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Full Name</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Grade</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Section</th>
-                    <th className="px-4 py-2 text-left text-xs font-medium text-gray-500">Gender</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Student ID</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Full Name</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Grade</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Section</th>
+                    <th className="px-4 py-2 text-left text-xs font-medium text-[var(--muted-foreground)]">Gender</th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-100">
+                <tbody className="bg-[var(--surface)] divide-y divide-[var(--border)]">
                   {enrolledStudents.map((student) => (
-                    <tr key={student._id} className="hover:bg-gray-50">
-                      <td className="px-4 py-2 text-sm text-gray-700">{student.studentId}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{student.fullName}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{student.gradeLevel}</td>
-                      <td className="px-4 py-2 text-sm text-gray-700">{student.section}</td>
+                    <tr key={student._id} className="hover:bg-[var(--muted)]">
+                      <td className="px-4 py-2 text-sm text-[var(--foreground)]">{student.studentId}</td>
+                      <td className="px-4 py-2 text-sm text-[var(--foreground)]">{student.fullName}</td>
+                      <td className="px-4 py-2 text-sm text-[var(--foreground)]">{student.gradeLevel}</td>
+                      <td className="px-4 py-2 text-sm text-[var(--foreground)]">{student.section}</td>
                       <td className="px-4 py-2 text-sm">
-                        <span className={student.gender === 'Male' ? 'text-blue-700 font-medium' : 'text-gray-700'}>{student.gender}</span>
+                        <span className={student.gender === 'Male' ? 'text-blue-600 dark:text-blue-400 font-medium' : 'text-[var(--foreground)]'}>{student.gender}</span>
                       </td>
                     </tr>
                   ))}
@@ -162,10 +162,10 @@ export default function ViewScheduleModal({ isOpen, onClose, schedule }: ViewSch
           )}
         </div>
 
-        <div className="flex justify-end mt-8 pt-6 border-t border-gray-200">
+        <div className="flex justify-end mt-8 pt-6 border-t border-[var(--border)]">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-sm hover:shadow-md"
+            className="px-6 py-2.5 bg-[var(--primary)] text-[var(--primary-foreground)] rounded-lg hover:bg-[var(--primary-dark)] transition-colors shadow-sm hover:shadow-md"
           >
             Close
           </button>

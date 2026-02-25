@@ -164,14 +164,14 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
       {/* Modal Overlay */}
       <div id="print-root" className="fixed inset-0 flex items-center justify-center z-50">
         <div className="fixed inset-0 bg-black opacity-50 print:hidden"></div>
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-2xl w-full mx-4 relative z-10">
+        <div className="bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 p-8 max-w-2xl w-full mx-4 relative z-10">
           <div className="space-y-6">
             {/* Header */}
             <div className="flex items-center justify-between print:hidden">
-              <h2 className="text-2xl font-bold text-gray-900">Print QR Code</h2>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Print QR Code</h2>
               <button
                 onClick={onClose}
-                className="text-gray-400 hover:text-gray-600 transition-colors"
+                className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
               >
                 <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -181,11 +181,11 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
 
             {/* Print Content */}
             <div ref={printRef} className="print-content">
-              <div className="bg-white p-8 text-center">
+              <div className="bg-white dark:bg-gray-800 p-8 text-center">
                 {/* School Header */}
                 <div className="mb-8">
-                  <h1 className="text-2xl font-bold text-gray-900 mb-2">Smartendance System</h1>
-                  <p className="text-gray-600">Student QR Code</p>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Smartendance System</h1>
+                  <p className="text-gray-600 dark:text-gray-400">Student QR Code</p>
                 </div>
 
                 {/* Student Information */}
@@ -207,15 +207,15 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
                       </div>
                     )}
                   </div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-1">{student.fullName}</h2>
-                  <p className="text-lg text-gray-700 mb-1">Student ID: {student.studentId}</p>
-                  <p className="text-gray-600">{student.gradeLevel} - Section {student.section}</p>
-                  <p className="text-gray-600">{student.shift} Shift</p>
+                  <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">{student.fullName}</h2>
+                  <p className="text-lg text-gray-700 dark:text-gray-300 mb-1">Student ID: {student.studentId}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{student.gradeLevel} - Section {student.section}</p>
+                  <p className="text-gray-600 dark:text-gray-400">{student.shift} Shift</p>
                 </div>
 
                 {/* QR Code */}
                 <div className="flex justify-center mb-6">
-                  <div className="bg-white p-4 border-2 border-gray-300 rounded-lg">
+                  <div className="bg-white dark:bg-gray-700 p-4 border-2 border-gray-300 dark:border-gray-600 rounded-lg">
                     {isLoading ? (
                       <div className="w-48 h-48 flex items-center justify-center bg-gray-100 border-2 border-gray-300 rounded">
                         <div className="text-center">
@@ -224,9 +224,9 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
                         </div>
                       </div>
                     ) : error ? (
-                      <div className="w-48 h-48 flex items-center justify-center bg-red-50 border-2 border-red-300 rounded">
+                      <div className="w-48 h-48 flex items-center justify-center bg-red-50 dark:bg-red-900/30 border-2 border-red-300 dark:border-red-700 rounded">
                         <div className="text-center">
-                          <p className="text-red-500 text-sm mb-2">{error}</p>
+                          <p className="text-red-500 dark:text-red-400 text-sm mb-2">{error}</p>
                           <button
                             onClick={fetchQRCode}
                             className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700"
@@ -250,7 +250,7 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
                 </div>
 
                 {/* Instructions */}
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600 dark:text-gray-400">
                   <p className="mb-2">Scan this QR code with the mobile app to view student information</p>
             
                 </div>
@@ -261,13 +261,13 @@ export default function PrintQRCodeModal({ isOpen, onClose, student }: PrintQRCo
             <div className="flex justify-end space-x-3 print:hidden">
               <button
                 onClick={onClose}
-                className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-gray-600 dark:text-gray-300 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handlePrint}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 transition-colors"
               >
                 Print QR Code
               </button>

@@ -27,11 +27,11 @@ export default function Watermark() {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center pointer-events-none z-0"
+      className="fixed inset-0 flex items-center justify-center pointer-events-none z-0 dark:opacity-60"
       style={{ opacity: 0.08 }}
       aria-hidden
     >
-      <img src={watermarkSrc} alt="" className="w-[800px] h-[800px] object-contain" />
+      <img src={watermarkSrc} alt="" className="w-[800px] h-[800px] object-contain dark:brightness-300 dark:contrast-150 dark:drop-shadow-2xl" />
     </div>
   );
 }

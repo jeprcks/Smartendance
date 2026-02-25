@@ -298,7 +298,7 @@ export default function TeachersPage() {
                   <IconComponent className={stat.textColor} size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                  <p className="text-sm text-[var(--muted-foreground)] dark:text-white/90 mb-1">{stat.title}</p>
                   <p className={`text-3xl font-bold ${stat.textColor}`}>
                     {stat.value.toLocaleString()}
                   </p>
@@ -366,7 +366,7 @@ export default function TeachersPage() {
         />
 
         <div className="table-container">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
             <span className="w-3 h-3 bg-green-500 rounded-full mr-2"></span>
             Active Teachers ({filteredActiveTeachers.length})
           </h2>
@@ -529,7 +529,7 @@ export default function TeachersPage() {
         {/* Inactive Teachers Section */}
         {filteredInactiveTeachers.length > 0 && (
           <div className="content-section mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
               <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
               Inactive Teachers ({filteredInactiveTeachers.length})
             </h2>

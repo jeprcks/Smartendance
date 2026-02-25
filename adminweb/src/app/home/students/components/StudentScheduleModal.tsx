@@ -89,11 +89,11 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
   if (!isOpen || !student) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-4xl max-h-[90vh] flex flex-col transform transition-all duration-300 scale-100">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-[var(--surface)] backdrop-blur-sm rounded-2xl shadow-xl border border-[var(--border)] p-6 w-full max-w-4xl max-h-[90vh] flex flex-col transform transition-all duration-300 scale-100">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-3">
+            <h2 className="text-2xl font-bold text-[var(--foreground)] tracking-tight mb-3">
               Schedule for {student.fullName}
             </h2>
             <div className="flex gap-3 flex-wrap">
@@ -119,7 +119,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all duration-200 flex-shrink-0"
+            className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-2 hover:bg-[var(--muted)] rounded-full transition-all duration-200 flex-shrink-0"
           >
             <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -132,7 +132,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
           {loading ? (
             <div className="flex items-center justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mr-3"></div>
-              <span className="text-gray-600">Loading schedule...</span>
+              <span className="text-[var(--muted-foreground)]">Loading schedule...</span>
             </div>
           ) : error ? (
             <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
@@ -161,34 +161,34 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
                         groupedClasses[day].map((schedule, idx) => (
                           <div
                             key={idx}
-                            className="bg-white rounded p-3 text-sm border border-green-100 hover:shadow-md transition-shadow"
+                            className="bg-[var(--card)] rounded p-3 text-sm border border-[var(--border)] hover:shadow-md transition-shadow"
                           >
                             <div className="flex items-start justify-between gap-2">
                               <div className="flex-1">
-                                <div className="font-semibold text-gray-900">{schedule.subject}</div>
-                                <div className="text-xs text-gray-500 mt-1">{schedule.day}</div>
+                                <div className="font-semibold text-[var(--foreground)]">{schedule.subject}</div>
+                                <div className="text-xs text-[var(--muted-foreground)] mt-1">{schedule.day}</div>
                               </div>
                             </div>
                             <div className="mt-2 space-y-1">
-                              <div className="flex items-center text-xs text-gray-700">
+                              <div className="flex items-center text-xs text-[var(--foreground)]">
                                 <svg className="w-4 h-4 mr-1.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00-.293.707l-2.828 2.829a1 1 0 101.414 1.414L8 9.586V6z" clipRule="evenodd" />
                                 </svg>
                                 <span className="font-medium">{schedule.timeSlot}</span>
                               </div>
-                              <div className="flex items-center text-xs text-gray-700">
+                              <div className="flex items-center text-xs text-[var(--foreground)]">
                                 <svg className="w-4 h-4 mr-1.5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
                                   <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
                                 </svg>
                                 <span className="font-medium">Room {schedule.room}</span>
                               </div>
-                              <div className="flex items-center text-xs text-gray-600">
+                              <div className="flex items-center text-xs text-[var(--muted-foreground)]">
                                 <svg className="w-4 h-4 mr-1.5 text-purple-600" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
                                 </svg>
                                 <span>{schedule.teacher}</span>
                               </div>
-                              <div className="flex items-center text-xs text-gray-600">
+                              <div className="flex items-center text-xs text-[var(--muted-foreground)]">
                                 <svg className="w-4 h-4 mr-1.5 text-orange-600" fill="currentColor" viewBox="0 0 20 20">
                                   <path fillRule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2V6h10a2 2 0 00-2-2H4zm2 6a2 2 0 012-2h8a2 2 0 012 2v4a2 2 0 01-2 2H8a2 2 0 01-2-2v-4zm6 4a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
                                 </svg>
@@ -198,7 +198,7 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
                           </div>
                         ))
                       ) : (
-                        <div className="bg-white rounded p-3 text-sm border border-gray-200 text-gray-400">
+                        <div className="bg-[var(--card)] rounded p-3 text-sm border border-[var(--border)] text-[var(--muted-foreground)]">
                           No classes
                         </div>
                       )}
@@ -218,15 +218,15 @@ export default function StudentScheduleModal({ isOpen, onClose, student }: Stude
         </div>
 
         {/* Action buttons - fixed at bottom */}
-        <div className="flex items-center justify-between pt-6 border-t border-gray-200 mt-6 flex-shrink-0">
-          <div className="text-sm text-gray-600">
-            Grade: <span className="font-semibold text-gray-900">{student.gradeLevel}</span> • 
-            Section: <span className="font-semibold text-gray-900">{student.section}</span> •
-            Total Classes: <span className="font-semibold text-gray-900">{schedules.length} classes per week</span>
+        <div className="flex items-center justify-between pt-6 border-t border-[var(--border)] mt-6 flex-shrink-0">
+          <div className="text-sm text-[var(--foreground)]">
+            Grade: <span className="font-semibold">{student.gradeLevel}</span> • 
+            Section: <span className="font-semibold">{student.section}</span> •
+            Total Classes: <span className="font-semibold">{schedules.length} classes per week</span>
           </div>
           <button
             onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 font-medium rounded-lg hover:bg-gray-200 transition-all duration-200"
+            className="px-4 py-2 bg-[var(--muted)] text-[var(--foreground)] font-medium rounded-lg hover:bg-[var(--secondary)] transition-all duration-200"
           >
             Close
           </button>

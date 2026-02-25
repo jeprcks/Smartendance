@@ -75,7 +75,7 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Basic Information */}
-          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)] bg-green-50/30 dark:bg-black/80">
             <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -126,7 +126,7 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Contact Information */}
-          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)] bg-green-50/30 dark:bg-black/80">
             <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Contact Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
@@ -137,7 +137,7 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Address Information */}
-          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)] bg-green-50/30 dark:bg-black/80">
             <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {teacher.address?.street && (
@@ -174,7 +174,7 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Employment Information */}
-          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)] bg-green-50/30 dark:bg-black/80">
             <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Employment Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>

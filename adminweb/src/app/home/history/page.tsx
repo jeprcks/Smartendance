@@ -101,7 +101,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                   <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ${
                     student.gender === 'Male' ? 'bg-blue-50 text-blue-700 ring-blue-200/50' :
                     student.gender === 'Female' ? 'bg-pink-50 text-pink-700 ring-pink-200/50' :
-                    'bg-gray-50 text-gray-700 ring-gray-200/50'
+                    'bg-[var(--muted)] text-[var(--foreground)] ring-[var(--border)]'
                   }`}>
                     {student.gender}
                   </span>
@@ -167,34 +167,34 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
         {/* Recent Attendance Records */}
         <div>
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900">Recent Attendance Records</h3>
-            <div className="text-sm text-gray-500">{filteredRecords.length} records found</div>
+            <h3 className="text-lg font-semibold text-[var(--foreground)]">Recent Attendance Records</h3>
+            <div className="text-sm text-[var(--muted-foreground)]">{filteredRecords.length} records found</div>
           </div>
 
           {/* Filters for Recent Attendance Records */}
           <div className="mb-6 flex gap-4 items-end">
             <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">Search</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Search</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                  <svg className="h-5 w-5 text-gray-400 group-focus-within:text-green-500 transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-5 w-5 text-[var(--muted-foreground)] group-focus-within:text-[var(--primary)] transition-colors duration-300" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <input
                   type="text"
                   placeholder="Search by subject, teacher, or status..."
-                  className="w-full pl-12 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300 text-sm"
+                  className="w-full pl-12 pr-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
                   value={recordSearchQuery}
                   onChange={(e) => setRecordSearchQuery(e.target.value)}
                 />
               </div>
             </div>
             <div className="w-48">
-              <label className="block text-sm font-medium text-gray-600 mb-1.5">Date</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Date</label>
               <input
                 type="date"
-                className="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-green-500 focus:bg-white transition-all duration-300 text-sm"
+                className="w-full px-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
                 value={recordSelectedDate}
                 onChange={(e) => setRecordSelectedDate(e.target.value)}
               />
@@ -205,46 +205,46 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                   setRecordSearchQuery('');
                   setRecordSelectedDate('');
                 }}
-                className="px-3 py-2.5 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors duration-200 text-sm font-medium"
+                className="px-3 py-2.5 bg-[var(--muted)] text-[var(--foreground)] rounded-lg hover:bg-[var(--secondary)] transition-colors duration-200 text-sm font-medium"
               >
                 Clear Filters
               </button>
             )}
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200/80">
-            <table className="w-full divide-y divide-gray-200/80">
-              <thead className="bg-gradient-to-br from-gray-50/80 to-gray-100/50">
+          <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
+            <table className="w-full divide-y divide-[var(--border)]">
+              <thead className="bg-[var(--muted)]">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Schedule</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Time</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Subject</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Teacher</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Schedule</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Date</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Type</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Time</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Subject</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Teacher</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Status</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200/80">
+              <tbody className="bg-[var(--surface)] divide-y divide-[var(--border)]">
                 {filteredRecords.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={7} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
                       No records found matching your filters
                     </td>
                   </tr>
                 ) : (
                   filteredRecords.map((record) => (
-                    <tr key={record._id} className="hover:bg-gray-50/80 group transition-all duration-200">
+                    <tr key={record._id} className="hover:bg-[var(--muted)] group transition-all duration-200">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                      <div className="text-sm font-medium text-[var(--foreground)] transition-colors duration-200">
                         {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? 'N/A' : record.scheduleDay || 'N/A'}
                       </div>
-                      <div className="text-xs text-gray-500 group-hover:text-gray-600 transition-colors duration-200">
+                      <div className="text-xs text-[var(--muted-foreground)] transition-colors duration-200">
                         {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0) ? '' : record.scheduleTimeSlot || 'N/A'}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
+                      <span className="text-sm text-[var(--foreground)] transition-colors duration-200">
                         {format(new Date(record.checkInTime || record.scanTime), 'MMM dd, yyyy')}
                       </span>
                     </td>
@@ -256,7 +256,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                           ? 'bg-green-50 text-green-700 ring-green-200/50' 
                           : record.attendanceType === 'Out' 
                           ? 'bg-purple-50 text-purple-700 ring-purple-200/50' 
-                          : 'bg-gray-50 text-gray-700 ring-gray-200/50'
+                          : 'bg-[var(--muted)] text-[var(--foreground)] ring-[var(--border)]'
                       }`}>
                         {record.statusHistory && record.statusHistory.length > 0 
                           ? `Teacher (${record.statusHistory[record.statusHistory.length - 1].changedBy || 'Unknown'})` 
@@ -264,7 +264,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-600 group-hover:text-gray-900 transition-colors duration-200">
+                      <div className="text-sm text-[var(--foreground)] transition-colors duration-200">
                         {/* Show teacher update time if available, otherwise show attendance-specific time */}
                         {record.statusHistory && record.statusHistory.length > 0
                           ? format(new Date(record.statusHistory[record.statusHistory.length - 1].changedAt), 'HH:mm')
@@ -276,17 +276,17 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                      <span className="text-sm font-medium text-[var(--foreground)] transition-colors duration-200">
                         {record.subject || '—'}
                       </span>
                       {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (
-                        <span className="text-gray-500 block text-xs mt-0.5">
+                        <span className="text-[var(--muted-foreground)] block text-xs mt-0.5">
                           {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm text-gray-700 group-hover:text-gray-900 transition-colors duration-200">
+                      <span className="text-sm text-[var(--foreground)] transition-colors duration-200">
                         {record.scheduleTeacher || 'N/A'}
                       </span>
                     </td>
@@ -612,7 +612,7 @@ export default function HistoryPage() {
                 <input
                   type="text"
                   placeholder="Search by student name, ID, or subject..."
-                  className="w-full pl-12 pr-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-white transition-all duration-300"
+                  className="w-full pl-12 pr-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-[var(--foreground)]"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
@@ -701,7 +701,7 @@ export default function HistoryPage() {
                           <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ${
                             record.gender === 'Male' ? 'bg-blue-50 text-blue-700 ring-blue-200/50' :
                             record.gender === 'Female' ? 'bg-pink-50 text-pink-700 ring-pink-200/50' :
-                            'bg-gray-50 text-gray-700 ring-gray-200/50'
+                            'bg-[var(--muted)] text-[var(--foreground)] ring-[var(--border)]'
                           }`}>
                             {record.gender}
                           </span>
@@ -711,7 +711,7 @@ export default function HistoryPage() {
                     <td className="whitespace-nowrap">
                       <span>{record.subject || '—'}</span>
                       {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (
-                        <span className="text-gray-500 block text-xs mt-0.5">
+                        <span className="text-[var(--muted-foreground)] block text-xs mt-0.5">
                           {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
                         </span>
                       )}

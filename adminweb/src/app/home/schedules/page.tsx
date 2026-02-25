@@ -124,7 +124,7 @@ export default function SchedulesPage() {
                     <input
                       type="text"
                       placeholder="Search schedules..."
-                      className="w-full pl-12 pr-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-white transition-all duration-300"
+                      className="w-full pl-12 pr-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300"
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                     />
@@ -230,7 +230,7 @@ export default function SchedulesPage() {
                       <td className="whitespace-nowrap">
                         <button
                           type="button"
-                          className="inline-flex items-center px-4 py-2 bg-[var(--secondary)] text-[var(--primary)] text-sm font-medium rounded-lg hover:bg-[var(--primary)] hover:text-white transition-all duration-200"
+                          className="inline-flex items-center px-4 py-2 bg-[var(--secondary)] text-[var(--primary)] text-sm font-medium rounded-lg hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] transition-all duration-200"
                           onClick={() => {
                             setSelectedSchedule(schedule);
                             setIsViewModalOpen(true);

@@ -18,6 +18,9 @@ const settingsSchema = new Schema(
 
     // Academic
     academicYear: { type: String, default: "" }, // e.g. "2024-2025"
+
+    // Appearance
+    theme: { type: String, default: "light", enum: ["light", "dark"] },
   },
   { timestamps: true }
 );

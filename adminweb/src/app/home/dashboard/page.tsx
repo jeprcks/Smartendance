@@ -359,9 +359,9 @@ export default function DashboardPage() {
       'Late': { bg: 'bg-yellow-100', text: 'text-yellow-700' },
       'Absent': { bg: 'bg-red-100', text: 'text-red-700' },
       'Cutting': { bg: 'bg-orange-100', text: 'text-orange-700' },
-      'Out': { bg: 'bg-gray-100', text: 'text-gray-700' },
+      'Out': { bg: 'bg-[var(--muted)]', text: 'text-[var(--foreground)]' },
     };
-    const colors = statusMap[status] || { bg: 'bg-gray-100', text: 'text-gray-700' };
+    const colors = statusMap[status] || { bg: 'bg-[var(--muted)]', text: 'text-[var(--foreground)]' };
     return (
       <span className={`px-2 py-1 ${colors.bg} ${colors.text} rounded text-sm font-semibold`}>
         {status}
@@ -381,7 +381,7 @@ export default function DashboardPage() {
     } else if (record.attendanceType === 'Out') {
       return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-purple-50 text-purple-700 ring-purple-200/50">Out</span>;
     }
-    return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-gray-50 text-gray-700 ring-gray-200/50">N/A</span>;
+    return <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 bg-[var(--muted)] text-[var(--foreground)] ring-[var(--border)]">N/A</span>;
   };
 
   if (isLoading && stats.totalStudents === 0) {
@@ -454,14 +454,14 @@ export default function DashboardPage() {
                   <IconComponent className={`${stat.textColor}`} size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">{stat.title}</p>
                   <p className={`text-3xl font-bold ${stat.textColor} stat-value-transition`} key={stat.value}>
                     {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                   </p>
                 </div>
               </div>
               {/* Mini progress bar */}
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-[var(--muted)] rounded-full h-2">
                 <div
                   className={`${stat.color} h-2 rounded-full transition-all duration-500`}
                   style={{ width: barHeight }}
@@ -475,8 +475,8 @@ export default function DashboardPage() {
       {/* Charts Section - Recharts */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
         {/* Bar Chart - Today's counts */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '400ms' }}>
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Today&apos;s Statistics</h2>
+        <div className="bg-[var(--surface)] rounded-xl shadow-md border border-[var(--border)] p-6 dashboard-section-animate" style={{ animationDelay: '400ms' }}>
+          <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">Today&apos;s Statistics</h2>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
@@ -503,11 +503,11 @@ export default function DashboardPage() {
         </div>
 
         {/* Pie Chart - Attendance distribution */}
-        <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '500ms' }}>
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">Today&apos;s Attendance Distribution</h2>
+        <div className="bg-[var(--surface)] rounded-xl shadow-md border border-[var(--border)] p-6 dashboard-section-animate" style={{ animationDelay: '500ms' }}>
+          <h2 className="text-xl font-semibold text-[var(--foreground)] mb-6">Today&apos;s Attendance Distribution</h2>
           <div className="h-80">
             {stats.presentToday + stats.absentToday + stats.lateToday === 0 ? (
-              <div className="flex items-center justify-center h-full text-gray-500">
+              <div className="flex items-center justify-center h-full text-[var(--muted-foreground)]">
                 No attendance data yet today
               </div>
             ) : (
@@ -552,19 +552,19 @@ export default function DashboardPage() {
       </div>
 
       {/* Weekly Trends */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate mb-8" style={{ animationDelay: '600ms' }}>
+      <div className="bg-[var(--surface)] rounded-xl shadow-md border border-[var(--border)] p-6 dashboard-section-animate mb-8" style={{ animationDelay: '600ms' }}>
         <div className="flex items-center gap-2 mb-6">
           <Calendar className="text-green-600" size={24} />
-          <h2 className="text-xl font-semibold text-gray-900">Weekly Attendance Trends</h2>
-          <span className="ml-auto text-sm text-gray-500">Last 7 days</span>
+          <h2 className="text-xl font-semibold text-[var(--foreground)]">Weekly Attendance Trends</h2>
+          <span className="ml-auto text-sm text-[var(--muted-foreground)]">Last 7 days</span>
         </div>
         
         {isLoading ? (
           <LoadingSkeleton type="table" count={3} />
         ) : weeklyTrends.length === 0 || weeklyTrends.every(d => d.total === 0) ? (
-          <div className="flex items-center justify-center h-80 text-gray-500 bg-gray-50/50 rounded-lg border border-dashed border-gray-200">
+          <div className="flex items-center justify-center h-80 text-[var(--muted-foreground)] bg-[var(--muted)]/50 rounded-lg border border-dashed border-[var(--border)]">
             <div className="text-center">
-              <Calendar className="mx-auto text-gray-400 mb-3" size={40} />
+              <Calendar className="mx-auto text-[var(--muted-foreground)] mb-3" size={40} />
               <p className="font-medium">No weekly data available</p>
               <p className="text-sm mt-1">Attendance trends will appear as data is collected</p>
             </div>
@@ -639,9 +639,9 @@ export default function DashboardPage() {
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-gray-200">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[var(--border)]">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Avg. Present</p>
+                <p className="text-sm text-[var(--muted-foreground)] mb-1">Avg. Present</p>
                 <p className="text-2xl font-bold text-green-600">
                   {weeklyTrends.length > 0 
                     ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.present, 0) / weeklyTrends.length)
@@ -649,7 +649,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Avg. Late</p>
+                <p className="text-sm text-[var(--muted-foreground)] mb-1">Avg. Late</p>
                 <p className="text-2xl font-bold text-yellow-600">
                   {weeklyTrends.length > 0 
                     ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.late, 0) / weeklyTrends.length)
@@ -657,7 +657,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Avg. Absent</p>
+                <p className="text-sm text-[var(--muted-foreground)] mb-1">Avg. Absent</p>
                 <p className="text-2xl font-bold text-red-600">
                   {weeklyTrends.length > 0 
                     ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.absent, 0) / weeklyTrends.length)
@@ -665,7 +665,7 @@ export default function DashboardPage() {
                 </p>
               </div>
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Avg. Rate</p>
+                <p className="text-sm text-[var(--muted-foreground)] mb-1">Avg. Rate</p>
                 <p className="text-2xl font-bold text-indigo-600">
                   {weeklyTrends.length > 0 
                     ? Math.round(weeklyTrends.reduce((sum, d) => sum + d.attendanceRate, 0) / weeklyTrends.length)
@@ -676,7 +676,7 @@ export default function DashboardPage() {
 
             {/* Trend Indicator */}
             {weeklyTrends.length >= 2 && (
-              <div className="flex items-center justify-center gap-2 p-3 bg-gray-50 rounded-lg">
+              <div className="flex items-center justify-center gap-2 p-3 bg-[var(--muted)] rounded-lg">
                 {(() => {
                   const recentRate = weeklyTrends[weeklyTrends.length - 1].attendanceRate;
                   const previousRate = weeklyTrends[weeklyTrends.length - 2].attendanceRate;
@@ -687,10 +687,10 @@ export default function DashboardPage() {
                   return (
                     <>
                       <TrendingUp 
-                        className={`${isPositive ? 'text-green-600' : isNeutral ? 'text-gray-600' : 'text-red-600'} ${!isPositive && !isNeutral ? 'rotate-180' : ''}`} 
+                        className={`${isPositive ? 'text-green-600 dark:text-green-400' : isNeutral ? 'text-[var(--muted-foreground)]' : 'text-red-600 dark:text-red-400'} ${!isPositive && !isNeutral ? 'rotate-180' : ''}`} 
                         size={20} 
                       />
-                      <span className={`text-sm font-medium ${isPositive ? 'text-green-600' : isNeutral ? 'text-gray-600' : 'text-red-600'}`}>
+                      <span className={`text-sm font-medium ${isPositive ? 'text-green-600 dark:text-green-400' : isNeutral ? 'text-[var(--muted-foreground)]' : 'text-red-600 dark:text-red-400'}`}>
                         {isNeutral 
                           ? 'Attendance rate unchanged from yesterday'
                           : `Attendance ${isPositive ? 'improved' : 'decreased'} by ${Math.abs(diff).toFixed(1)}% from yesterday`
@@ -706,21 +706,21 @@ export default function DashboardPage() {
       </div>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 p-6 dashboard-section-animate" style={{ animationDelay: '650ms' }}>
+      <div className="bg-[var(--surface)] rounded-xl shadow-md border border-[var(--border)] p-6 dashboard-section-animate" style={{ animationDelay: '650ms' }}>
         <div className="flex flex-wrap justify-between items-center gap-3 mb-4">
           <div className="flex items-center gap-2">
             <Activity className="text-green-600" size={24} />
-            <h2 className="text-xl font-semibold text-gray-900">Recent Activity</h2>
+            <h2 className="text-xl font-semibold text-[var(--foreground)]">Recent Activity</h2>
           </div>
           <div className="flex items-center gap-3">
             {recentActivity.length > 0 && (
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-[var(--muted-foreground)]">
                 Last {recentActivity.length} records
               </span>
             )}
             <Link
               href="/home/history"
-              className="inline-flex items-center gap-1.5 text-sm font-medium text-green-700 hover:text-green-800"
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-[var(--primary)] hover:text-[var(--primary-dark)]"
             >
               View all
               <ArrowRight size={16} />
@@ -730,16 +730,16 @@ export default function DashboardPage() {
         {isLoading ? (
           <LoadingSkeleton type="table" count={5} />
         ) : recentActivity.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 rounded-lg border border-dashed border-gray-200 bg-gray-50/50">
-            <Activity className="mx-auto text-gray-400 mb-3" size={40} />
+          <div className="text-center py-12 text-[var(--muted-foreground)] rounded-lg border border-dashed border-[var(--border)] bg-[var(--muted)]/50">
+            <Activity className="mx-auto text-[var(--muted-foreground)] mb-3" size={40} />
             <p className="font-medium">No recent activity</p>
             <p className="text-sm mt-1">Attendance records will appear here as students check in or out</p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-lg border border-gray-200">
+          <div className="overflow-x-auto rounded-lg border border-[var(--border)]">
             <table className="min-w-[640px] w-full border-collapse">
               <thead>
-                <tr className="bg-green-600 text-white">
+                <tr className="bg-[var(--primary)] text-[var(--primary-foreground)]">
                   <th className="px-4 py-3 text-left text-sm font-semibold rounded-tl-lg">Time</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Student</th>
                   <th className="px-4 py-3 text-left text-sm font-semibold">Subject</th>
@@ -751,19 +751,19 @@ export default function DashboardPage() {
                 {recentActivity.map((record, index) => (
                   <tr
                     key={record._id}
-                    className={`dashboard-activity-row border-b border-gray-100 last:border-0 hover:bg-gray-50 ${index % 2 === 1 ? 'bg-gray-50/50' : ''}`}
+                    className={`dashboard-activity-row border-b border-[var(--border)] last:border-0 hover:bg-[var(--muted)] ${index % 2 === 1 ? 'bg-[var(--muted)]/50' : ''}`}
                   >
                     <td className="px-4 py-3 text-sm">
-                      <span className="font-medium text-gray-900">{format(new Date(record.scanTime), 'hh:mm a')}</span>
-                      <span className="text-gray-500 block text-xs mt-0.5">
+                      <span className="font-medium text-[var(--foreground)]">{format(new Date(record.scanTime), 'hh:mm a')}</span>
+                      <span className="text-[var(--muted-foreground)] block text-xs mt-0.5">
                         {formatDistanceToNow(new Date(record.scanTime), { addSuffix: true })}
                       </span>
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-900">{record.studentName}</td>
-                    <td className="px-4 py-3 text-sm text-gray-700">
+                    <td className="px-4 py-3 font-medium text-[var(--foreground)]">{record.studentName}</td>
+                    <td className="px-4 py-3 text-sm text-[var(--foreground)]">
                       {record.subject || '—'}
                       {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (
-                        <span className="text-gray-500 block text-xs mt-0.5">
+                        <span className="text-[var(--muted-foreground)] block text-xs mt-0.5">
                           {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
                         </span>
                       )}

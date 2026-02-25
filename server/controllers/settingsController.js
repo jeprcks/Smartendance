@@ -21,6 +21,7 @@ const updateSettings = async (req, res) => {
       morningShiftCutoff,
       afternoonShiftCutoff,
       academicYear,
+      theme,
     } = req.body;
 
     let settings = await Settings.findOne();
@@ -36,6 +37,7 @@ const updateSettings = async (req, res) => {
     if (morningShiftCutoff !== undefined) settings.morningShiftCutoff = morningShiftCutoff;
     if (afternoonShiftCutoff !== undefined) settings.afternoonShiftCutoff = afternoonShiftCutoff;
     if (academicYear !== undefined) settings.academicYear = academicYear;
+    if (theme !== undefined && ["light", "dark"].includes(theme)) settings.theme = theme;
 
     await settings.save();
     res.status(200).json(settings);

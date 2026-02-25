@@ -365,7 +365,7 @@ export default function StudentsPage() {
                   <IconComponent className={stat.textColor} size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">{stat.title}</p>
                   <p className={`text-3xl font-bold ${stat.textColor}`}>
                     {stat.value.toLocaleString()}
                   </p>
@@ -382,7 +382,7 @@ export default function StudentsPage() {
         })}
       </div>
 
-      <div className="bg-white rounded-xl shadow-md border-2 border-transparent hover:border-[var(--primary)] transition-colors duration-200 backdrop-blur-sm">
+      <div className="bg-[var(--surface)] rounded-xl shadow-md border-2 border-transparent hover:border-[var(--primary)] transition-colors duration-200 backdrop-blur-sm">
         <div className="p-6">
           {/* Advanced Search */}
           <AdvancedSearch
@@ -409,10 +409,10 @@ export default function StudentsPage() {
           />
 
           <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
-            <table className="min-w-full divide-y divide-gray-200/80">
-              <thead className="bg-gray-50/50">
+            <table className="min-w-full divide-y divide-[var(--border)]">
+              <thead className="bg-[var(--muted)]/50">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-12">
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider w-12">
                     <input
                       type="checkbox"
                       checked={selectedStudents.size === sortedFilteredStudents.length && sortedFilteredStudents.length > 0}
@@ -420,27 +420,27 @@ export default function StudentsPage() {
                       className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Profile</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Student ID</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Full Name</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Grade Level</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Section</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Gender</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Shift</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Profile</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Student ID</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Full Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Grade Level</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Section</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Gender</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Shift</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200/80">
+              <tbody className="bg-[var(--surface)] divide-y divide-[var(--border)]">
                 {loading ? (
                   // Show loading skeletons
                   [...Array(5)].map((_, index) => <LoadingSkeleton key={index} />)
                 ) : sortedFilteredStudents.length === 0 ? (
                   // Show empty state
                   <tr>
-                    <td colSpan={10} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={10} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
                       <div className="flex flex-col items-center justify-center space-y-2">
-                        <svg className="w-8 h-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <svg className="w-8 h-8 text-[var(--muted-foreground)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
                         </svg>
                         <p>No students found</p>
@@ -452,7 +452,7 @@ export default function StudentsPage() {
                   sortedFilteredStudents.map((student) => {
                     const isSelected = selectedStudents.has(student.studentId);
                     return (
-                  <tr key={student.studentId} className={`hover:bg-[var(--secondary)] hover:shadow-[inset_4px_0_0_0_var(--primary)] transition-all duration-200 ${isSelected ? 'bg-green-50' : ''}`}>
+                  <tr key={student.studentId} className={`hover:bg-[var(--secondary)] hover:shadow-[inset_4px_0_0_0_var(--primary)] transition-all duration-200 ${isSelected ? 'bg-[var(--secondary)]' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"
@@ -483,7 +483,7 @@ export default function StudentsPage() {
                           />
                         ) : (
                           <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-green-500 flex items-center justify-center">
-                            <span className="text-sm font-bold text-gray-600">
+                            <span className="text-sm font-bold text-[var(--foreground)]">
                               {student.fullName.split(' ').map((name: string) => name[0]).join('')}
                             </span>
                           </div>
@@ -491,18 +491,18 @@ export default function StudentsPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-800">{student.studentId}</span>
+                      <span className="text-sm font-medium text-[var(--foreground)]">{student.studentId}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="text-sm font-medium text-gray-800">{student.fullName}</span>
+                      <span className="text-sm font-medium text-[var(--foreground)]">{student.fullName}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm ${(student.status ?? '') === 'Graduated' ? 'text-indigo-700 font-medium' : 'text-gray-700'}`}>
+                      <span className={`text-sm ${(student.status ?? '') === 'Graduated' ? 'text-indigo-700 font-medium' : 'text-[var(--foreground)]'}`}>
                         {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gradeLevel}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm ${(student.status ?? '') === 'Graduated' ? 'text-indigo-700 font-medium' : 'text-gray-700'}`}>
+                      <span className={`text-sm ${(student.status ?? '') === 'Graduated' ? 'text-indigo-700 font-medium' : 'text-[var(--foreground)]'}`}>
                         {(student.status ?? '') === 'Graduated' ? 'N/A' : student.section}
                       </span>
                     </td>
@@ -538,7 +538,7 @@ export default function StudentsPage() {
                           {student.status ?? 'Active'}
                         </span>
                         {(student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate) && (
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-[var(--muted-foreground)]">
                             SY {student.graduationSchoolYear
                               ? student.graduationSchoolYear
                               : (() => {
@@ -554,7 +554,7 @@ export default function StudentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60 dark:hover:text-green-200 transition-all duration-200 shadow-sm hover:shadow-md"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsViewModalOpen(true);
@@ -567,7 +567,7 @@ export default function StudentsPage() {
                           View
                         </button>
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-yellow-50 text-yellow-600 text-sm font-medium rounded-lg hover:bg-yellow-100 hover:text-yellow-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-yellow-50 text-yellow-600 text-sm font-medium rounded-lg hover:bg-yellow-100 hover:text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 dark:hover:bg-yellow-900/60 dark:hover:text-yellow-200 transition-all duration-200 shadow-sm hover:shadow-md"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsEditModalOpen(true);
@@ -580,7 +580,7 @@ export default function StudentsPage() {
                           Edit
                         </button>
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60 dark:hover:text-green-200 transition-all duration-200 shadow-sm hover:shadow-md"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsPrintModalOpen(true);
@@ -593,7 +593,7 @@ export default function StudentsPage() {
                           Print
                         </button>
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-purple-50 text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-purple-50 text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 dark:hover:bg-purple-900/60 dark:hover:text-purple-200 transition-all duration-200 shadow-sm hover:shadow-md"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsScheduleModalOpen(true);

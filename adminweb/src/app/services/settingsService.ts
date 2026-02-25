@@ -10,6 +10,7 @@ export interface Settings {
   morningShiftCutoff: string;
   afternoonShiftCutoff: string;
   academicYear?: string;
+  theme?: 'light' | 'dark';
 }
 
 const defaultSettings: Settings = {
@@ -21,7 +22,20 @@ const defaultSettings: Settings = {
   morningShiftCutoff: '12:00',
   afternoonShiftCutoff: '17:00',
   academicYear: '',
+  theme: 'light',
 };
+
+export const THEME_STORAGE_KEY = 'theme';
+
+export function applyTheme(theme: 'light' | 'dark') {
+  if (typeof document === 'undefined') return;
+  if (theme === 'dark') {
+    document.documentElement.classList.add('dark');
+  } else {
+    document.documentElement.classList.remove('dark');
+  }
+  localStorage.setItem(THEME_STORAGE_KEY, theme);
+}
 
 export const settingsService = {
   async getSettings(): Promise<Settings> {

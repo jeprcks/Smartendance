@@ -45,10 +45,10 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
         <div className="fixed inset-0 bg-black opacity-50"></div>
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full mx-4 relative z-10">
+        <div className="bg-[var(--surface)] rounded-lg shadow-lg p-8 max-w-sm w-full mx-4 relative z-10">
           <div className="flex flex-col items-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-            <p className="mt-4 text-gray-600">Loading student details...</p>
+            <p className="mt-4 text-[var(--muted-foreground)]">Loading student details...</p>
           </div>
         </div>
       </div>
@@ -59,14 +59,14 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
     return (
       <div className="fixed inset-0 flex items-center justify-center z-50">
         <div className="fixed inset-0 bg-black opacity-50"></div>
-        <div className="bg-white rounded-lg shadow-lg p-8 max-w-sm w-full mx-4 relative z-10">
+        <div className="bg-[var(--surface)] rounded-lg shadow-lg p-8 max-w-sm w-full mx-4 relative z-10">
           <div className="flex flex-col items-center">
             <div className="text-red-600 mb-4">
               <svg className="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
             </div>
-            <p className="text-gray-800 mb-4">{error}</p>
+            <p className="text-[var(--foreground)] mb-4">{error}</p>
             <button
               onClick={onClose}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors"
@@ -84,10 +84,10 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-black opacity-50"></div>
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
+      <div className="bg-[var(--surface)] rounded-lg shadow-lg border border-[var(--border)] p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
         <div className="space-y-8">
           {/* Profile and Attendance Section */}
-          <div className="flex gap-8 pb-6 border-b border-gray-200">
+          <div className="flex gap-8 pb-6 border-b border-[var(--border)]">
             {/* Profile Section - Left Side */}
             <div className="flex flex-col items-center w-1/3">
               <div className="relative mb-4">
@@ -123,11 +123,11 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                   </div>
                 )}
               </div>
-              <h2 className="text-xl font-bold text-gray-900 mb-1 text-center">{student.fullName}</h2>
-              <p className="text-gray-500 mb-2 text-center">{student.studentId}</p>
+              <h2 className="text-xl font-bold text-[var(--foreground)] mb-1 text-center">{student.fullName}</h2>
+              <p className="text-[var(--muted-foreground)] mb-2 text-center">{student.studentId}</p>
               <span className={`px-4 py-1 rounded-full text-sm font-semibold ${
                 (student.status ?? '') === 'Graduated'
-                  ? 'bg-gray-100 text-gray-600 ring-1 ring-gray-200/50'
+                  ? 'bg-[var(--muted)] text-[var(--foreground)] ring-1 ring-[var(--border)]'
                   : student.gender === 'Male'
                     ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/50'
                     : 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/50'
@@ -142,7 +142,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
                 </svg>
-                <h3 className="text-lg font-semibold text-gray-900">Attendance Summary</h3>
+                <h3 className="text-lg font-semibold text-[var(--foreground)]">Attendance Summary</h3>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="bg-green-50 p-4 rounded-lg border border-green-200">
@@ -207,47 +207,47 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900">Personal Information</h3>
+              <h3 className="text-lg font-semibold text-[var(--foreground)]">Personal Information</h3>
             </div>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-3 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
               <div>
-                <p className="text-sm text-gray-500">Student ID</p>
-                <p className="text-base text-gray-900">{student.studentId}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Student ID</p>
+                <p className="text-base text-[var(--foreground)]">{student.studentId}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Full Name</p>
-                <p className="text-base text-gray-900">{student.fullName}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Full Name</p>
+                <p className="text-base text-[var(--foreground)]">{student.fullName}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Phone Number</p>
-                <p className="text-base text-gray-900">{student.phoneNumber}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Phone Number</p>
+                <p className="text-base text-[var(--foreground)]">{student.phoneNumber}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Birth Date</p>
-                <p className="text-base text-gray-900">{typeof student.birthDate === 'string' ? student.birthDate.split('T')[0] : typeof student.birthDate === 'object' && student.birthDate !== null && 'toLocaleDateString' in student.birthDate ? (student.birthDate as Date).toLocaleDateString() : student.birthDate}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Birth Date</p>
+                <p className="text-base text-[var(--foreground)]">{typeof student.birthDate === 'string' ? student.birthDate.split('T')[0] : typeof student.birthDate === 'object' && student.birthDate !== null && 'toLocaleDateString' in student.birthDate ? (student.birthDate as Date).toLocaleDateString() : student.birthDate}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Age</p>
-                <p className="text-base text-gray-900">{student.age}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Age</p>
+                <p className="text-base text-[var(--foreground)]">{student.age}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Grade Level</p>
-                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gradeLevel}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Grade Level</p>
+                <p className="text-base text-[var(--foreground)]">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gradeLevel}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Section</p>
-                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.section}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Section</p>
+                <p className="text-base text-[var(--foreground)]">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.section}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Gender</p>
-                <p className={`text-base font-medium ${(student.status ?? '') === 'Graduated' ? 'text-gray-900' : student.gender === 'Male' ? 'text-blue-700' : 'text-pink-700'}`}>{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Gender</p>
+                <p className={`text-base font-medium ${(student.status ?? '') === 'Graduated' ? 'text-[var(--foreground)]' : student.gender === 'Male' ? 'text-blue-700' : 'text-pink-700'}`}>{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Shift</p>
-                <p className="text-base text-gray-900">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.shift}</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Shift</p>
+                <p className="text-base text-[var(--foreground)]">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.shift}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Enrollment Status</p>
+                <p className="text-sm text-[var(--muted-foreground)]">Enrollment Status</p>
                 <p className="text-base">
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
                     (student.status ?? 'Active') === 'Active'
@@ -262,8 +262,8 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </div>
               {(student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate) && (
                 <div>
-                  <p className="text-sm text-gray-500">School year graduated</p>
-                  <p className="text-base text-gray-900">
+                  <p className="text-sm text-[var(--muted-foreground)]">School year graduated</p>
+                  <p className="text-base text-[var(--foreground)]">
                     {student.graduationSchoolYear
                       ? `SY ${student.graduationSchoolYear}`
                       : typeof student.graduationDate === 'string'
@@ -281,12 +281,12 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clipRule="evenodd" />
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900">Address Information</h3>
+              <h3 className="text-lg font-semibold text-[var(--foreground)]">Address Information</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
               <div className="col-span-2">
-                <p className="text-sm text-gray-500">Street Address</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Street Address</p>
+                <p className="text-base text-[var(--foreground)]">
                   {typeof student.address === 'string' 
                     ? student.address 
                     : student.address?.street || 'N/A'
@@ -294,20 +294,20 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">City/Municipality</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">City/Municipality</p>
+                <p className="text-base text-[var(--foreground)]">
                   {typeof student.address === 'object' ? student.address?.city || 'N/A' : 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Province</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Province</p>
+                <p className="text-base text-[var(--foreground)]">
                   {typeof student.address === 'object' ? student.address?.province || 'N/A' : 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">ZIP Code</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">ZIP Code</p>
+                <p className="text-base text-[var(--foreground)]">
                   {typeof student.address === 'object' ? student.address?.zipCode || 'N/A' : 'N/A'}
                 </p>
               </div>
@@ -320,32 +320,32 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900">Parent/Guardian Information</h3>
+              <h3 className="text-lg font-semibold text-[var(--foreground)]">Parent/Guardian Information</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
               <div>
-                <p className="text-sm text-gray-500">Parent/Guardian Name</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Parent/Guardian Name</p>
+                <p className="text-base text-[var(--foreground)]">
                   {student.parentInfo?.name || student.parentName || 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Parent/Guardian Contact</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Parent/Guardian Contact</p>
+                <p className="text-base text-[var(--foreground)]">
                   {student.parentInfo?.contactNumber || student.parentContact || 'N/A'}
                 </p>
               </div>
               <div className="col-span-2">
-                <p className="text-sm text-gray-500 flex items-center gap-2">
+                <p className="text-sm text-[var(--muted-foreground)] flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-500" viewBox="0 0 20 20" fill="currentColor">
                     <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                     <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                   </svg>
                   Telegram Chat ID
                 </p>
-                <p className="text-base text-gray-900 font-mono">
+                <p className="text-base text-[var(--foreground)] font-mono">
                   {(student.parentInfo as any)?.telegramChatId || (student as any).parentTelegramChatId || (student as any).telegramChatId || (
-                    <span className="text-gray-400 italic font-sans">Not configured</span>
+                    <span className="text-[var(--muted-foreground)] italic font-sans">Not configured</span>
                   )}
                 </p>
                 {!((student.parentInfo as any)?.telegramChatId || (student as any).parentTelegramChatId || (student as any).telegramChatId) && (
@@ -363,24 +363,24 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                 <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900">Emergency Contact</h3>
+              <h3 className="text-lg font-semibold text-[var(--foreground)]">Emergency Contact</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
               <div>
-                <p className="text-sm text-gray-500">Emergency Contact Name</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Emergency Contact Name</p>
+                <p className="text-base text-[var(--foreground)]">
                   {student.emergencyContact?.name || student.emergencyContactName || 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Emergency Contact Number</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Emergency Contact Number</p>
+                <p className="text-base text-[var(--foreground)]">
                   {student.emergencyContact?.contactNumber || 'N/A'}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Relationship to Student</p>
-                <p className="text-base text-gray-900">
+                <p className="text-sm text-[var(--muted-foreground)]">Relationship to Student</p>
+                <p className="text-base text-[var(--foreground)]">
                   {student.emergencyContact?.relationship || student.relationship || 'N/A'}
                 </p>
               </div>
@@ -393,10 +393,10 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-600" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M3 4a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm2 2V5h1v1H5zM3 13a1 1 0 011-1h3a1 1 0 011 1v3a1 1 0 01-1 1H4a1 1 0 01-1-1v-3zm2 2v-1h1v1H5zM13 3a1 1 0 00-1 1v3a1 1 0 001 1h3a1 1 0 001-1V4a1 1 0 00-1-1h-3zm1 2v1h1V5h-1z" />
               </svg>
-              <h3 className="text-lg font-semibold text-gray-900">Student QR Code</h3>
+              <h3 className="text-lg font-semibold text-[var(--foreground)]">Student QR Code</h3>
             </div>
-            <div className="flex justify-center bg-green-50/30 p-6 rounded-lg">
-              <div className="bg-white p-4 border border-green-200 rounded-lg shadow-md">
+            <div className="flex justify-center bg-green-50/30 dark:bg-black/80 p-6 rounded-lg">
+              <div className="bg-[var(--surface)] p-4 border border-[var(--border)] rounded-lg shadow-md">
                 <QRCodeSVG
                   value={JSON.stringify({
                     id: student.studentId,
@@ -418,7 +418,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </div>
             </div>
             <div className="mt-4 text-center">
-              <p className="text-sm text-gray-600">
+              <p className="text-sm text-[var(--muted-foreground)]">
                 Scan this QR code with the mobile app to view student information
               </p>
             </div>

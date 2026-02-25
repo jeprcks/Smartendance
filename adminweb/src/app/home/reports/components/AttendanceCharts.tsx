@@ -25,30 +25,30 @@ export default function AttendanceCharts({
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       {/* Status Distribution - Will be Pie Chart */}
       <div className="content-section">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Status Distribution</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Status Distribution</h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">Present</span>
-            <span className="text-lg font-bold text-green-700">{overallStats.present}</span>
+          <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
+            <span className="text-sm font-medium text-gray-700 dark:text-green-300">Present</span>
+            <span className="text-lg font-bold text-green-700 dark:text-green-300">{overallStats.present}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">Absent</span>
-            <span className="text-lg font-bold text-red-700">{overallStats.absent}</span>
+          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
+            <span className="text-sm font-medium text-gray-700 dark:text-red-300">Absent</span>
+            <span className="text-lg font-bold text-red-700 dark:text-red-300">{overallStats.absent}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-yellow-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">Late</span>
-            <span className="text-lg font-bold text-yellow-700">{overallStats.late}</span>
+          <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+            <span className="text-sm font-medium text-gray-700 dark:text-yellow-300">Late</span>
+            <span className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{overallStats.late}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-orange-50 rounded-lg">
-            <span className="text-sm font-medium text-gray-700">Cutting</span>
-            <span className="text-lg font-bold text-orange-700">{overallStats.cutting}</span>
+          <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
+            <span className="text-sm font-medium text-gray-700 dark:text-orange-300">Cutting</span>
+            <span className="text-lg font-bold text-orange-700 dark:text-orange-300">{overallStats.cutting}</span>
           </div>
         </div>
       </div>
 
       {/* Grade Level Comparison - Will be Bar Chart */}
       <div className="content-section">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Grade Level Comparison</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Grade Level Comparison</h3>
         <div className="space-y-2">
           {gradeLevelStats
             .filter(stat => stat.gradeLevel.toLowerCase() !== 'graduated')
@@ -59,8 +59,8 @@ export default function AttendanceCharts({
             return (
               <div key={index} className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium">{stat.gradeLevel}</span>
-                  <span className="text-gray-600">{stat.attendanceRate}%</span>
+                  <span className="font-medium text-gray-900 dark:text-white">{stat.gradeLevel}</span>
+                  <span className="text-gray-600 dark:text-gray-400">{stat.attendanceRate}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
