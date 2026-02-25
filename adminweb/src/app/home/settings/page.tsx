@@ -1,9 +1,9 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { settingsService, Settings, applyTheme } from '@/app/services/settingsService';
+import { settingsService, Settings } from '@/app/services/settingsService';
 import toast from 'react-hot-toast';
-import { Image, Building2, Clock, Calendar, Droplets, Sun, Moon } from 'lucide-react';
+import { Image, Building2, Clock, Calendar, Droplets } from 'lucide-react';
 
 const SETTINGS_UPDATED_EVENT = 'settingsUpdated';
 
@@ -24,7 +24,6 @@ export default function SettingsPage() {
           schoolName: data.schoolName,
           logo: data.logo,
           watermarkLogo: data.watermarkLogo,
-          theme: data.theme ?? 'light',
           address: data.address ?? '',
           lateThresholdMinutes: data.lateThresholdMinutes ?? 15,
           morningShiftCutoff: data.morningShiftCutoff ?? '12:00',
@@ -92,27 +91,12 @@ export default function SettingsPage() {
     }
   };
 
-  const handleThemeChange = async (theme: 'light' | 'dark') => {
-    setForm((f) => ({ ...f, theme }));
-    try {
-      const updated = await settingsService.updateSettings({ theme });
-      setSettings(updated);
-      applyTheme(theme);
-      window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
-      toast.success(`Theme set to ${theme}`);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update theme');
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
     try {
       const updated = await settingsService.updateSettings(form);
       setSettings(updated);
-      const theme = (updated.theme ?? form.theme ?? 'light') as 'light' | 'dark';
-      applyTheme(theme);
       window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
       toast.success('Settings saved successfully');
     } catch (err) {
@@ -144,41 +128,6 @@ export default function SettingsPage() {
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Appearance */}
-        <div className="content-section">
-          <h2 className="text-lg font-semibold text-[var(--primary-dark)] mb-4 flex items-center gap-2">
-            <Sun size={20} className="text-[var(--primary)]" />
-            Theme
-          </h2>
-          <p className="text-sm text-[var(--muted-foreground)] mb-4">Choose light or dark theme for the application</p>
-          <div className="flex gap-4">
-            <button
-              type="button"
-              onClick={() => handleThemeChange('light')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] border-2 transition-all ${
-                (form.theme ?? 'light') === 'light'
-                  ? 'border-[var(--primary)] bg-[var(--secondary)] text-[var(--primary-dark)]'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--primary)]/50'
-              }`}
-            >
-              <Sun size={20} />
-              Light
-            </button>
-            <button
-              type="button"
-              onClick={() => handleThemeChange('dark')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-[var(--radius)] border-2 transition-all ${
-                form.theme === 'dark'
-                  ? 'border-[var(--primary)] bg-[var(--secondary)] text-[var(--primary-dark)]'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--foreground)] hover:border-[var(--primary)]/50'
-              }`}
-            >
-              <Moon size={20} />
-              Dark
-            </button>
-          </div>
-        </div>
-
         {/* School Branding */}
         <div className="content-section">
           <h2 className="text-lg font-semibold text-[var(--primary-dark)] mb-4 flex items-center gap-2">

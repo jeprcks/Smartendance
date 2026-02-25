@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { Bell, Settings } from 'lucide-react';
 import { notificationService } from '@/app/services/notificationService';
 import { settingsService } from '@/app/services/settingsService';
+import ThemeToggle from '@/app/components/ThemeToggle';
 
 const NOTIFICATION_LAST_SEEN_KEY = 'notificationLastSeenCount';
 const DEFAULT_SCHOOL_NAME = 'Umapad Elementary School';
@@ -140,6 +141,8 @@ export default function Navbar() {
             >
               <Settings size={18} strokeWidth={2} />
             </Link>
+
+            <ThemeToggle />
 
             <div className="hidden md:block">
               <Link href="/logout" className="navbar-logout">

@@ -201,7 +201,7 @@ export default function DashboardPage() {
   if (error) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-6">
-        <div className="p-6 rounded-xl border bg-red-50" style={{ borderColor: 'var(--error)' }}>
+        <div className="p-6 rounded-xl border bg-red-100 dark:bg-red-900/40 border-red-300 dark:border-red-700">
           <p className="text-base font-semibold" style={{ color: 'var(--error)' }}>{error}</p>
         </div>
         <button
@@ -217,11 +217,11 @@ export default function DashboardPage() {
   }
 
   const statCardStyles: Record<string, { border: string; bg: string; valueColor: string }> = {
-    Present: { border: 'var(--success)', bg: 'rgba(67, 160, 71, 0.08)', valueColor: 'var(--success)' },
-    Absent: { border: 'var(--destructive)', bg: 'rgba(216, 67, 21, 0.08)', valueColor: 'var(--destructive)' },
-    Late: { border: 'var(--accent)', bg: 'rgba(255, 193, 7, 0.1)', valueColor: 'var(--error)' },
-    Cutting: { border: 'var(--error)', bg: 'rgba(230, 81, 0, 0.08)', valueColor: 'var(--error)' },
-    Total: { border: 'var(--primary)', bg: 'var(--secondary)', valueColor: 'var(--primary-dark)' },
+    Present: { border: 'var(--success)', bg: 'rgba(67, 160, 71, 0.3)', valueColor: 'var(--success)' },
+    Absent: { border: 'var(--destructive)', bg: 'rgba(216, 67, 21, 0.28)', valueColor: 'var(--destructive)' },
+    Late: { border: 'var(--accent)', bg: 'rgba(255, 193, 7, 0.35)', valueColor: 'var(--error)' },
+    Cutting: { border: 'var(--error)', bg: 'rgba(230, 81, 0, 0.28)', valueColor: 'var(--error)' },
+    Total: { border: 'var(--primary)', bg: 'rgba(46, 125, 50, 0.25)', valueColor: 'var(--primary-dark)' },
   };
 
   const statCards = [
@@ -258,12 +258,11 @@ export default function DashboardPage() {
           return (
             <div
               key={c.label}
-              className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 animate-fade-in-up dashboard-card"
+              className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 animate-fade-in-up dashboard-card bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700"
               style={{
                 background: s.bg,
-                borderColor: 'var(--border)',
                 borderLeftColor: s.border,
-                boxShadow: '0 2px 4px rgba(46, 125, 50, 0.1)',
+                boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
                 animationDelay: `${(i + 1) * 0.05}s`,
               }}
             >
@@ -280,12 +279,10 @@ export default function DashboardPage() {
 
       <div className="grid md:grid-cols-2 gap-6">
         <div
-          className="rounded-xl border border-l-4 p-4 animate-fade-in-up transition-all duration-300 hover:shadow-md dashboard-card"
+          className="rounded-xl border border-l-4 p-4 animate-fade-in-up transition-all duration-300 hover:shadow-md dashboard-card bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700"
           style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--border)',
             borderLeftColor: 'var(--primary)',
-            boxShadow: '0 1px 3px rgba(46, 125, 50, 0.08)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
             animationDelay: '0.3s',
           }}
         >
@@ -338,12 +335,10 @@ export default function DashboardPage() {
         </div>
 
         <div
-          className="rounded-xl border border-l-4 p-4 animate-fade-in-up transition-all duration-300 hover:shadow-md dashboard-card"
+          className="rounded-xl border border-l-4 p-4 animate-fade-in-up transition-all duration-300 hover:shadow-md dashboard-card bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700"
           style={{
-            background: 'var(--surface)',
-            borderColor: 'var(--border)',
             borderLeftColor: 'var(--destructive)',
-            boxShadow: '0 1px 3px rgba(46, 125, 50, 0.08)',
+            boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
             animationDelay: '0.35s',
           }}
         >
@@ -391,12 +386,10 @@ export default function DashboardPage() {
       </div>
 
       <div
-        className="rounded-xl border border-l-4 p-4 animate-fade-in-up transition-all duration-300 hover:shadow-md dashboard-card"
+        className="rounded-xl border border-l-4 p-4 animate-fade-in-up transition-all duration-300 hover:shadow-md dashboard-card bg-white dark:bg-slate-800 border-gray-200 dark:border-gray-700"
         style={{
-          background: 'var(--surface)',
-          borderColor: 'var(--border)',
           borderLeftColor: 'var(--primary-dark)',
-          boxShadow: '0 1px 3px rgba(46, 125, 50, 0.08)',
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
           animationDelay: '0.4s',
         }}
       >

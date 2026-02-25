@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { API_BASE_URL } from '@/app/config/api';
+import Watermark from '@/app/components/Watermark';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -67,6 +68,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-background px-4 py-8 overflow-hidden">
+      <Watermark />
       {/* Card */}
       <div className="relative z-10 w-full max-w-[22rem] rounded-2xl border border-border bg-card shadow-lg shadow-primary/10 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         <header className="bg-gradient-to-br from-primary to-primary/80 px-5 py-4 text-center border-b border-white/15 shadow-md">

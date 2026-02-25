@@ -44,21 +44,79 @@
   --sidebar-ring: #2e7d32;
 }
 
+.dark {
+  --primary: #66bb6a;
+  --primary-light: #81c784;
+  --primary-dark: #43a047;
+  --primary-hover: #66bb6a;
+  --accent: #ffc107;
+  --background: #0f172a;
+  --foreground: #f1f5f9;
+  --surface: #1e293b;
+  --border: #334155;
+  --radius: 0.625rem;
+  --muted: #334155;
+  --muted-foreground: #cbd5e1;
+  --secondary: #1e3a1f;
+  --secondary-foreground: #86efac;
+  --destructive: #ff5252;
+  --success: #66bb6a;
+  --error: #ff6e40;
+  --card: #1e293b;
+  --card-foreground: #f1f5f9;
+  --popover: #1e293b;
+  --popover-foreground: #f1f5f9;
+  --primary-foreground: #ffffff;
+  --accent-foreground: #3b2f00;
+  --input: #334155;
+  --ring: #66bb6a;
+  --sidebar: #1e293b;
+  --sidebar-foreground: #f1f5f9;
+  --sidebar-primary: #66bb6a;
+  --sidebar-primary-foreground: #0f172a;
+  --sidebar-accent: #1e3a1f;
+  --sidebar-accent-foreground: #86efac;
+  --sidebar-border: #334155;
+  --sidebar-ring: #66bb6a;
+}
+
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
 .btn-primary {
   background-color: var(--primary);
   color: white;
   padding: 0.5rem 1rem;
   border-radius: 0.375rem;
   transition: background-color 0.2s, transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  cursor: pointer;
+  font-weight: 500;
 }
 
 .btn-primary:hover:not(:disabled) {
   background-color: var(--primary-dark);
   transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
 }
 
 .btn-primary:active:not(:disabled) {
   transform: translateY(0);
+}
+
+.dark .btn-primary {
+  background-color: var(--primary-light);
+  box-shadow: 0 2px 8px rgba(102, 187, 106, 0.2);
+}
+
+.dark .btn-primary:hover:not(:disabled) {
+  background-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.3);
+  transform: translateY(-1px);
 }
 
 .nav-item {
@@ -71,7 +129,7 @@
 }
 
 .card {
-  background-color: var(--background);
+  background-color: var(--surface);
   border: 1px solid var(--border);
   outline: 1px solid var(--border);
   outline-offset: 0;
@@ -86,6 +144,20 @@
   box-shadow: 0 4px 12px rgba(46, 125, 50, 0.15);
   outline-color: var(--primary-light);
   border-color: var(--primary-light);
+}
+
+.dark .card {
+  background-color: var(--surface);
+  border-color: var(--border);
+  outline-color: var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.15);
+  border-color: var(--primary);
+  outline-color: var(--primary);
 }
 
 .input {
@@ -106,6 +178,10 @@
   outline: none;
   box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15);
   transform: translateY(-1px);
+}
+
+.dark .input:focus {
+  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.15);
 }
 
 .table {
@@ -137,7 +213,9 @@
   box-shadow: -4px 0 0 0 var(--primary);
 }
 
-/* Remove dark mode for consistent branding */
+.dark .table tbody tr:hover {
+  box-shadow: -4px 0 0 0 rgba(102, 187, 106, 0.6);
+}
 
 /* Base Page Styles */
 .page-container {
@@ -158,6 +236,7 @@
   border: 1px solid var(--border);
   outline: 1px solid var(--border);
   outline-offset: 0;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .page-title {
@@ -183,6 +262,21 @@
   outline: 1px solid var(--primary-dark);
   outline-offset: 0;
   overflow: hidden;
+}
+
+.dark .dashboard-header {
+  background: linear-gradient(135deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 100%);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--border);
+  outline: 1px solid var(--border);
+}
+
+.dark .dashboard-header h1 {
+  color: var(--primary);
+}
+
+.dark .dashboard-header p {
+  color: var(--muted-foreground);
 }
 
 .dashboard-header-inner {
@@ -682,10 +776,6 @@
   transform: translateY(-1px);
 }
 
-body {
-  background: var(--surface);
-}
-
 /* Global link hover – match teacher portal */
 a {
   transition: all 0.2s ease;
@@ -731,44 +821,6 @@ a:hover {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-}
-
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --surface: oklch(0.205 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.6 0.15 145);
-  --primary-light: oklch(0.7 0.15 145);
-  --primary-dark: oklch(0.55 0.15 145);
-  --primary-hover: oklch(0.65 0.15 145);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 12%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.6 0.15 145);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 12%);
-  --sidebar-ring: oklch(0.556 0 0);
 }
 
 /* Dark theme: softer shadows and overlays */
@@ -874,3 +926,156 @@ a:hover {
 }
 
 /* Login page uses Tailwind utilities + Lucide icons in src/app/login/page.tsx */
+
+/* ========================================
+   COMPREHENSIVE DARK MODE THEME STYLING
+   ======================================== */
+
+/* Input and Form Elements */
+.dark .input,
+.dark textarea,
+.dark select {
+  background-color: var(--input);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.dark .input:focus,
+.dark textarea:focus,
+.dark select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(102, 187, 106, 0.2);
+}
+
+.dark .input::placeholder {
+  color: var(--muted-foreground);
+}
+
+/* Tables and Data Displays */
+.dark .table {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+.dark .table th {
+  background-color: color-mix(in srgb, var(--surface) 90%, var(--primary) 10%);
+  border-color: var(--border);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+.dark .table td {
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+.dark .table tbody tr {
+  background-color: var(--surface);
+}
+
+.dark .table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--surface) 85%, var(--primary) 15%);
+}
+
+/* Content Sections and Containers */
+.dark .content-section {
+  background-color: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .stat-card {
+  background-color: var(--surface);
+  border-color: var(--border);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.dark .stat-card:hover {
+  box-shadow: 0 4px 12px rgba(102, 187, 106, 0.2);
+  border-color: var(--primary);
+}
+
+/* Page Header Sections */
+.dark .page-header {
+  background-color: var(--surface);
+  border-color: var(--border);
+}
+
+/* Modal and Dialog Overlays */
+.dark [role="dialog"],
+.dark .modal,
+.dark .modal-content {
+  background-color: var(--surface);
+  border-color: var(--border);
+  color: var(--foreground);
+}
+
+/* Button Variants in Dark Mode */
+.dark .btn-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+}
+
+.dark .btn-secondary:hover {
+  background-color: color-mix(in srgb, var(--secondary) 90%, var(--primary) 10%);
+  border-color: var(--primary);
+}
+
+.dark .btn-destructive {
+  background-color: var(--destructive);
+  color: white;
+}
+
+.dark .btn-destructive:hover {
+  opacity: 0.9;
+  box-shadow: 0 4px 12px rgba(255, 82, 82, 0.3);
+}
+
+/* Link and Navigation Styles */
+.dark a {
+  color: var(--primary);
+  transition: color 0.2s ease;
+}
+
+.dark a:hover {
+  color: var(--primary-light);
+}
+
+/* Badge and Label Styles */
+.dark .badge {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  border: 1px solid var(--border);
+}
+
+/* Loading and Skeleton Styles */
+.dark .skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted) 0%,
+    color-mix(in srgb, var(--muted) 80%, var(--surface) 20%) 50%,
+    var(--muted) 100%
+  );
+  background-size: 200% 100%;
+}
+
+/* Scrollbar Styling for Dark Mode */
+.dark ::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.dark ::-webkit-scrollbar-track {
+  background-color: var(--surface);
+}
+
+.dark ::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 4px;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background-color: var(--muted);
+}
+

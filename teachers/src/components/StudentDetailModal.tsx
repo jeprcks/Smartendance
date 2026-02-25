@@ -175,23 +175,22 @@ export function StudentDetailModal({
     >
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300" onClick={onClose} style={{ zIndex: 9998 }} />
       <div
-        className="relative w-full max-w-[95vw] lg:max-w-7xl max-h-[calc(100vh-7rem)] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transform transition-all duration-300 scale-100"
+        className="relative w-full max-w-[95vw] lg:max-w-7xl max-h-[calc(100vh-7rem)] flex flex-col rounded-2xl border shadow-2xl overflow-hidden transform transition-all duration-300 scale-100 bg-white dark:bg-slate-900"
         style={{
-          background: 'linear-gradient(180deg, var(--surface) 0%, color-mix(in srgb, var(--surface) 98%, var(--primary) 2%) 100%)',
           borderColor: 'var(--border)',
           boxShadow: '0 20px 60px rgba(46, 125, 50, 0.3)',
           zIndex: 9999,
         }}
       >
         <div
-          className="flex items-center justify-between gap-4 px-6 py-4 border-b shrink-0"
-          style={{ borderColor: 'var(--border)', background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)', boxShadow: '0 2px 8px rgba(46, 125, 50, 0.15)' }}
+          className="modal-header"
+          style={{ borderColor: 'var(--border)' }}
         >
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-xl bg-white/20 backdrop-blur-sm text-white">
               <UserIcon />
             </div>
-            <h2 id="student-modal-title" className="text-2xl font-bold text-white">
+            <h2 id="student-modal-title" className="modal-title">
               Student Details · <span className="font-bold">{studentName}</span>
             </h2>
           </div>
@@ -227,69 +226,69 @@ export function StudentDetailModal({
 
         <div className="flex-1 overflow-y-auto overflow-x-visible p-6 space-y-6">
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl border-2 ring-2 ring-primary/10 bg-gradient-to-br from-white to-color-mix(in srgb, var(--muted) 50%, transparent) transition-all duration-200 hover:shadow-lg cursor-pointer student-info-card" style={{ borderColor: 'var(--primary)', boxShadow: '0 2px 8px rgba(46, 125, 50, 0.1), 0 0 0 1px rgba(46, 125, 50, 0.05)' }}>
+            <div className="info-card">
               <div className="flex items-center gap-2 mb-2">
                 <UserIcon />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>Name</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Name</span>
               </div>
-              <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{studentName}</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-white">{studentName}</p>
             </div>
-            <div className="p-4 rounded-xl border-2 ring-2 ring-primary/10 bg-gradient-to-br from-white to-color-mix(in srgb, var(--muted) 50%, transparent) transition-all duration-200 hover:shadow-lg cursor-pointer student-info-card" style={{ borderColor: 'var(--primary)', boxShadow: '0 2px 8px rgba(46, 125, 50, 0.1), 0 0 0 1px rgba(46, 125, 50, 0.05)' }}>
+            <div className="info-card">
               <div className="flex items-center gap-2 mb-2">
                 <CheckCircleIcon />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>Student ID</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Student ID</span>
               </div>
-              <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>{studentId || '—'}</p>
+              <p className="text-base font-semibold text-gray-900 dark:text-white">{studentId || '—'}</p>
             </div>
-            <div className="p-4 rounded-xl border-2 ring-2 ring-primary/10 bg-gradient-to-br from-white to-color-mix(in srgb, var(--muted) 50%, transparent) transition-all duration-200 hover:shadow-lg cursor-pointer student-info-card" style={{ borderColor: 'var(--primary)', boxShadow: '0 2px 8px rgba(46, 125, 50, 0.1), 0 0 0 1px rgba(46, 125, 50, 0.05)' }}>
+            <div className="info-card">
               <div className="flex items-center gap-2 mb-2">
                 <UserIcon />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>Gender</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Gender</span>
               </div>
-              <p className="text-lg font-bold" style={{ color: String(historyData?.student?.gender ?? student.gender ?? '').toLowerCase() === 'female' ? '#ec4899' : String(historyData?.student?.gender ?? student.gender ?? '').toLowerCase() === 'male' ? '#3b82f6' : 'var(--primary-dark)' }}>{String(historyData?.student?.gender ?? student.gender ?? '—')}</p>
+              <p className={`text-lg font-bold ${String(historyData?.student?.gender ?? student.gender ?? '').toLowerCase() === 'female' ? 'text-pink-500 dark:text-pink-400' : String(historyData?.student?.gender ?? student.gender ?? '').toLowerCase() === 'male' ? 'text-blue-500 dark:text-blue-400' : 'text-green-700 dark:text-green-400'}`}>{String(historyData?.student?.gender ?? student.gender ?? '—')}</p>
             </div>
-            <div className="p-4 rounded-xl border-2 ring-2 ring-primary/10 bg-gradient-to-br from-white to-color-mix(in srgb, var(--muted) 50%, transparent) transition-all duration-200 hover:shadow-lg cursor-pointer student-info-card" style={{ borderColor: 'var(--primary)', boxShadow: '0 2px 8px rgba(46, 125, 50, 0.1), 0 0 0 1px rgba(46, 125, 50, 0.05)' }}>
+            <div className="info-card">
               <div className="flex items-center gap-2 mb-2">
                 <BookIcon />
-                <span className="text-xs font-semibold uppercase tracking-wider" style={{ color: 'var(--muted-foreground)' }}>Class</span>
+                <span className="text-xs font-semibold uppercase tracking-wider text-gray-600 dark:text-gray-400">Class</span>
               </div>
-              <p className="text-base font-semibold" style={{ color: 'var(--foreground)' }}>
+              <p className="text-base font-semibold text-gray-900 dark:text-white">
                 {String(historyData?.student?.gradeLevel ?? student.gradeLevel ?? '—')}-{String(historyData?.student?.section ?? student.section ?? '—')}
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-3 pb-3 border-b" style={{ borderColor: 'var(--border)' }}>
-            <div className="p-2 rounded-lg" style={{ background: 'rgba(46, 125, 50, 0.1)' }}>
+          <div className="flex items-center gap-3 pb-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
               <CalendarIcon />
             </div>
-            <h3 className="text-xl font-bold" style={{ color: 'var(--primary-dark)' }}>
-              Attendance History {subjectFilter ? <span className="text-base font-semibold text-primary-dark">· {subjectFilter}</span> : <span className="text-base font-normal text-muted-foreground">(all subjects)</span>}
+            <h3 className="text-xl font-bold text-green-700 dark:text-green-400">
+              Attendance History {subjectFilter ? <span className="text-base font-semibold">· {subjectFilter}</span> : <span className="text-base font-normal text-gray-500 dark:text-gray-400">(all subjects)</span>}
             </h3>
           </div>
 
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-4">
-              <div className="animate-spin w-10 h-10 border-[3px] border-t-transparent rounded-full" style={{ borderColor: 'var(--primary)' }} />
-              <p className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>Loading history...</p>
+              <div className="animate-spin w-10 h-10 border-[3px] border-t-transparent rounded-full border-green-600 dark:border-green-500" />
+              <p className="text-sm font-medium text-gray-500 dark:text-gray-400">Loading history...</p>
             </div>
           ) : error ? (
-            <div className="p-6 rounded-xl border bg-red-50" style={{ borderColor: 'var(--error)' }}>
-              <p className="text-sm font-semibold" style={{ color: 'var(--error)' }}>{error}</p>
+            <div className="p-6 rounded-xl border border-red-300 bg-red-50 dark:bg-red-900/30">
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400">{error}</p>
             </div>
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
                 <CalendarIcon />
               </div>
-              <p className="text-base font-medium" style={{ color: 'var(--muted-foreground)' }}>No attendance records found.</p>
+              <p className="text-base font-medium text-gray-500 dark:text-gray-400">No attendance records found.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto rounded-xl border shadow-lg -mx-2" style={{ borderColor: 'var(--border)' }}>
+            <div className="overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg -mx-2">
               <div className="min-w-full inline-block">
-                <table className="w-full text-sm divide-y min-w-[800px]" style={{ borderColor: 'var(--border)' }}>
+                <table className="w-full text-sm divide-y divide-gray-200 dark:divide-gray-700 min-w-[800px]">
                   <thead>
-                    <tr style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)', color: 'white' }}>
+                    <tr className="bg-gradient-to-r from-green-600 to-green-500 dark:from-green-700 dark:to-green-600 text-white">
                       <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider">Schedule</th>
                       <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider">Date</th>
                       <th className="text-left px-5 py-4 text-xs font-bold uppercase tracking-wider">Type</th>
@@ -301,20 +300,20 @@ export function StudentDetailModal({
                   </thead>
                   <tbody>
                     {filtered.map((r, i) => (
-                      <tr key={i} className="border-t transition-all duration-200 hover:bg-gradient-to-r hover:from-[var(--muted)]/60 hover:to-transparent animate-fade-in-up" style={{ borderColor: 'var(--border)', animationDelay: `${i * 0.03}s` }}>
+                      <tr key={i} className="border-t transition-all duration-200 hover:bg-gray-50 dark:hover:bg-gray-800 animate-fade-in-up" style={{ animationDelay: `${i * 0.03}s` }}>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <CalendarIcon />
                             <div>
-                              <div className="text-sm font-bold" style={{ color: 'var(--primary-dark)' }}>{isInOrOutGeneral(r) ? 'N/A' : String(r.scheduleDay ?? r.day ?? 'N/A')}</div>
-                              <div className="text-xs mt-0.5 font-medium" style={{ color: 'var(--muted-foreground)' }}>{isInOrOutGeneral(r) ? '' : String(r.scheduleTimeSlot ?? r.timeSlot ?? 'N/A')}</div>
+                              <div className="text-sm font-bold text-green-700 dark:text-green-400">{isInOrOutGeneral(r) ? 'N/A' : String(r.scheduleDay ?? r.day ?? 'N/A')}</div>
+                              <div className="text-xs mt-0.5 font-medium text-gray-500 dark:text-gray-400">{isInOrOutGeneral(r) ? '' : String(r.scheduleTimeSlot ?? r.timeSlot ?? 'N/A')}</div>
                             </div>
                           </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <CalendarIcon />
-                            <span className="text-sm font-bold" style={{ color: 'var(--foreground)' }}>{formatDate(r.checkInTime ?? r.scanTime ?? r.date)}</span>
+                            <span className="text-sm font-bold text-gray-900 dark:text-white">{formatDate(r.checkInTime ?? r.scanTime ?? r.date)}</span>
                           </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
@@ -323,16 +322,16 @@ export function StudentDetailModal({
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <ClockIcon />
-                            <span className="text-sm font-bold" style={{ color: 'var(--primary-dark)' }}>{formatTime(getTimeForRecord(r))}</span>
+                            <span className="text-sm font-bold text-green-700 dark:text-green-400">{formatTime(getTimeForRecord(r))}</span>
                           </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <BookIcon />
                             <div>
-                              <span className="text-sm font-bold" style={{ color: 'var(--primary-dark)' }}>{String(r.subject ?? '—')}</span>
+                              <span className="text-sm font-bold text-green-700 dark:text-green-400">{String(r.subject ?? '—')}</span>
                               {String(r.subject ?? '').toLowerCase() !== 'general' && (Boolean(r.gradeLevel) || Boolean(r.section)) && (
-                                <span className="block text-xs mt-0.5 font-semibold px-1.5 py-0.5 rounded" style={{ background: 'rgba(46, 125, 50, 0.1)', color: 'var(--primary-dark)' }}>
+                                <span className="block text-xs mt-0.5 font-semibold px-1.5 py-0.5 rounded bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
                                   {[String(r.gradeLevel ?? '').trim(), String(r.section ?? '').trim()].filter(Boolean).join(' - ')}
                                 </span>
                               )}
@@ -342,7 +341,7 @@ export function StudentDetailModal({
                         <td className="px-5 py-4 whitespace-nowrap">
                           <div className="flex items-center gap-2">
                             <UserIcon />
-                            <span className="text-sm font-semibold" style={{ color: 'var(--muted-foreground)' }}>{String(r.scheduleTeacher ?? r.teacher ?? 'N/A')}</span>
+                            <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">{String(r.scheduleTeacher ?? r.teacher ?? 'N/A')}</span>
                           </div>
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap">

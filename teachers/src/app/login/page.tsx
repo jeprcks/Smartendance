@@ -86,12 +86,13 @@ export default function LoginPage() {
           pointerEvents: 'none',
           zIndex: 0,
         }}
+        className="dark:opacity-25"
       >
         <img
-          src="/logo/backgroundlogo.png"
+          src="/logo/newbackgroundlogo.png"
           alt=""
           aria-hidden
-          className="max-w-full max-h-full w-[700px] h-[700px] object-contain"
+          className="max-w-full max-h-full w-[700px] h-[700px] object-contain dark:brightness-150"
         />
       </div>
       <div className="w-full max-w-sm relative z-10">

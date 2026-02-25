@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { removeToken } from '@/lib/auth';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const router = useRouter();
@@ -31,7 +32,7 @@ export default function Navbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
         <Link href="/dashboard" className="flex items-center gap-3 min-w-0 group">
           <span className="navbar-teacher-logo-wrap flex-shrink-0">
             <img
-              src="/logo/umapadlogo.png"
+              src="/logo/newbackgroundlogo.png"
               alt=""
               className="navbar-teacher-logo object-contain"
             />
@@ -43,6 +44,7 @@ export default function Navbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
+        <ThemeToggle />
         <button
           type="button"
           onClick={handleLogout}
