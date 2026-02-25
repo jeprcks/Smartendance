@@ -6,54 +6,54 @@ interface StatsCardProps {
 
 const variantStyles = {
   default: {
-    background: 'from-gray-50 to-gray-100',
-    border: 'border-gray-200/50',
-    text: 'text-gray-800',
-    label: 'text-gray-600',
-    icon: 'text-gray-400',
-    hover: 'hover:from-gray-100 hover:to-gray-200',
-    iconBg: 'bg-gray-100',
-    iconRing: 'ring-gray-400/20'
+    background: '[background-image:linear-gradient(135deg,var(--surface)_0%,var(--muted)_100%)]',
+    border: 'border-[var(--border)]',
+    text: 'text-[var(--foreground)]',
+    label: 'text-[var(--muted-foreground)]',
+    icon: 'text-[var(--primary)]',
+    hover: 'hover:brightness-110 dark:hover:brightness-125',
+    iconBg: '[background-color:color-mix(in_srgb,var(--primary)_10%,var(--surface)_90%)]',
+    iconRing: '[--tw-ring-color:rgba(102,187,106,0.2)]'
   },
   success: {
-    background: 'from-green-50 to-green-100',
-    border: 'border-green-200/50',
-    text: 'text-green-800',
-    label: 'text-green-700',
-    icon: 'text-green-500',
-    hover: 'hover:from-green-100 hover:to-green-200',
-    iconBg: 'bg-green-100',
-    iconRing: 'ring-green-400/20'
+    background: '[background-image:linear-gradient(135deg,color-mix(in_srgb,var(--surface)_95%,var(--primary)_5%)_0%,color-mix(in_srgb,var(--surface)_90%,var(--primary)_10%)_100%)]',
+    border: 'border-[var(--border)]',
+    text: 'text-[var(--primary)]',
+    label: 'text-[var(--primary)]',
+    icon: 'text-[var(--primary)]',
+    hover: 'hover:brightness-110 dark:hover:brightness-125',
+    iconBg: '[background-color:color-mix(in_srgb,var(--primary)_15%,var(--surface)_85%)]',
+    iconRing: '[--tw-ring-color:rgba(102,187,106,0.3)]'
   },
   danger: {
-    background: 'from-red-50 to-red-100',
-    border: 'border-red-200/50',
-    text: 'text-red-800',
-    label: 'text-red-700',
-    icon: 'text-red-500',
-    hover: 'hover:from-red-100 hover:to-red-200',
-    iconBg: 'bg-red-100',
-    iconRing: 'ring-red-400/20'
+    background: '[background-image:linear-gradient(135deg,color-mix(in_srgb,var(--surface)_95%,var(--destructive)_5%)_0%,color-mix(in_srgb,var(--surface)_90%,var(--destructive)_10%)_100%)]',
+    border: 'border-[var(--border)]',
+    text: 'text-[var(--destructive)]',
+    label: 'text-[var(--destructive)]',
+    icon: 'text-[var(--destructive)]',
+    hover: 'hover:brightness-110 dark:hover:brightness-125',
+    iconBg: '[background-color:color-mix(in_srgb,var(--destructive)_15%,var(--surface)_85%)]',
+    iconRing: '[--tw-ring-color:rgba(255,82,82,0.3)]'
   },
   warning: {
-    background: 'from-yellow-50 to-yellow-100',
-    border: 'border-yellow-200/50',
-    text: 'text-yellow-800',
-    label: 'text-yellow-700',
-    icon: 'text-yellow-500',
-    hover: 'hover:from-yellow-100 hover:to-yellow-200',
-    iconBg: 'bg-yellow-100',
-    iconRing: 'ring-yellow-400/20'
+    background: '[background-image:linear-gradient(135deg,color-mix(in_srgb,var(--surface)_95%,var(--accent)_5%)_0%,color-mix(in_srgb,var(--surface)_90%,var(--accent)_10%)_100%)]',
+    border: 'border-[var(--border)]',
+    text: 'text-[var(--accent)]',
+    label: 'text-[var(--accent)]',
+    icon: 'text-[var(--accent)]',
+    hover: 'hover:brightness-110 dark:hover:brightness-125',
+    iconBg: '[background-color:color-mix(in_srgb,var(--accent)_15%,var(--surface)_85%)]',
+    iconRing: '[--tw-ring-color:rgba(255,193,7,0.3)]'
   },
   caution: {
-    background: 'from-orange-50 to-orange-100',
-    border: 'border-orange-200/50',
-    text: 'text-orange-800',
-    label: 'text-orange-700',
-    icon: 'text-orange-500',
-    hover: 'hover:from-orange-100 hover:to-orange-200',
-    iconBg: 'bg-orange-100',
-    iconRing: 'ring-orange-400/20'
+    background: '[background-image:linear-gradient(135deg,color-mix(in_srgb,var(--surface)_95%,var(--error)_5%)_0%,color-mix(in_srgb,var(--surface)_90%,var(--error)_10%)_100%)]',
+    border: 'border-[var(--border)]',
+    text: 'text-[var(--error)]',
+    label: 'text-[var(--error)]',
+    icon: 'text-[var(--error)]',
+    hover: 'hover:brightness-110 dark:hover:brightness-125',
+    iconBg: '[background-color:color-mix(in_srgb,var(--error)_15%,var(--surface)_85%)]',
+    iconRing: '[--tw-ring-color:rgba(230,81,0,0.3)]'
   }
 };
 
@@ -88,9 +88,23 @@ const icons = {
 export default function StatsCard({ label, value, variant = 'default' }: StatsCardProps) {
   const styles = variantStyles[variant];
   const Icon = icons[variant];
+
+  const getBackgroundGradient = (): React.CSSProperties => {
+    const gradients: Record<string, string> = {
+      default: 'linear-gradient(135deg, var(--surface) 0%, var(--muted) 100%)',
+      success: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+      danger: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--destructive) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--destructive) 10%) 100%)',
+      warning: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%)',
+      caution: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--error) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--error) 10%) 100%)',
+    };
+    return { backgroundImage: gradients[variant] };
+  };
   
   return (
-    <div className={`group bg-gradient-to-br ${styles.background} p-5 rounded-xl border ${styles.border} shadow-sm hover:shadow-md ${styles.hover} transition-all duration-300 relative overflow-hidden`}>
+    <div 
+      className={`group p-5 rounded-xl border ${styles.border} shadow-sm hover:shadow-md ${styles.hover} transition-all duration-300 relative overflow-hidden`}
+      style={getBackgroundGradient()}
+    >
       <div className="flex justify-between items-start mb-3">
         <p className={`text-sm font-medium ${styles.label}`}>{label}</p>
         <div className={`p-2 rounded-lg ${styles.iconBg} group-hover:ring-4 ${styles.iconRing} transition-all duration-300`}>
@@ -100,7 +114,6 @@ export default function StatsCard({ label, value, variant = 'default' }: StatsCa
       <h3 className={`text-2xl font-bold ${styles.text} transform group-hover:scale-105 transition-transform duration-300 relative z-10`}>
         {value}
       </h3>
-      <div className={`absolute inset-0 bg-gradient-to-r ${styles.background} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
     </div>
   );
 }

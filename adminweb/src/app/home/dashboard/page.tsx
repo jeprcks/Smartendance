@@ -443,19 +443,52 @@ export default function DashboardPage() {
             ? `${(numericValue / maxValue) * 100}%` 
             : '0%';
 
+          // Map stat types to theme-aware gradient styles
+          const getStatStyle = (title: string) => {
+            const styleMap: Record<string, string> = {
+              'Total Students': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+              'Present Today': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+              'Absent Today': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--destructive) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--destructive) 10%) 100%)',
+              'Late Today': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%)',
+              'Total Classes': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, #7c4dff 5%) 0%, color-mix(in srgb, var(--surface) 90%, #7c4dff 10%) 100%)',
+              'Attendance Rate': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, #6366f1 5%) 0%, color-mix(in srgb, var(--surface) 90%, #6366f1 10%) 100%)',
+            };
+            return styleMap[title] || styleMap['Total Students'];
+          };
+
+          const getTextColor = (title: string) => {
+            const colorMap: Record<string, string> = {
+              'Total Students': 'text-[var(--primary)]',
+              'Present Today': 'text-[var(--primary)]',
+              'Absent Today': 'text-[var(--destructive)]',
+              'Late Today': 'text-[var(--accent)]',
+              'Total Classes': 'text-purple-600 dark:text-purple-400',
+              'Attendance Rate': 'text-indigo-600 dark:text-indigo-400',
+            };
+            return colorMap[title] || colorMap['Total Students'];
+          };
+
           return (
             <div
               key={index}
               className="stat-card"
-              style={{ animationDelay: `${index * 80}ms` }}
+              style={{
+                animationDelay: `${index * 80}ms`,
+                backgroundImage: getStatStyle(stat.title)
+              }}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 ${stat.bgColor} rounded-lg`}>
-                  <IconComponent className={`${stat.textColor}`} size={24} />
+                <div
+                  className="p-3 rounded-lg"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--surface) 90%, var(--primary) 10%)`
+                  }}
+                >
+                  <IconComponent className={`${getTextColor(stat.title)} transition-colors`} size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">{stat.title}</p>
-                  <p className={`text-3xl font-bold ${stat.textColor} stat-value-transition`} key={stat.value}>
+                  <p className={`text-3xl font-bold ${getTextColor(stat.title)} stat-value-transition transition-colors`} key={stat.value}>
                     {typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}
                   </p>
                 </div>
@@ -463,8 +496,11 @@ export default function DashboardPage() {
               {/* Mini progress bar */}
               <div className="w-full bg-[var(--muted)] rounded-full h-2">
                 <div
-                  className={`${stat.color} h-2 rounded-full transition-all duration-500`}
-                  style={{ width: barHeight }}
+                  className="h-2 rounded-full transition-all duration-500"
+                  style={{
+                    width: barHeight,
+                    backgroundColor: 'var(--primary)'
+                  }}
                 />
               </div>
             </div>

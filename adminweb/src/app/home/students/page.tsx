@@ -347,34 +347,71 @@ export default function StudentsPage() {
         onAdd={handleAddStudent}
       />
 
-      {/* Stats cards – same style as dashboard */}
+      {/* Stats cards – theme-aware gradients */}
       <div className="dashboard-grid mb-8">
         {studentStatCards.map((stat, index) => {
           const IconComponent = stat.icon;
           const maxVal = Math.max(students.length, 1);
           const numericValue = stat.value;
           const barHeight = `${(numericValue / maxVal) * 100}%`;
+          
+          // Map stat types to theme-aware gradient styles
+          const getStatStyle = (title: string) => {
+            const styleMap: Record<string, string> = {
+              'Total Students': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+              'Active': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+              'Inactive': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%)',
+              'Graduated': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--muted-foreground) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--muted-foreground) 10%) 100%)',
+              'Male': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, #3b82f6 5%) 0%, color-mix(in srgb, var(--surface) 90%, #3b82f6 10%) 100%)',
+              'Female': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, #ec4899 5%) 0%, color-mix(in srgb, var(--surface) 90%, #ec4899 10%) 100%)',
+            };
+            return styleMap[title] || styleMap['Total Students'];
+          };
+
+          const getTextColor = (title: string) => {
+            const colorMap: Record<string, string> = {
+              'Total Students': 'text-[var(--primary)]',
+              'Active': 'text-[var(--primary)]',
+              'Inactive': 'text-[var(--accent)]',
+              'Graduated': 'text-[var(--muted-foreground)]',
+              'Male': 'text-blue-600 dark:text-blue-400',
+              'Female': 'text-pink-600 dark:text-pink-400',
+            };
+            return colorMap[title] || colorMap['Total Students'];
+          };
+
           return (
             <div
               key={stat.title}
               className="stat-card"
-              style={{ animationDelay: `${index * 80}ms` }}
+              style={{
+                animationDelay: `${index * 80}ms`,
+                backgroundImage: getStatStyle(stat.title)
+              }}
             >
               <div className="flex items-start justify-between mb-4">
-                <div className={`p-3 ${stat.bgColor} rounded-lg`}>
-                  <IconComponent className={stat.textColor} size={24} />
+                <div
+                  className="p-3 rounded-lg"
+                  style={{
+                    backgroundColor: `color-mix(in srgb, var(--surface) 90%, var(--primary) 10%)`
+                  }}
+                >
+                  <IconComponent className={`${getTextColor(stat.title)} transition-colors`} size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">{stat.title}</p>
-                  <p className={`text-3xl font-bold ${stat.textColor}`}>
+                  <p className={`text-3xl font-bold ${getTextColor(stat.title)} transition-colors`}>
                     {stat.value.toLocaleString()}
                   </p>
                 </div>
               </div>
-              <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="w-full bg-[var(--muted)] rounded-full h-2">
                 <div
-                  className={`${stat.color} h-2 rounded-full transition-all duration-500`}
-                  style={{ width: barHeight }}
+                  className="h-2 rounded-full transition-all duration-500"
+                  style={{
+                    width: barHeight,
+                    backgroundColor: 'var(--primary)'
+                  }}
                 />
               </div>
             </div>
