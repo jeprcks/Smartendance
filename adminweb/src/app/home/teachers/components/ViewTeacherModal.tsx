@@ -7,7 +7,8 @@ interface ViewTeacherModalProps {
     teacherId: string;
     name: string;
     role: string;
-    subject: string;
+    subject?: string;
+    subjects?: string[];
     email: string;
     phoneNumber: string;
     dateJoined: string;
@@ -86,8 +87,14 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
                 <p className="text-base text-gray-900">{teacher.role}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Subject</p>
-                <p className="text-base text-gray-900">{teacher.subject}</p>
+                <p className="text-sm text-gray-500">Subjects</p>
+                <div className="flex flex-wrap gap-1 mt-1">
+                  {(Array.isArray(teacher.subjects) ? teacher.subjects : (teacher.subject ? [teacher.subject] : [])).map((sub) => (
+                    <span key={sub} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {sub}
+                    </span>
+                  ))}
+                </div>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Gender</p>

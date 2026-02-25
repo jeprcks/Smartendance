@@ -188,7 +188,7 @@ const teacherLogin = async (req, res) => {
                 name: teacher.name,
                 email: teacher.email,
                 username: teacher.username,
-                subject: teacher.subject,
+                subjects: Array.isArray(teacher.subjects) ? teacher.subjects : (teacher.subject ? [teacher.subject] : []),
                 role: teacher.role,
                 profilePicture: teacher.profilePicture
             }

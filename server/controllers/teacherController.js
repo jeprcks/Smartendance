@@ -9,6 +9,7 @@ const createTeacher = async (req, res) => {
             username,
             name,
             role = 'Teacher',
+            subjects,
             subject,
             email,
             phoneNumber,
@@ -21,10 +22,21 @@ const createTeacher = async (req, res) => {
             profilePicture
         } = req.body;
 
+        // Normalize subjects: accept array or legacy single subject
+        let subjectsArray = Array.isArray(subjects) ? subjects : (subject ? [subject] : []).filter(Boolean);
+        if (subjectsArray.length === 0 && subject) {
+            subjectsArray = subject.split(/[,;]/).map(s => s.trim()).filter(Boolean);
+        }
+
         // Validate required fields
-        if (!username || !name || !subject || !email || !phoneNumber || !password) {
+        if (!username || !name || !email || !phoneNumber || !password) {
             return res.status(400).json({ 
-                error: "Missing required fields: username, name, subject, email, phoneNumber, password are required" 
+                error: "Missing required fields: username, name, email, phoneNumber, password are required" 
+            });
+        }
+        if (!subjectsArray || subjectsArray.length === 0) {
+            return res.status(400).json({ 
+                error: "At least one subject is required" 
             });
         }
 
@@ -53,7 +65,7 @@ const createTeacher = async (req, res) => {
                 username,
                 name,
                 role,
-                subject,
+                subjects: subjectsArray,
                 email,
                 phoneNumber,
                 password: hashedPassword,
@@ -101,7 +113,7 @@ const getAllTeachers = async (req, res) => {
         // Build filter object
         const filter = {};
         
-        if (subject) filter.subject = new RegExp(subject, 'i');
+        if (subject) filter.subjects = new RegExp(subject, 'i');
         if (status) filter.status = status;
         if (role) filter.role = role;
         
@@ -112,7 +124,7 @@ const getAllTeachers = async (req, res) => {
                 { teacherId: { $regex: search, $options: 'i' } },
                 { username: { $regex: search, $options: 'i' } },
                 { email: { $regex: search, $options: 'i' } },
-                { subject: { $regex: search, $options: 'i' } }
+                { subjects: { $regex: search, $options: 'i' } }
             ];
         }
 
@@ -212,7 +224,16 @@ const getTeacherByTeacherId = async (req, res) => {
 const updateTeacher = async (req, res) => {
     try {
         const { id } = req.params;
-        const updates = req.body;
+        const updates = { ...req.body };
+
+        // Normalize subjects: accept subjects array or legacy subject string
+        if (updates.subject !== undefined && !updates.subjects) {
+            updates.subjects = typeof updates.subject === 'string'
+                ? updates.subject.split(/[,;]/).map(s => s.trim()).filter(Boolean)
+                : Array.isArray(updates.subject) ? updates.subject : [updates.subject];
+            if (updates.subjects.length === 0) updates.subjects = [updates.subject];
+            delete updates.subject;
+        }
 
         // Handle password update if provided
         if (updates.password) {
@@ -346,7 +367,7 @@ const searchTeachers = async (req, res) => {
                 { teacherId: { $regex: query, $options: 'i' } },
                 { username: { $regex: query, $options: 'i' } },
                 { email: { $regex: query, $options: 'i' } },
-                { subject: { $regex: query, $options: 'i' } }
+                { subjects: { $regex: query, $options: 'i' } }
             ]
         }).select('-password').sort({ name: 1 });
 

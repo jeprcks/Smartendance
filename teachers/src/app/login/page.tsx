@@ -31,7 +31,7 @@ export default function LoginPage() {
       const teacherName =
         (user.name ?? user.fullName ?? user.email ?? 'Teacher') as string;
       const teacherEmail = (user.email ?? '') as string;
-      const subject = (user.subject ?? '') as string;
+      const subject = (Array.isArray(user.subjects) ? (user.subjects as string[]).join(', ') : (user.subject ?? '')) as string;
       const role = (user.role ?? 'Teacher') as string;
       const profilePicture = (user.profilePicture ?? user.avatar ?? user.photo ?? null) as string | null;
 

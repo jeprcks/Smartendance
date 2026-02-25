@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
+import 'package:audioplayers/audioplayers.dart';
 import '../fetch/fetchstudents.dart';
 import '../main.dart';
 import 'components/studentsinformation.dart';
@@ -28,6 +29,7 @@ class _ScanningPageState extends State<ScanningPage> {
 
   // Student service instance
   final StudentService _studentService = StudentService();
+  final AudioPlayer _beepPlayer = AudioPlayer();
 
   @override
   void initState() {
@@ -39,7 +41,12 @@ class _ScanningPageState extends State<ScanningPage> {
   @override
   void dispose() {
     cameraController.dispose();
+    _beepPlayer.dispose();
     super.dispose();
+  }
+
+  void _playScanBeep() {
+    _beepPlayer.play(AssetSource('audio/beep.wav'));
   }
 
   // Initialize the student service
@@ -265,6 +272,9 @@ class _ScanningPageState extends State<ScanningPage> {
                   setState(() {
                     scannedCode = code;
                   });
+
+                  // Play success beep when QR code is scanned
+                  _playScanBeep();
 
                   // Fetch student information when QR code is scanned
                   fetchStudentInfo(code);

@@ -428,7 +428,7 @@ class TelegramService {
       `${THEME.icons.id} ${this._escapeHtml(teacher.teacherId || 'N/A')}\n` +
       `${THEME.icons.email} ${this._escapeHtml(teacher.email)}\n` +
       `${THEME.icons.phone} ${this._escapeHtml(teacher.phoneNumber || 'N/A')}\n` +
-      `${THEME.icons.grade} ${this._escapeHtml(teacher.subject || 'N/A')}\n` +
+      `${THEME.icons.grade} ${this._escapeHtml(Array.isArray(teacher.subjects) ? teacher.subjects.join(', ') : (teacher.subject || 'N/A'))}\n` +
       `🎯 ${this._escapeHtml(teacher.role || 'N/A')}\n` +
       `${THEME.icons.info} Status: ${this._escapeHtml(teacher.status || 'N/A')}`;
 

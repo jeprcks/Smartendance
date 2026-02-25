@@ -9,11 +9,13 @@ interface AddTeacherModalProps {
   onAdd: (teacherData: any) => void;
 }
 
+const SUBJECT_OPTIONS = ['Mathematics', 'English', 'Science', 'Filipino', 'Social Studies', 'Physical Education', 'Values Education'];
+
 interface TeacherFormData {
   username: string;
   password: string;
   name: string;
-  subject: string;
+  subjects: string[];
   email: string;
   phoneNumber: string;
   gender: string;
@@ -29,7 +31,7 @@ interface ValidationErrors {
   username?: string;
   password?: string;
   name?: string;
-  subject?: string;
+  subjects?: string[];
   email?: string;
   phoneNumber?: string;
   gender?: string;
@@ -46,7 +48,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
     username: '',
     password: '',
     name: '',
-    subject: '',
+    subjects: [],
     email: '',
     phoneNumber: '',
     gender: '',
@@ -104,8 +106,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
       newErrors.name = 'Full name must be at least 2 characters long';
     }
 
-    if (!formData.subject.trim()) {
-      newErrors.subject = 'Subject is required';
+    if (!formData.subjects || formData.subjects.length === 0) {
+      newErrors.subjects = 'At least one subject is required';
     }
 
     if (!formData.email.trim()) {
@@ -144,7 +146,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
     try {
       const { address, city, province, zipCode, ...restFormData } = formData;
       await onAdd({ 
-        ...restFormData, 
+        ...restFormData,
+        subjects: formData.subjects,
         profilePicture: formData.photo, // Map photo to profilePicture for API
         address: {
           street: address,
@@ -346,22 +349,30 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                 <FieldError error={errors.name} />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject*
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subjects*
                 </label>
-                <input
-                  type="text"
-                  name="subject"
-                  required
-                  placeholder="Enter subject"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.subject ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
-                  }`}
-                  value={formData.subject}
-                  onChange={handleChange}
-                />
-                <FieldError error={errors.subject} />
+                <div className="flex flex-wrap gap-2">
+                  {SUBJECT_OPTIONS.map((sub) => (
+                    <label key={sub} className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.subjects.includes(sub)}
+                        onChange={(e) => {
+                          const newSubjects = e.target.checked
+                            ? [...formData.subjects, sub]
+                            : formData.subjects.filter((s) => s !== sub);
+                          setFormData({ ...formData, subjects: newSubjects });
+                          if (errors.subjects) setErrors({ ...errors, subjects: undefined });
+                        }}
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">{sub}</span>
+                    </label>
+                  ))}
+                </div>
+                <FieldError error={errors.subjects} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -6,7 +6,9 @@ export interface Teacher {
   username: string;
   name: string;
   role: 'Teacher' | 'Head Teacher' | 'Department Head' | 'Principal';
-  subject: string;
+  subjects: string[];
+  /** @deprecated Use subjects. Kept for backward compatibility with legacy API responses */
+  subject?: string;
   email: string;
   phoneNumber: string;
   password?: string; // Only included when creating/updating
@@ -134,7 +136,7 @@ class TeacherService {
     username: string;
     name: string;
     role?: string;
-    subject: string;
+    subjects: string[];
     email: string;
     phoneNumber: string;
     password: string;

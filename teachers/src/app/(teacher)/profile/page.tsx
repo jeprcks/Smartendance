@@ -74,6 +74,7 @@ const CancelIcon = () => (
   </svg>
 );
 
+const SUBJECT_OPTIONS = ['Mathematics', 'English', 'Science', 'Filipino', 'Social Studies', 'Physical Education', 'Values Education'];
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -89,7 +90,7 @@ export default function ProfilePage() {
     name: '',
     email: '',
     phoneNumber: '',
-    subject: '',
+    subjects: [] as string[],
     gender: '',
     password: '',
   });
@@ -108,19 +109,22 @@ export default function ProfilePage() {
     try {
       const profileData = await getTeacherProfile(data.teacherId, token);
       setProfile(profileData);
+      const subjects = Array.isArray(profileData.subjects)
+        ? profileData.subjects as string[]
+        : profileData.subject ? [String(profileData.subject)] : [];
       setFormData({
         teacherId: String(profileData.teacherId ?? data.teacherId ?? ''),
         name: String(profileData.name ?? data.teacherName ?? ''),
         email: String(profileData.email ?? data.teacherEmail ?? ''),
         phoneNumber: String(profileData.phoneNumber ?? ''),
-        subject: String(profileData.subject ?? ''),
+        subjects,
         gender: String(profileData.gender ?? ''),
         password: String(profileData.plainPassword ?? ''),
       });
       updateTeacherDisplay({
         teacherName: String(profileData.name ?? data.teacherName ?? ''),
         teacherEmail: String(profileData.email ?? data.teacherEmail ?? ''),
-        teacherSubject: String(profileData.subject ?? ''),
+        teacherSubject: subjects.length ? subjects.join(', ') : '',
         profilePicture: (profileData.profilePicture as string) ?? null,
       });
     } catch (e) {
@@ -179,7 +183,7 @@ export default function ProfilePage() {
         name: formData.name,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        subject: formData.subject,
+        subjects: formData.subjects,
         gender: formData.gender,
       };
       
@@ -198,10 +202,11 @@ export default function ProfilePage() {
       setEditing(false);
       setShowPassword(false);
       await load();
+      const updatedSubjects = Array.isArray(updated?.subjects) ? (updated.subjects as string[]).join(', ') : (updated?.subject as string) ?? '';
       updateTeacherDisplay({
         teacherName: (updated?.name as string) ?? undefined,
         teacherEmail: (updated?.email as string) ?? undefined,
-        teacherSubject: (updated?.subject as string) ?? undefined,
+        teacherSubject: updatedSubjects,
         profilePicture: (updated?.profilePicture as string) ?? undefined,
       });
     } catch (e) {
@@ -337,12 +342,15 @@ export default function ProfilePage() {
                 onClick={() => {
                   setEditing(false);
                   setShowPassword(false);
+                  const subjects = Array.isArray(profile?.subjects)
+                    ? (profile.subjects as string[])
+                    : profile?.subject ? [String(profile.subject)] : [];
                   setFormData({
                     teacherId: String(profile?.teacherId ?? ''),
                     name: String(profile?.name ?? ''),
                     email: String(profile?.email ?? ''),
                     phoneNumber: String(profile?.phoneNumber ?? ''),
-                    subject: String(profile?.subject ?? ''),
+                    subjects,
                     gender: String(profile?.gender ?? ''),
                     password: String(profile?.plainPassword ?? ''),
                   });
@@ -425,22 +433,48 @@ export default function ProfilePage() {
             )}
           </div>
 
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
-              Subject
+              Subjects
             </label>
             {editing ? (
-              <input
-                type="text"
-                value={formData.subject}
-                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border input-theme"
-                placeholder="Enter your subject"
-              />
+              <div className="flex flex-wrap gap-3">
+                {SUBJECT_OPTIONS.map((sub) => (
+                  <label key={sub} className="inline-flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={formData.subjects.includes(sub)}
+                      onChange={(e) => {
+                        const newSubjects = e.target.checked
+                          ? [...formData.subjects, sub]
+                          : formData.subjects.filter((s) => s !== sub);
+                        setFormData({ ...formData, subjects: newSubjects });
+                      }}
+                      className="rounded border-gray-300"
+                      style={{ accentColor: 'var(--primary)' }}
+                    />
+                    <span className="text-sm" style={{ color: 'var(--foreground)' }}>{sub}</span>
+                  </label>
+                ))}
+              </div>
             ) : (
-              <p className="px-4 py-3 rounded-xl bg-[var(--muted)] font-medium" style={{ color: 'var(--foreground)' }}>
-                {formData.subject || 'Not set'}
-              </p>
+              <div className="px-4 py-3 rounded-xl bg-[var(--muted)]">
+                {formData.subjects.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.subjects.map((sub) => (
+                      <span
+                        key={sub}
+                        className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{ background: 'var(--primary)', color: 'white' }}
+                      >
+                        {sub}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="font-medium" style={{ color: 'var(--foreground)' }}>Not set</p>
+                )}
+              </div>
             )}
           </div>
 

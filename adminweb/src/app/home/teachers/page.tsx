@@ -192,13 +192,17 @@ export default function TeachersPage() {
   const allInactiveTeachers = teachers.filter(teacher => teacher.status === 'Inactive');
 
   // Filter teachers based on search filters
+  const getTeacherSubjects = (t: Teacher) =>
+    Array.isArray(t.subjects) ? t.subjects : ((t as any).subject ? [(t as any).subject] : []);
+
   const filteredActiveTeachers = allActiveTeachers.filter(teacher => {
     const query = (searchFilters.query || searchQuery).toLowerCase();
+    const subjects = getTeacherSubjects(teacher);
     const matchesSearch = !query || (
       teacher.name.toLowerCase().includes(query) ||
       teacher.teacherId.toLowerCase().includes(query) ||
       teacher.username.toLowerCase().includes(query) ||
-      teacher.subject.toLowerCase().includes(query)
+      subjects.some(s => s.toLowerCase().includes(query))
     );
     const statusFilterValue = searchFilters.status || statusFilter;
     const matchesStatus = !statusFilterValue || teacher.status === statusFilterValue;
@@ -207,11 +211,12 @@ export default function TeachersPage() {
 
   const filteredInactiveTeachers = allInactiveTeachers.filter(teacher => {
     const query = (searchFilters.query || searchQuery).toLowerCase();
+    const subjects = getTeacherSubjects(teacher);
     const matchesSearch = !query || (
       teacher.name.toLowerCase().includes(query) ||
       teacher.teacherId.toLowerCase().includes(query) ||
       teacher.username.toLowerCase().includes(query) ||
-      teacher.subject.toLowerCase().includes(query)
+      subjects.some(s => s.toLowerCase().includes(query))
     );
     const statusFilterValue = searchFilters.status || statusFilter;
     const matchesStatus = !statusFilterValue || teacher.status === statusFilterValue;
@@ -452,7 +457,15 @@ export default function TeachersPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.subject}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex flex-wrap gap-1">
+                          {getTeacherSubjects(teacher).map((sub) => (
+                            <span key={sub} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {sub}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => {
@@ -592,7 +605,15 @@ export default function TeachersPage() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.subject}</td>
+                      <td className="px-6 py-4 text-sm">
+                        <div className="flex flex-wrap gap-1">
+                          {getTeacherSubjects(teacher).map((sub) => (
+                            <span key={sub} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                              {sub}
+                            </span>
+                          ))}
+                        </div>
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <button
                           onClick={() => {

@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
+const SUBJECT_OPTIONS = ['Mathematics', 'English', 'Science', 'Filipino', 'Social Studies', 'Physical Education', 'Values Education'];
+
 interface EditTeacherModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -13,7 +15,8 @@ interface EditTeacherModalProps {
     username: string;
     name: string;
     role: string;
-    subject: string;
+    subject?: string;
+    subjects?: string[];
     email: string;
     phoneNumber: string;
     gender?: string;
@@ -34,7 +37,7 @@ interface EditTeacherModalProps {
 interface TeacherFormData {
   username: string;
   name: string;
-  subject: string;
+  subjects: string[];
   email: string;
   phoneNumber: string;
   gender: string;
@@ -52,7 +55,7 @@ interface TeacherFormData {
 interface ValidationErrors {
   username?: string;
   name?: string;
-  subject?: string;
+  subjects?: string;
   email?: string;
   phoneNumber?: string;
   gender?: string;
@@ -69,7 +72,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
   const [formData, setFormData] = useState<TeacherFormData>({
     username: '',
     name: '',
-    subject: '',
+    subjects: [],
     email: '',
     phoneNumber: '',
     gender: '',
@@ -94,7 +97,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
       setFormData({
         username: teacher.username || '',
         name: teacher.name || '',
-        subject: teacher.subject || '',
+        subjects: Array.isArray(teacher.subjects) ? teacher.subjects : (teacher.subject ? [teacher.subject] : []),
         email: teacher.email || '',
         phoneNumber: teacher.phoneNumber || '',
         gender: teacher.gender || '',
@@ -143,8 +146,8 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
       newErrors.name = 'Full name must be at least 2 characters long';
     }
 
-    if (!formData.subject.trim()) {
-      newErrors.subject = 'Subject is required';
+    if (!formData.subjects || formData.subjects.length === 0) {
+      newErrors.subjects = 'At least one subject is required';
     }
 
     if (!formData.email.trim()) {
@@ -185,7 +188,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
       const dataToSubmit: any = {
         username: formData.username,
         name: formData.name,
-        subject: formData.subject,
+        subjects: formData.subjects,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
         birthDate: formData.birthDate,
@@ -441,22 +444,30 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                 <FieldError error={errors.name} />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Subject*
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subjects*
                 </label>
-                <input
-                  type="text"
-                  name="subject"
-                  required
-                  placeholder="Enter subject"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.subject ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
-                  }`}
-                  value={formData.subject}
-                  onChange={handleChange}
-                />
-                <FieldError error={errors.subject} />
+                <div className="flex flex-wrap gap-2">
+                  {SUBJECT_OPTIONS.map((sub) => (
+                    <label key={sub} className="inline-flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formData.subjects.includes(sub)}
+                        onChange={(e) => {
+                          const newSubjects = e.target.checked
+                            ? [...formData.subjects, sub]
+                            : formData.subjects.filter((s) => s !== sub);
+                          setFormData({ ...formData, subjects: newSubjects });
+                          if (errors.subjects) setErrors({ ...errors, subjects: undefined });
+                        }}
+                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      />
+                      <span className="ml-2 text-sm text-gray-700">{sub}</span>
+                    </label>
+                  ))}
+                </div>
+                <FieldError error={errors.subjects} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">

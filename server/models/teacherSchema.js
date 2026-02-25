@@ -27,10 +27,15 @@ const teacherSchema = new Schema(
             enum: ['Teacher', 'Head Teacher', 'Department Head', 'Principal'],
             default: 'Teacher'
         },
-        subject: {
-            type: String,
+        subjects: {
+            type: [String],
             required: true,
-            trim: true
+            validate: {
+                validator: function(v) {
+                    return v && Array.isArray(v) && v.length > 0;
+                },
+                message: 'At least one subject is required'
+            }
         },
         gender: {
             type: String,
@@ -158,7 +163,7 @@ teacherSchema.virtual('yearsOfExperience').get(function () {
 
 // Indexes for better query performance
 // Note: teacherId, username, and email already have indices from unique: true
-teacherSchema.index({ subject: 1 });
+teacherSchema.index({ subjects: 1 });
 teacherSchema.index({ status: 1 });
 teacherSchema.index({ role: 1 });
 
@@ -185,7 +190,7 @@ teacherSchema.methods.isActive = function() {
 
 // Static method to find teachers by subject
 teacherSchema.statics.findBySubject = function(subject) {
-    return this.find({ subject: new RegExp(subject, 'i'), status: 'Active' });
+    return this.find({ subjects: new RegExp(subject, 'i'), status: 'Active' });
 };
 
 // Static method to get teacher statistics
@@ -214,8 +219,18 @@ teacherSchema.statics.getTeacherStats = async function() {
     return result;
 };
 
+// Transform for backward compatibility: if subject (legacy) exists but subjects doesn't, derive subjects
+const subjectTransform = function(doc, ret) {
+    if (ret.subject && (!ret.subjects || ret.subjects.length === 0)) {
+        ret.subjects = typeof ret.subject === 'string'
+            ? ret.subject.split(/[,;]/).map(s => s.trim()).filter(Boolean)
+            : Array.isArray(ret.subject) ? ret.subject : [ret.subject];
+        if (ret.subjects.length === 0) ret.subjects = [ret.subject];
+    }
+};
+
 // Ensure virtuals are included when converting document to JSON
-teacherSchema.set('toJSON', { virtuals: true });
-teacherSchema.set('toObject', { virtuals: true });
+teacherSchema.set('toJSON', { virtuals: true, transform: subjectTransform });
+teacherSchema.set('toObject', { virtuals: true, transform: subjectTransform });
 
 module.exports = mongoose.model("Teacher", teacherSchema);
