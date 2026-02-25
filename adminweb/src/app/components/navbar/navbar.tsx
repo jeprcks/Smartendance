@@ -3,17 +3,38 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Bell } from 'lucide-react';
+import { Bell, Settings } from 'lucide-react';
 import { notificationService } from '@/app/services/notificationService';
+import { settingsService } from '@/app/services/settingsService';
 
 const NOTIFICATION_LAST_SEEN_KEY = 'notificationLastSeenCount';
+const DEFAULT_SCHOOL_NAME = 'Umapad Elementary School';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [notificationCount, setNotificationCount] = useState(0);
   const [lastSeenCount, setLastSeenCount] = useState(0);
+  const [schoolName, setSchoolName] = useState(DEFAULT_SCHOOL_NAME);
+  const [logo, setLogo] = useState<string | null>(null);
 
   const hasUnread = notificationCount > lastSeenCount;
+
+  const loadSettings = async () => {
+    try {
+      const s = await settingsService.getSettings();
+      setSchoolName(s.schoolName || DEFAULT_SCHOOL_NAME);
+      setLogo(s.logo || null);
+    } catch {
+      // Keep defaults
+    }
+  };
+
+  useEffect(() => {
+    loadSettings();
+    const handler = () => loadSettings();
+    window.addEventListener('settingsUpdated', handler);
+    return () => window.removeEventListener('settingsUpdated', handler);
+  }, []);
 
   const navItems = [
     { href: '/home/dashboard', label: 'Dashboard', icon: '📊' },
@@ -67,14 +88,12 @@ export default function Navbar() {
           {/* Logo & brand */}
           <div className="flex items-center min-w-0 flex-shrink-0">
             <Link href="/home/dashboard" className="flex items-center gap-2.5 min-w-0 group">
-              <span className="navbar-logo-wrap">
-                <img
-                  src="/logo/backgroundlogo.png"
-                  alt="Umapad Elementary School Logo"
-                  className="navbar-logo"
-                />
-              </span>
-              <span className="navbar-brand">Umapad Elementary School</span>
+              {logo && (
+                <span className="navbar-logo-wrap">
+                  <img src={logo} alt={`${schoolName} Logo`} className="navbar-logo" />
+                </span>
+              )}
+              <span className="navbar-brand">{schoolName}</span>
             </Link>
           </div>
 
@@ -111,6 +130,15 @@ export default function Navbar() {
                   {/* Red dot – disappears after notifications are viewed */}
                 </span>
               )}
+            </Link>
+
+            <Link
+              href="/home/settings"
+              className="navbar-action"
+              aria-label="Settings"
+              title="Settings"
+            >
+              <Settings size={18} strokeWidth={2} />
             </Link>
 
             <div className="hidden md:block">

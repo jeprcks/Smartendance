@@ -382,7 +382,7 @@ export default function StudentsPage() {
         })}
       </div>
 
-      <div className="bg-white rounded-xl shadow-md border border-gray-200/80 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-md border-2 border-transparent hover:border-[var(--primary)] transition-colors duration-200 backdrop-blur-sm">
         <div className="p-6">
           {/* Advanced Search */}
           <AdvancedSearch
@@ -408,7 +408,7 @@ export default function StudentsPage() {
             getLabel={(student) => student.fullName}
           />
 
-          <div className="overflow-x-auto rounded-xl border border-gray-200/80">
+          <div className="overflow-x-auto rounded-xl border border-[var(--border)]">
             <table className="min-w-full divide-y divide-gray-200/80">
               <thead className="bg-gray-50/50">
                 <tr>
@@ -452,7 +452,7 @@ export default function StudentsPage() {
                   sortedFilteredStudents.map((student) => {
                     const isSelected = selectedStudents.has(student.studentId);
                     return (
-                  <tr key={student.studentId} className={`hover:bg-gray-50/50 transition-colors duration-200 ${isSelected ? 'bg-green-50' : ''}`}>
+                  <tr key={student.studentId} className={`hover:bg-[var(--secondary)] hover:shadow-[inset_4px_0_0_0_var(--primary)] transition-all duration-200 ${isSelected ? 'bg-green-50' : ''}`}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <input
                         type="checkbox"

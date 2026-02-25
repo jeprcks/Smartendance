@@ -4,6 +4,7 @@ export interface AttendanceRecord {
   _id: string;
   studentId: string;
   studentName: string;
+  gender?: string;
   subject: string;
   scanTime: string;
   status: 'Present' | 'Late' | 'Absent' | 'Cutting' | 'Out';
@@ -70,9 +71,11 @@ export interface StudentAttendanceHistory {
   student: {
     id: string;
     name: string;
+    gender?: string;
     gradeLevel: string;
     section: string;
     shift: string;
+    profilePicture?: string;
   };
   stats: AttendanceStats;
   records: AttendanceRecord[];
@@ -112,6 +115,7 @@ class HistoryService {
   async getHistoryPageData(params: {
     search?: string;
     status?: string;
+    gender?: string;
     startDate?: string;
     endDate?: string;
     page?: number;
@@ -122,6 +126,7 @@ class HistoryService {
       
       if (params.search) searchParams.append('search', params.search);
       if (params.status) searchParams.append('status', params.status);
+      if (params.gender) searchParams.append('gender', params.gender);
       if (params.startDate) searchParams.append('startDate', params.startDate);
       if (params.endDate) searchParams.append('endDate', params.endDate);
       if (params.page) searchParams.append('page', params.page.toString());

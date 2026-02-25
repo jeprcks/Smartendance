@@ -67,18 +67,6 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen relative flex items-center justify-center bg-background px-4 py-8 overflow-hidden">
-      {/* Watermark */}
-      <div
-        className="absolute inset-0 flex items-center justify-center opacity-[0.12] pointer-events-none z-0"
-        aria-hidden
-      >
-        <img
-          src="/logo/backgroundlogo.png"
-          alt=""
-          className="w-[700px] h-[700px] object-contain"
-        />
-      </div>
-
       {/* Card */}
       <div className="relative z-10 w-full max-w-[22rem] rounded-2xl border border-border bg-card shadow-lg shadow-primary/10 overflow-hidden animate-in fade-in zoom-in-95 duration-300">
         <header className="bg-gradient-to-br from-primary to-primary/80 px-5 py-4 text-center border-b border-white/15 shadow-md">

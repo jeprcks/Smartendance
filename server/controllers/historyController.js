@@ -449,7 +449,8 @@ const getStudentAttendanceHistory = async (req, res) => {
                 gradeLevel: student.gradeLevel,
                 section: student.section,
                 shift: student.shift,
-                gender: student.gender
+                gender: student.gender,
+                profilePicture: student.photo
             },
             stats,
             records
@@ -466,6 +467,7 @@ const getHistoryPageData = async (req, res) => {
         const {
             search,
             status,
+            gender,
             startDate,
             endDate,
             page = 1,
@@ -477,6 +479,13 @@ const getHistoryPageData = async (req, res) => {
         const filter = {};
         
         if (status) filter.status = status;
+
+        // Filter by gender (join with Student)
+        if (gender) {
+            const studentsWithGender = await Student.find({ gender }).select('studentId').lean();
+            const studentIds = studentsWithGender.map(s => s.studentId);
+            filter.studentId = { $in: studentIds };
+        }
         
         // Date range filter
         if (startDate || endDate) {
@@ -520,7 +529,14 @@ const getHistoryPageData = async (req, res) => {
             .skip(skip)
             .limit(parseInt(limit));
 
-        // Enrich records with schedule information for each specific subject
+        // Batch-fetch student genders for all unique studentIds
+        const uniqueStudentIds = [...new Set(records.map(r => r.studentId))];
+        const students = await Student.find({ studentId: { $in: uniqueStudentIds } })
+            .select('studentId gender')
+            .lean();
+        const studentGenderMap = Object.fromEntries(students.map(s => [s.studentId, s.gender]));
+
+        // Enrich records with schedule information and gender for each specific subject
         records = await Promise.all(records.map(async (record) => {
             const recordObj = record.toObject ? record.toObject() : record;
             
@@ -554,6 +570,9 @@ const getHistoryPageData = async (req, res) => {
             } catch (scheduleError) {
                 console.log('Could not fetch schedule for subject:', recordObj.subject);
             }
+
+            // Add gender from student lookup
+            recordObj.gender = studentGenderMap[recordObj.studentId] || null;
             
             return recordObj;
         }));

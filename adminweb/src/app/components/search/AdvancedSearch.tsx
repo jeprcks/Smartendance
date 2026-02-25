@@ -127,7 +127,7 @@ export default function AdvancedSearch({
             <button
               key={index}
               onClick={() => handleQuickFilter(option.filters)}
-              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
+              className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full hover:bg-[var(--secondary)] hover:text-[var(--primary-dark)] hover:ring-2 hover:ring-[var(--primary)]/30 transition-all duration-200"
             >
               {option.label}
             </button>

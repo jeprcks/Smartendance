@@ -31,7 +31,7 @@ interface ValidationErrors {
   username?: string;
   password?: string;
   name?: string;
-  subjects?: string[];
+  subjects?: string;
   email?: string;
   phoneNumber?: string;
   gender?: string;
@@ -195,7 +195,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
   const FieldError = ({ error }: { error?: string }) => {
     if (!error) return null;
     return (
-      <p className="mt-1 text-sm text-red-600 flex items-center">
+      <p className="mt-1 text-sm text-[var(--destructive)] flex items-center">
         <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
           <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
         </svg>
@@ -214,22 +214,25 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="fixed inset-0 bg-black opacity-50"></div>
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-7xl w-full mx-4 max-h-[95vh] overflow-y-auto relative z-10">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Teacher</h2>
+    <div className="fixed top-20 left-0 right-0 bottom-0 flex items-center justify-center z-50">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true"></div>
+      <div className="relative z-10 bg-[var(--surface)] rounded-[var(--radius)] shadow-xl border border-[var(--border)] p-8 max-w-7xl w-full mx-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border)]">
+          <h2 className="text-2xl font-bold text-[var(--primary-dark)]">Add New Teacher</h2>
           <button 
             onClick={handleClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="p-2 rounded-[var(--radius)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+            aria-label="Close"
           >
-            ✕
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Profile Image Upload */}
-          <div className="mb-6 p-6 bg-gray-50 rounded-lg">
+          <div className="mb-6 p-6 rounded-[var(--radius)] border border-[var(--border)]">
             <div className="flex items-start space-x-6">
               <div className="flex-shrink-0">
                 <div className="relative w-40 h-40">
@@ -241,8 +244,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                       className="object-cover rounded-lg"
                     />
                   ) : (
-                    <div className="w-40 h-40 bg-gray-200 rounded-lg flex items-center justify-center">
-                      <svg className="w-12 h-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <div className="w-40 h-40 bg-[var(--muted)] rounded-[var(--radius)] flex items-center justify-center border-2 border-dashed border-[var(--border)]">
+                      <svg className="w-12 h-12 text-[var(--muted-foreground)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
                     </div>
@@ -269,15 +272,15 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                 />
                 <label
                   htmlFor="photo-upload"
-                  className="mt-2 inline-block px-4 py-2 bg-white border border-gray-300 rounded-md cursor-pointer hover:bg-gray-50 transition-colors text-sm text-gray-600"
+                  className="mt-2 inline-block px-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius)] cursor-pointer hover:bg-[var(--secondary)] transition-colors text-sm font-medium text-[var(--primary-dark)]"
                 >
                   Upload Photo
                 </label>
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-medium text-gray-700 mb-2">Teacher Photo</h4>
-                <p className="text-sm text-gray-500 mb-4">Upload a professional photo. The photo should be:</p>
-                <ul className="text-sm text-gray-500 list-disc list-inside space-y-1">
+                <h4 className="text-sm font-semibold text-[var(--foreground)] mb-2">Teacher Photo</h4>
+                <p className="text-sm text-[var(--muted-foreground)] mb-4">Upload a professional photo. The photo should be:</p>
+                <ul className="text-sm text-[var(--muted-foreground)] list-disc list-inside space-y-1">
                   <li>A recent photo (taken within the last 6 months)</li>
                   <li>Professional appearance</li>
                   <li>Clear and well-lit</li>
@@ -287,11 +290,11 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
             </div>
           </div>
           {/* Account Information */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Account Information</h3>
+          <div className="p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)] mb-4">Account Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Username*
                 </label>
                 <input
@@ -299,8 +302,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="username"
                   required
                   placeholder="Enter username"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.username ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.username ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.username}
                   onChange={handleChange}
@@ -308,7 +311,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                 <FieldError error={errors.username} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Password*
                 </label>
                 <input
@@ -316,8 +319,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="password"
                   required
                   placeholder="Enter password"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.password ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.password ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.password}
                   onChange={handleChange}
@@ -328,11 +331,11 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
           </div>
 
           {/* Basic Information */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Basic Information</h3>
+          <div className="p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)] mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Full Name*
                 </label>
                 <input
@@ -340,8 +343,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="name"
                   required
                   placeholder="Enter full name"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.name ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.name ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.name}
                   onChange={handleChange}
@@ -350,7 +353,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
               </div>
 
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
                   Subjects*
                 </label>
                 <div className="flex flex-wrap gap-2">
@@ -366,22 +369,22 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                           setFormData({ ...formData, subjects: newSubjects });
                           if (errors.subjects) setErrors({ ...errors, subjects: undefined });
                         }}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
                       />
-                      <span className="ml-2 text-sm text-gray-700">{sub}</span>
+                      <span className="ml-2 text-sm text-[var(--foreground)]">{sub}</span>
                     </label>
                   ))}
                 </div>
                 <FieldError error={errors.subjects} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Gender
                 </label>
                 <select
                   name="gender"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.gender ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.gender ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.gender}
                   onChange={handleChange}
@@ -397,11 +400,11 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
           </div>
 
           {/* Contact Information */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Contact Information</h3>
+          <div className="p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)] mb-4">Contact Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Email Address*
                 </label>
                 <input
@@ -409,8 +412,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="email"
                   required
                   placeholder="Enter email address"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.email ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.email ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.email}
                   onChange={handleChange}
@@ -418,7 +421,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                 <FieldError error={errors.email} />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Phone Number*
                 </label>
                 <input
@@ -426,8 +429,8 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   name="phoneNumber"
                   required
                   placeholder="Enter phone number"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.phoneNumber ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.phoneNumber ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.phoneNumber}
                   onChange={handleChange}
@@ -438,57 +441,57 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
           </div>
 
           {/* Address Information */}
-          <div className="bg-gray-50 p-6 rounded-lg">
-            <h3 className="text-lg font-semibold text-gray-900 mb-4">Address Information</h3>
+          <div className="p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)] mb-4">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="col-span-2">
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Street Address
                 </label>
                 <textarea
                   name="address"
                   rows={2}
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]"
                   value={formData.address}
                   onChange={handleChange}
                   placeholder="Enter street address"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   City/Municipality
                 </label>
                 <input
                   type="text"
                   name="city"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]"
                   value={formData.city}
                   onChange={handleChange}
                   placeholder="Enter city/municipality"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Province
                 </label>
                 <input
                   type="text"
                   name="province"
-                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]"
                   value={formData.province}
                   onChange={handleChange}
                   placeholder="Enter province"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   ZIP Code
                 </label>
                 <input
                   type="text"
                   name="zipCode"
-                  className={`w-full px-4 py-2 border rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 ${
-                    errors.zipCode ? 'border-red-300 focus:ring-red-500 focus:border-red-500' : 'border-gray-300'
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.zipCode ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
                   }`}
                   value={formData.zipCode}
                   onChange={handleChange}
@@ -501,16 +504,16 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
 
           {/* Submit Error Display */}
           {submitError && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="bg-red-50/80 border border-[var(--destructive)] text-[var(--destructive)] rounded-[var(--radius)] p-4">
               <div className="flex">
                 <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
-                  <h3 className="text-sm font-medium text-red-800">Error adding teacher</h3>
-                  <div className="mt-2 text-sm text-red-700">
+                  <h3 className="text-sm font-medium">Error adding teacher</h3>
+                  <div className="mt-2 text-sm">
                     <p>{submitError}</p>
                   </div>
                 </div>
@@ -518,21 +521,21 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
             </div>
           )}
 
-          <div className="flex justify-end space-x-4 mt-8">
+          <div className="flex justify-end space-x-4 mt-8 pt-6 border-t border-[var(--border)]">
             <button
               type="button"
               onClick={handleClose}
-              className="px-6 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors"
+              className="px-6 py-2.5 border border-[var(--border)] rounded-[var(--radius)] text-[var(--foreground)] bg-[var(--surface)] hover:bg-[var(--muted)] transition-colors font-medium"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={isSubmitting}
-              className={`px-6 py-2 rounded-md transition-colors flex items-center ${
+              className={`px-6 py-2.5 rounded-[var(--radius)] transition-colors flex items-center font-medium ${
                 isSubmitting
-                  ? 'bg-gray-400 text-gray-200 cursor-not-allowed'
-                  : 'bg-green-600 text-white hover:bg-green-700'
+                  ? 'bg-[var(--muted)] text-[var(--muted-foreground)] cursor-not-allowed'
+                  : 'btn-primary'
               }`}
             >
               {isSubmitting ? (

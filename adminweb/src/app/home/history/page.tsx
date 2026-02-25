@@ -13,6 +13,11 @@ interface StudentDetailsModalProps {
   student: {
     id: string;
     name: string;
+    gender?: string;
+    gradeLevel?: string;
+    section?: string;
+    shift?: string;
+    profilePicture?: string;
     stats: AttendanceStats;
     recentAttendance: AttendanceRecord[];
   } | null;
@@ -38,19 +43,17 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
   });
 
   return (
-    <div className="fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white/95 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-6 w-full max-w-5xl max-h-[90vh] overflow-y-auto transform transition-all duration-300 scale-100">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <h2 className="text-2xl font-bold text-gray-900 tracking-tight mb-1">{student.name}&apos;s </h2>
-            <p className="text-sm text-gray-500">Detailed attendance records and statistics</p>Attendance History
-          </div>
+    <div className="fixed top-20 left-0 right-0 bottom-0 flex items-center justify-center z-50">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true"></div>
+      <div className="relative z-10 bg-[var(--surface)] rounded-[var(--radius)] shadow-xl border border-[var(--border)] p-6 w-full max-w-7xl mx-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border)]">
+          <h2 className="text-xl font-bold text-[var(--primary-dark)]">Attendance History</h2>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={() => onExportPDF(student.recentAttendance, `attendance_${student.name.replace(/\s+/g, '_')}_${format(new Date(), 'yyyy-MM-dd')}.pdf`)}
               disabled={student.recentAttendance.length === 0}
-              className="inline-flex items-center px-4 py-2 bg-red-600 text-sm font-semibold text-white rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="inline-flex items-center px-4 py-2 btn-primary text-sm font-semibold rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:ring-offset-2 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
@@ -59,12 +62,73 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
             </button>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-full transition-all duration-200"
+              className="p-2 rounded-[var(--radius)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+              aria-label="Close"
             >
               <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+          </div>
+        </div>
+
+        {/* Profile Section - First Row */}
+        <div className="p-6 rounded-[var(--radius)] border border-[var(--border)] mb-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6">
+            <div className="flex-shrink-0">
+              {student.profilePicture ? (
+                <img
+                  src={student.profilePicture}
+                  alt={`${student.name}'s profile`}
+                  className="w-24 h-24 rounded-full object-cover border-4 border-[var(--primary)]"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-[var(--muted)] border-4 border-[var(--primary)] flex items-center justify-center">
+                  <svg
+                    className="w-12 h-12 text-[var(--muted-foreground)]"
+                    fill="currentColor"
+                    viewBox="0 0 20 20"
+                  >
+                    <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 mb-1">
+                <h3 className="text-xl font-bold text-[var(--primary-dark)]">{student.name}</h3>
+                {student.gender && (
+                  <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ${
+                    student.gender === 'Male' ? 'bg-blue-50 text-blue-700 ring-blue-200/50' :
+                    student.gender === 'Female' ? 'bg-pink-50 text-pink-700 ring-pink-200/50' :
+                    'bg-gray-50 text-gray-700 ring-gray-200/50'
+                  }`}>
+                    {student.gender}
+                  </span>
+                )}
+              </div>
+              <p className="text-sm font-medium text-[var(--muted-foreground)] mb-3">Student ID: {student.id}</p>
+              <div className="flex flex-wrap gap-4 text-sm">
+                {student.gradeLevel && (
+                  <div>
+                    <span className="text-[var(--muted-foreground)]">Grade:</span>
+                    <span className="ml-1.5 font-medium text-[var(--foreground)]">{student.gradeLevel}</span>
+                  </div>
+                )}
+                {student.section && (
+                  <div>
+                    <span className="text-[var(--muted-foreground)]">Section:</span>
+                    <span className="ml-1.5 font-medium text-[var(--foreground)]">{student.section}</span>
+                  </div>
+                )}
+                {student.shift && (
+                  <div>
+                    <span className="text-[var(--muted-foreground)]">Shift:</span>
+                    <span className="ml-1.5 font-medium text-[var(--foreground)]">{student.shift}</span>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -256,6 +320,7 @@ export default function HistoryPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
   const [selectedStatus, setSelectedStatus] = useState<AttendanceRecord['status'] | ''>('');
+  const [selectedGender, setSelectedGender] = useState<string>('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isSilentRefresh, setIsSilentRefresh] = useState(false);
@@ -264,6 +329,11 @@ export default function HistoryPage() {
   type SelectedStudent = {
     id: string;
     name: string;
+    gender?: string;
+    gradeLevel?: string;
+    section?: string;
+    shift?: string;
+    profilePicture?: string;
     stats: AttendanceStats;
     recentAttendance: AttendanceRecord[];
   };
@@ -371,6 +441,7 @@ export default function HistoryPage() {
       const response = await historyService.getHistoryPageData({
         search: searchQuery || undefined,
         status: selectedStatus || undefined,
+        gender: selectedGender || undefined,
         startDate: selectedDate || undefined,
         endDate: selectedDate || undefined,
         page: 1,
@@ -389,7 +460,7 @@ export default function HistoryPage() {
       setIsLoading(false);
       setIsSilentRefresh(false);
     }
-  }, [searchQuery, selectedStatus, selectedDate]);
+  }, [searchQuery, selectedStatus, selectedGender, selectedDate]);
 
   // Fetch student details for modal
   const fetchStudentDetails = async (studentId: string) => {
@@ -399,6 +470,11 @@ export default function HistoryPage() {
       setSelectedStudent({
         id: response.student.id,
         name: response.student.name,
+        gender: response.student.gender,
+        gradeLevel: response.student.gradeLevel,
+        section: response.student.section,
+        shift: response.student.shift,
+        profilePicture: response.student.profilePicture,
         stats: response.stats,
         recentAttendance: response.records
       });
@@ -566,6 +642,19 @@ export default function HistoryPage() {
                 <option value="Out">Out</option>
               </select>
             </div>
+            <div className="w-48">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Gender</label>
+              <select
+                className="w-full px-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
+                value={selectedGender}
+                onChange={(e) => setSelectedGender(e.target.value)}
+              >
+                <option value="">All Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
           </div>
         </div>
 
@@ -605,7 +694,20 @@ export default function HistoryPage() {
                     onClick={() => fetchStudentDetails(record.studentId)}
                   >
                     <td className="whitespace-nowrap font-medium">{record.studentId}</td>
-                    <td className="whitespace-nowrap font-medium">{record.studentName}</td>
+                    <td className="whitespace-nowrap">
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{record.studentName}</span>
+                        {record.gender && (
+                          <span className={`inline-flex px-2.5 py-0.5 rounded-full text-xs font-semibold ring-1 ${
+                            record.gender === 'Male' ? 'bg-blue-50 text-blue-700 ring-blue-200/50' :
+                            record.gender === 'Female' ? 'bg-pink-50 text-pink-700 ring-pink-200/50' :
+                            'bg-gray-50 text-gray-700 ring-gray-200/50'
+                          }`}>
+                            {record.gender}
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="whitespace-nowrap">
                       <span>{record.subject || '—'}</span>
                       {record.subject?.toLowerCase() !== 'general' && record.gradeLevel && (record.gradeLevel.trim() !== '' || (record.section && record.section.trim() !== '')) && (

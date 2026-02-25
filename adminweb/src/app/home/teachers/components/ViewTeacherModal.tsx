@@ -30,15 +30,19 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
   if (!isOpen || !teacher) return null;
 
   return (
-    <div className="fixed inset-0 flex items-center justify-center z-50">
-      <div className="fixed inset-0 bg-black opacity-50"></div>
-      <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto relative z-10">
-        <div className="flex justify-end mb-4">
+    <div className="fixed top-20 left-0 right-0 bottom-0 flex items-center justify-center z-50">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" aria-hidden="true"></div>
+      <div className="relative z-10 bg-[var(--surface)] rounded-[var(--radius)] shadow-xl border border-[var(--border)] p-8 max-w-4xl w-full mx-4 max-h-[calc(100vh-5rem)] overflow-y-auto">
+        <div className="flex justify-between items-center mb-6 pb-4 border-b border-[var(--border)]">
+          <h2 className="text-xl font-bold text-[var(--primary-dark)]">Teacher Details</h2>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700"
+            className="p-2 rounded-[var(--radius)] text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] transition-colors"
+            aria-label="Close"
           >
-            ✕
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
           </button>
         </div>
 
@@ -50,12 +54,12 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
                 <img
                   src={teacher.profilePicture}
                   alt={`${teacher.name}'s profile`}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-gray-200"
+                  className="w-32 h-32 rounded-full object-cover border-4 border-[var(--border)]"
                 />
               ) : (
-                <div className="w-32 h-32 rounded-full bg-gray-200 border-4 border-gray-300 flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-[var(--muted)] border-4 border-[var(--border)] flex items-center justify-center">
                   <svg
-                    className="w-16 h-16 text-gray-400"
+                    className="w-16 h-16 text-[var(--muted-foreground)]"
                     fill="currentColor"
                     viewBox="0 0 20 20"
                   >
@@ -71,120 +75,120 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
           </div>
 
           {/* Basic Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Basic Information</h3>
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-gray-500">Teacher ID</p>
-                <p className="text-base text-gray-900">{teacher.teacherId}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Teacher ID</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.teacherId}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Full Name</p>
-                <p className="text-base text-gray-900">{teacher.name}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Full Name</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.name}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Role</p>
-                <p className="text-base text-gray-900">{teacher.role}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Role</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.role}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Subjects</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Subjects</p>
                 <div className="flex flex-wrap gap-1 mt-1">
                   {(Array.isArray(teacher.subjects) ? teacher.subjects : (teacher.subject ? [teacher.subject] : [])).map((sub) => (
-                    <span key={sub} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                    <span key={sub} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-[var(--secondary)] text-[var(--secondary-foreground)]">
                       {sub}
                     </span>
                   ))}
                 </div>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Gender</p>
-                <p className={`text-base font-medium ${teacher.gender === 'Male' ? 'text-blue-700' : teacher.gender === 'Female' ? 'text-pink-700' : 'text-gray-900'}`}>{teacher.gender || 'Not specified'}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Gender</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.gender || 'Not specified'}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Status</p>
-                <p className={`text-base ${
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Status</p>
+                <p className={`text-base font-medium mt-0.5 ${
                   teacher.status === 'Active' 
-                    ? 'text-green-600' 
-                    : 'text-red-600'
+                    ? 'text-[var(--primary)]' 
+                    : 'text-[var(--destructive)]'
                 }`}>
                   {teacher.status}
                 </p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Email Address</p>
-                <p className="text-base text-gray-900">{teacher.email}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Email Address</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.email}</p>
               </div>
               <div>
-                <p className="text-sm text-gray-500">Password</p>
-                <p className="text-base text-gray-900 font-mono">{(teacher as any).plainPassword || 'N/A'}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Password</p>
+                <p className="text-base text-[var(--foreground)] font-mono mt-0.5">{(teacher as any).plainPassword || 'N/A'}</p>
               </div>
             </div>
           </div>
 
           {/* Contact Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Contact Information</h3>
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Contact Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-gray-500">Phone Number</p>
-                <p className="text-base text-gray-900">{teacher.phoneNumber}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Phone Number</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.phoneNumber}</p>
               </div>
             </div>
           </div>
 
           {/* Address Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Address Information</h3>
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Address Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {teacher.address?.street && (
                 <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Street Address</p>
-                  <p className="text-base text-gray-900">{teacher.address.street}</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Street Address</p>
+                  <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.address.street}</p>
                 </div>
               )}
               {teacher.address?.city && (
                 <div>
-                  <p className="text-sm text-gray-500">City/Municipality</p>
-                  <p className="text-base text-gray-900">{teacher.address.city}</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">City/Municipality</p>
+                  <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.address.city}</p>
                 </div>
               )}
               {teacher.address?.province && (
                 <div>
-                  <p className="text-sm text-gray-500">Province</p>
-                  <p className="text-base text-gray-900">{teacher.address.province}</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Province</p>
+                  <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.address.province}</p>
                 </div>
               )}
               {teacher.address?.zipCode && (
                 <div>
-                  <p className="text-sm text-gray-500">ZIP Code</p>
-                  <p className="text-base text-gray-900">{teacher.address.zipCode}</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">ZIP Code</p>
+                  <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.address.zipCode}</p>
                 </div>
               )}
               {!teacher.address?.street && !teacher.address?.city && !teacher.address?.province && !teacher.address?.zipCode && (
                 <div className="col-span-2">
-                  <p className="text-sm text-gray-500">Address</p>
-                  <p className="text-base text-gray-500 italic">No address information provided</p>
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">Address</p>
+                  <p className="text-base text-[var(--muted-foreground)] italic mt-0.5">No address information provided</p>
                 </div>
               )}
             </div>
           </div>
 
           {/* Employment Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold text-gray-900">Employment Information</h3>
+          <div className="space-y-4 p-6 rounded-[var(--radius)] border border-[var(--border)]">
+            <h3 className="text-lg font-semibold text-[var(--primary-dark)]">Employment Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
-                <p className="text-sm text-gray-500">Date Joined</p>
-                <p className="text-base text-gray-900">{new Date(teacher.dateJoined).toLocaleDateString()}</p>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Date Joined</p>
+                <p className="text-base text-[var(--foreground)] mt-0.5">{new Date(teacher.dateJoined).toLocaleDateString()}</p>
               </div>
             </div>
           </div>
         </div>
 
-        <div className="flex justify-end mt-8">
+        <div className="flex justify-end mt-8 pt-6 border-t border-[var(--border)]">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors"
+            className="btn-primary px-6 py-2.5"
           >
             Close
           </button>

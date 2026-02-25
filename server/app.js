@@ -143,6 +143,7 @@ const authRoutes = require("./routes/authRoutes");
 const scheduleRoutes = require("./routes/scheduleRoutes");
 const reportRoutes = require("./routes/reportRoutes");
 const telegramRoutes = require("./routes/telegramRoutes");
+const settingsRoutes = require("./routes/settingsRoutes");
 
 // Health check (GET /) so you can verify backend is deployed
 app.get("/", (req, res) => {
@@ -157,5 +158,6 @@ app.use("/api/auth", authRoutes);
 app.use("/api/schedules", scheduleRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/telegram", telegramRoutes);
+app.use("/api/settings", settingsRoutes);
 
 module.exports = app;
