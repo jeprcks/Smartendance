@@ -338,7 +338,7 @@ a:hover .navbar-teacher-brand {
   }
   
   .info-card {
-    @apply p-4 rounded-xl border-2 ring-2 ring-primary/10 transition-all duration-200 hover:shadow-lg cursor-pointer student-info-card;
+    @apply p-4 rounded-xl border-2 ring-2 ring-primary/10 transition-all duration-200 hover:shadow-lg cursor-pointer;
     background: linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(241,246,241,0.85) 100%);
     border-color: var(--primary);
     box-shadow: 0 2px 8px rgba(46, 125, 50, 0.1), 0 0 0 1px rgba(46, 125, 50, 0.05);
