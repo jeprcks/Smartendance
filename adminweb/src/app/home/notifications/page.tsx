@@ -131,10 +131,10 @@ export default function NotificationsPage() {
       </header>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="text-red-600" size={20} />
-            <p className="text-red-700">{error}</p>
+            <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
+            <p className="text-red-700 dark:text-red-300">{error}</p>
           </div>
         </div>
       )}
@@ -143,60 +143,60 @@ export default function NotificationsPage() {
       <div className="dashboard-grid mb-8">
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-green-50 rounded-lg">
-              <Bell className="text-green-700" size={24} />
+            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+              <Bell className="text-green-700 dark:text-green-400" size={24} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Notifications</p>
-              <p className="text-3xl font-bold text-green-700">{stats.total}</p>
+              <p className="text-3xl font-bold text-green-700 dark:text-green-400">{stats.total}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-yellow-50 rounded-lg">
-              <Clock className="text-yellow-700" size={24} />
+            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+              <Clock className="text-yellow-700 dark:text-yellow-400" size={24} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Late</p>
-              <p className="text-3xl font-bold text-yellow-700">{stats.late}</p>
+              <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{stats.late}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-red-50 rounded-lg">
-              <XCircle className="text-red-700" size={24} />
+            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+              <XCircle className="text-red-700 dark:text-red-400" size={24} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Absent</p>
-              <p className="text-3xl font-bold text-red-700">{stats.absent}</p>
+              <p className="text-3xl font-bold text-red-700 dark:text-red-400">{stats.absent}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-orange-50 rounded-lg">
-              <Scissors className="text-orange-700" size={24} />
+            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
+              <Scissors className="text-orange-700 dark:text-orange-400" size={24} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Cutting</p>
-              <p className="text-3xl font-bold text-orange-700">{stats.cutting}</p>
+              <p className="text-3xl font-bold text-orange-700 dark:text-orange-400">{stats.cutting}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-violet-50 rounded-lg">
-              <Scan className="text-violet-700" size={24} />
+            <div className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
+              <Scan className="text-violet-700 dark:text-violet-400" size={24} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">No Time Out (Abnormal)</p>
-              <p className="text-3xl font-bold text-violet-700">{stats.noTimeOut}</p>
+              <p className="text-3xl font-bold text-violet-700 dark:text-violet-400">{stats.noTimeOut}</p>
             </div>
           </div>
         </div>
@@ -209,8 +209,8 @@ export default function NotificationsPage() {
           onClick={() => setFilter('all')}
           className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'all'
-              ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)]'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
+              ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)] dark:hover:opacity-80'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
           }`}
         >
           All ({stats.total})
@@ -220,8 +220,8 @@ export default function NotificationsPage() {
           onClick={() => setFilter('late')}
           className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'late'
-              ? 'bg-yellow-500 text-white hover:bg-yellow-600'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
+              ? 'bg-yellow-500 text-white hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
           }`}
         >
           Late ({stats.late})
@@ -231,8 +231,8 @@ export default function NotificationsPage() {
           onClick={() => setFilter('absent')}
           className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'absent'
-              ? 'bg-red-500 text-white hover:bg-red-600'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
+              ? 'bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
           }`}
         >
           Absent ({stats.absent})
@@ -242,8 +242,8 @@ export default function NotificationsPage() {
           onClick={() => setFilter('cutting')}
           className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'cutting'
-              ? 'bg-orange-500 text-white hover:bg-orange-600'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
+              ? 'bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
           }`}
         >
           Cutting ({stats.cutting})
@@ -253,8 +253,8 @@ export default function NotificationsPage() {
           onClick={() => setFilter('no_time_out')}
           className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
             filter === 'no_time_out'
-              ? 'bg-violet-500 text-white hover:bg-violet-600'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)]'
+              ? 'bg-violet-500 text-white hover:bg-violet-600 dark:bg-violet-600 dark:hover:bg-violet-700'
+              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
           }`}
         >
           No Time Out ({stats.noTimeOut})
@@ -267,9 +267,9 @@ export default function NotificationsPage() {
           <LoadingSkeleton type="card" count={5} />
         ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-12 text-[var(--muted-foreground)]">
-            <Bell className="mx-auto mb-4 text-[var(--muted-foreground)]" size={48} />
-            <p className="text-lg font-medium text-[var(--foreground)]">No notifications</p>
-            <p className="text-sm mt-2">
+            <Bell className="mx-auto mb-4 text-[var(--muted-foreground)] dark:text-slate-500" size={48} />
+            <p className="text-lg font-medium text-[var(--foreground)] dark:text-white">No notifications</p>
+            <p className="text-sm mt-2 dark:text-slate-400">
               {filter === 'all'
                 ? 'No notifications (consecutive late/absent/cutting or no time out)'
                 : filter === 'no_time_out'
@@ -282,7 +282,7 @@ export default function NotificationsPage() {
             {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
-                className={`p-6 rounded-[var(--radius)] border-l-4 ${getNotificationColor(notification.type, notification.severity)} shadow-sm hover:shadow-md transition-shadow border border-[var(--border)]`}
+                className={`p-6 rounded-[var(--radius)] border-l-4 ${getNotificationColor(notification.type, notification.severity)} dark:bg-slate-800 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow border border-[var(--border)]`}
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -291,18 +291,18 @@ export default function NotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="text-lg font-semibold text-[var(--foreground)]">
+                        <h3 className="text-lg font-semibold text-[var(--foreground)] dark:text-white">
                           {notification.studentName}
                         </h3>
                         {getStatusBadge(notification.type)}
                         {notification.severity === 'critical' && (
-                          <span className="px-2 py-1 bg-red-600 text-white rounded-full text-xs font-semibold">
+                          <span className="px-2 py-1 bg-red-600 dark:bg-red-700 text-white rounded-full text-xs font-semibold">
                             Critical
                           </span>
                         )}
                       </div>
-                      <p className="text-[var(--foreground)]/90 mb-2">{notification.message}</p>
-                      <div className="flex items-center gap-4 text-sm text-[var(--muted-foreground)] flex-wrap">
+                      <p className="text-[var(--foreground)]/90 dark:text-slate-300 mb-2">{notification.message}</p>
+                      <div className="flex items-center gap-4 text-sm text-[var(--muted-foreground)] dark:text-slate-400 flex-wrap">
                         <span>
                           {notification.gradeLevel} - {notification.section}
                         </span>
@@ -327,7 +327,7 @@ export default function NotificationsPage() {
                   </div>
                   <Link
                     href={`/home/history?studentId=${notification.studentId}`}
-                    className="px-4 py-2 bg-[var(--primary)] text-white rounded-[var(--radius)] hover:bg-[var(--primary-dark)] transition-colors text-sm font-medium inline-flex flex-shrink-0"
+                    className="px-4 py-2 bg-[var(--primary)] text-white rounded-[var(--radius)] hover:bg-[var(--primary-dark)] dark:hover:opacity-80 transition-colors text-sm font-medium inline-flex flex-shrink-0"
                   >
                     View History
                   </Link>
