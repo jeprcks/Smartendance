@@ -253,9 +253,9 @@ export default function TeachersPage() {
   };
 
   const teacherStatCards = [
-    { title: 'Total Teachers', value: teachers.length, icon: Users, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
-    { title: 'Active Teachers', value: allActiveTeachers.length, icon: CheckCircle, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
-    { title: 'Inactive Teachers', value: allInactiveTeachers.length, icon: XCircle, color: 'bg-gray-500', bgColor: 'bg-gray-50', textColor: 'text-gray-700' },
+    { title: 'Total Teachers', value: teachers.length, icon: Users },
+    { title: 'Active Teachers', value: allActiveTeachers.length, icon: CheckCircle },
+    { title: 'Inactive Teachers', value: allInactiveTeachers.length, icon: XCircle },
   ];
 
   return (
@@ -288,24 +288,29 @@ export default function TeachersPage() {
           const maxVal = Math.max(teachers.length, 1);
           const barHeight = `${(stat.value / maxVal) * 100}%`;
           
-          // Map stat types to theme-aware gradient styles
+          // Map stat types to theme-aware styling
           const getStatStyle = (title: string) => {
-            const styleMap: Record<string, string> = {
-              'Total Teachers': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
-              'Active Teachers': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
-              'Inactive Teachers': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--muted-foreground) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--muted-foreground) 10%) 100%)',
+            const styleMap: Record<string, { bgGradient: string; textColor: string; iconBg: string }> = {
+              'Total Teachers': {
+                bgGradient: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 85%, var(--primary) 15%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+                textColor: 'text-[var(--primary)]',
+                iconBg: 'bg-[color-mix(in_srgb,var(--surface)_90%,var(--primary)_10%)]'
+              },
+              'Active Teachers': {
+                bgGradient: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 85%, var(--primary) 15%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
+                textColor: 'text-[var(--primary)]',
+                iconBg: 'bg-[color-mix(in_srgb,var(--surface)_90%,var(--primary)_10%)]'
+              },
+              'Inactive Teachers': {
+                bgGradient: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 85%, var(--muted-foreground) 15%) 0%, color-mix(in srgb, var(--surface) 90%, var(--muted-foreground) 10%) 100%)',
+                textColor: 'text-[var(--muted-foreground)]',
+                iconBg: 'bg-[color-mix(in_srgb,var(--surface)_90%,var(--muted-foreground)_10%)]'
+              },
             };
             return styleMap[title] || styleMap['Total Teachers'];
           };
 
-          const getTextColor = (title: string) => {
-            const colorMap: Record<string, string> = {
-              'Total Teachers': 'text-[var(--primary)]',
-              'Active Teachers': 'text-[var(--primary)]',
-              'Inactive Teachers': 'text-[var(--muted-foreground)]',
-            };
-            return colorMap[title] || colorMap['Total Teachers'];
-          };
+          const statStyle = getStatStyle(stat.title);
 
           return (
             <div
@@ -313,21 +318,16 @@ export default function TeachersPage() {
               className="stat-card"
               style={{
                 animationDelay: `${index * 80}ms`,
-                backgroundImage: getStatStyle(stat.title)
+                backgroundImage: statStyle.bgGradient
               }}
             >
               <div className="flex items-start justify-between mb-4">
-                <div
-                  className="p-3 rounded-lg"
-                  style={{
-                    backgroundColor: `color-mix(in srgb, var(--surface) 90%, var(--primary) 10%)`
-                  }}
-                >
-                  <IconComponent className={`${getTextColor(stat.title)} transition-colors`} size={24} />
+                <div className="p-3 rounded-lg bg-[color-mix(in_srgb,var(--surface)_90%,var(--primary)_10%)]">
+                  <IconComponent className={`${statStyle.textColor} transition-colors`} size={24} />
                 </div>
                 <div className="text-right">
-                  <p className="text-sm text-[var(--muted-foreground)] dark:text-white/90 mb-1">{stat.title}</p>
-                  <p className={`text-3xl font-bold ${getTextColor(stat.title)} transition-colors`}>
+                  <p className="text-sm text-[var(--muted-foreground)] mb-1">{stat.title}</p>
+                  <p className={`text-3xl font-bold ${statStyle.textColor} transition-colors`}>
                     {stat.value.toLocaleString()}
                   </p>
                 </div>

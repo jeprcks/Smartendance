@@ -348,7 +348,7 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                 />
                 <label
                   htmlFor="edit-student-photo"
-                  className="mt-2 inline-block px-3 py-1.5 text-sm font-medium text-green-700 bg-green-50 border border-green-200 rounded-lg cursor-pointer hover:bg-green-100 dark:bg-green-900/40 dark:text-green-300 dark:border-green-700/50 dark:hover:bg-green-900/60 transition-colors"
+                  className="mt-2 inline-block px-3 py-1.5 text-sm font-bold text-white bg-green-600 border border-green-600 rounded-lg cursor-pointer hover:bg-green-700 dark:bg-green-700 dark:border-green-600 dark:hover:bg-green-800 transition-colors shadow-sm hover:shadow-md"
                 >
                   Change photo
                 </label>

@@ -591,7 +591,7 @@ export default function StudentsPage() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60 dark:hover:text-green-200 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 transition-all duration-200 shadow-md hover:shadow-lg"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsViewModalOpen(true);
@@ -604,7 +604,7 @@ export default function StudentsPage() {
                           View
                         </button>
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-yellow-50 text-yellow-600 text-sm font-medium rounded-lg hover:bg-yellow-100 hover:text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300 dark:hover:bg-yellow-900/60 dark:hover:text-yellow-200 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-amber-600 text-white text-sm font-bold rounded-lg hover:bg-amber-700 dark:bg-amber-700 dark:hover:bg-amber-800 transition-all duration-200 shadow-md hover:shadow-lg"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsEditModalOpen(true);
@@ -617,7 +617,7 @@ export default function StudentsPage() {
                           Edit
                         </button>
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-green-50 text-green-600 text-sm font-medium rounded-lg hover:bg-green-100 hover:text-green-700 dark:bg-green-900/40 dark:text-green-300 dark:hover:bg-green-900/60 dark:hover:text-green-200 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-green-600 text-white text-sm font-bold rounded-lg hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-800 transition-all duration-200 shadow-md hover:shadow-lg"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsPrintModalOpen(true);
@@ -630,7 +630,7 @@ export default function StudentsPage() {
                           Print
                         </button>
                         <button 
-                          className="inline-flex items-center px-3 py-2 bg-purple-50 text-purple-600 text-sm font-medium rounded-lg hover:bg-purple-100 hover:text-purple-700 dark:bg-purple-900/40 dark:text-purple-300 dark:hover:bg-purple-900/60 dark:hover:text-purple-200 transition-all duration-200 shadow-sm hover:shadow-md"
+                          className="inline-flex items-center px-3 py-2 bg-purple-600 text-white text-sm font-bold rounded-lg hover:bg-purple-700 dark:bg-purple-700 dark:hover:bg-purple-800 transition-all duration-200 shadow-md hover:shadow-lg"
                           onClick={() => {
                             setSelectedStudent(student);
                             setIsScheduleModalOpen(true);

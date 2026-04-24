@@ -209,7 +209,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </svg>
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Personal Information</h3>
             </div>
-            <div className="grid grid-cols-3 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
+            <div className="grid grid-cols-3 gap-6 bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Student ID</p>
                 <p className="text-base text-[var(--foreground)]">{student.studentId}</p>
@@ -283,7 +283,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </svg>
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Address Information</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
               <div className="col-span-2">
                 <p className="text-sm text-[var(--muted-foreground)]">Street Address</p>
                 <p className="text-base text-[var(--foreground)]">
@@ -322,7 +322,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </svg>
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Parent/Guardian Information</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Parent/Guardian Name</p>
                 <p className="text-base text-[var(--foreground)]">
@@ -365,7 +365,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </svg>
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Emergency Contact</h3>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-green-50/30 dark:bg-black/80 p-4 rounded-lg">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[var(--surface)] border border-[var(--border)] p-4 rounded-lg">
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Emergency Contact Name</p>
                 <p className="text-base text-[var(--foreground)]">
@@ -395,7 +395,7 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </svg>
               <h3 className="text-lg font-semibold text-[var(--foreground)]">Student QR Code</h3>
             </div>
-            <div className="flex justify-center bg-green-50/30 dark:bg-black/80 p-6 rounded-lg">
+            <div className="flex justify-center bg-[var(--surface)] border border-[var(--border)] p-6 rounded-lg">
               <div className="bg-[var(--surface)] p-4 border border-[var(--border)] rounded-lg shadow-md">
                 <QRCodeSVG
                   value={JSON.stringify({

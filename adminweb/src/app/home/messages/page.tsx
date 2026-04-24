@@ -155,27 +155,50 @@ export default function MessagesPage() {
 
     setMessageLoading(true);
     try {
-      const filters: any = {};
-      if (sortGrade) filters.gradeLevel = sortGrade;
-      if (sortSection) filters.section = sortSection;
+      // Get all students with telegram chat IDs
+      const studentsWithChatIds = filteredStudents.filter(s => {
+        const chatId = getTelegramChatIds(s).contact;
+        return !!chatId;
+      });
 
-      const result = await telegramService.sendToAllStudents(
-        messageText,
-        'contact',
-        filters
-      );
+      if (studentsWithChatIds.length === 0) {
+        toast.error('No Telegram chat IDs found. Please update student parent Telegram IDs.');
+        setMessageLoading(false);
+        return;
+      }
+
+      // Extract all chat IDs
+      const chatIds = studentsWithChatIds
+        .map(s => getTelegramChatIds(s).contact)
+        .filter(Boolean) as string[];
+
+      console.log('Sending message to all students:', { 
+        message: messageText, 
+        chatIdCount: chatIds.length,
+        totalFiltered: filteredStudents.length
+      });
+
+      const result = await telegramService.broadcastMessage(chatIds, messageText);
+
+      console.log('Send to all result:', result);
 
       if (result.success && result.data) {
         const { successCount, total } = result.data;
-        toast.success(`Message sent to ${successCount} out of ${total} parents via Telegram!`);
+        toast.success(`✅ Message sent to ${successCount} out of ${total} parents via Telegram!`);
         setMessageText('');
         setIsSendAllModalOpen(false);
       } else {
-        toast.error(result.error || 'Failed to send message');
+        const errorMessage = result.error || 'Failed to send message';
+        console.error('Send to all error:', errorMessage);
+        toast.error(errorMessage);
       }
     } catch (error) {
       console.error('Error sending message:', error);
-      toast.error('Failed to send message');
+      if (error instanceof Error) {
+        toast.error(`Error: ${error.message}`);
+      } else {
+        toast.error('Failed to send message');
+      }
     } finally {
       setMessageLoading(false);
     }
@@ -371,10 +394,10 @@ export default function MessagesPage() {
                               <span
                                 className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
                                   student.gender === 'Male'
-                                    ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                                    ? 'bg-blue-100 dark:bg-blue-900/30 text-black dark:text-blue-400 ring-blue-300 dark:ring-blue-700'
                                     : student.gender === 'Female'
-                                      ? 'bg-pink-50 text-pink-700 ring-pink-200/50'
-                                      : 'bg-gray-50 text-gray-700 ring-gray-200/50'
+                                      ? 'bg-pink-100 dark:bg-pink-900/30 text-black dark:text-pink-400 ring-pink-300 dark:ring-pink-700'
+                                      : 'bg-gray-100 dark:bg-gray-900/30 text-black dark:text-gray-400 ring-gray-300 dark:ring-gray-700'
                                 }`}
                               >
                                 {student.gender}
@@ -394,7 +417,7 @@ export default function MessagesPage() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           {chatIds.contact ? (
                             <div className="flex items-center space-x-2">
-                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 ring-1 ring-blue-200/50">
+                              <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 dark:bg-blue-900/30 text-black dark:text-blue-400 ring-1 ring-blue-300 dark:ring-blue-700">
                                 {chatIds.contact}
                               </span>
                               <button
@@ -420,7 +443,7 @@ export default function MessagesPage() {
                             <div className="flex items-center space-x-2">
                               <a 
                                 href={`tel:${chatIds.emergencyPhone}`}
-                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-700 ring-1 ring-red-200/50 hover:bg-red-100 transition-colors"
+                                className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 dark:bg-red-900/30 text-black dark:text-red-400 ring-1 ring-red-300 dark:ring-red-700 hover:bg-red-200 dark:hover:bg-red-900/50 transition-colors"
                                 title="Click to call"
                               >
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
@@ -505,10 +528,10 @@ export default function MessagesPage() {
                     <span
                       className={`ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold ring-1 ${
                         selectedStudent.gender === 'Male'
-                          ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                          ? 'bg-blue-100 dark:bg-blue-900/30 text-black dark:text-blue-400 ring-blue-300 dark:ring-blue-700'
                           : selectedStudent.gender === 'Female'
-                            ? 'bg-pink-50 text-pink-700 ring-pink-200/50'
-                            : 'bg-gray-50 text-gray-700 ring-gray-200/50'
+                            ? 'bg-pink-100 dark:bg-pink-900/30 text-black dark:text-pink-400 ring-pink-300 dark:ring-pink-700'
+                            : 'bg-gray-100 dark:bg-gray-900/30 text-black dark:text-gray-400 ring-gray-300 dark:ring-gray-700'
                       }`}
                     >
                       {selectedStudent.gender}
@@ -521,33 +544,33 @@ export default function MessagesPage() {
               {/* Contact Info Display */}
               <div className="mb-4">
                 {getTelegramChatIds(selectedStudent).contact ? (
-                  <div className="p-3 rounded-lg bg-blue-50 border-2 border-blue-200">
+                  <div className="p-3 rounded-lg bg-blue-100 dark:bg-blue-900/30 border-2 border-blue-300 dark:border-blue-700">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-[var(--foreground)] text-sm">Parent Telegram</p>
-                        <p className="text-sm text-blue-600 font-semibold">{getTelegramChatIds(selectedStudent).contact}</p>
+                        <p className="text-sm font-semibold text-black dark:text-blue-400">{getTelegramChatIds(selectedStudent).contact}</p>
                       </div>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-600" viewBox="0 0 20 20" fill="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black dark:text-blue-400" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
                         <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
                       </svg>
                     </div>
                   </div>
                 ) : (
-                  <p className="text-sm text-red-600 p-3 bg-red-50 rounded-lg border border-red-200">
+                  <p className="text-sm text-red-700 dark:text-red-400 p-3 bg-red-100 dark:bg-red-900/30 rounded-lg border border-red-300 dark:border-red-700">
                     No Telegram chat ID available for this student's parent
                   </p>
                 )}
                 {getTelegramChatIds(selectedStudent).emergencyPhone && (
-                  <div className="mt-2 p-3 rounded-lg bg-red-50 border border-red-200">
+                  <div className="mt-2 p-3 rounded-lg bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700">
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-[var(--foreground)] text-sm">Emergency Contact (Call)</p>
-                        <a href={`tel:${getTelegramChatIds(selectedStudent).emergencyPhone}`} className="text-sm text-red-600 font-semibold hover:underline">
+                        <a href={`tel:${getTelegramChatIds(selectedStudent).emergencyPhone}`} className="text-sm font-semibold text-black dark:text-red-400 hover:underline">
                           {getTelegramChatIds(selectedStudent).emergencyPhone}
                         </a>
                       </div>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-600" viewBox="0 0 20 20" fill="currentColor">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-black dark:text-red-400" viewBox="0 0 20 20" fill="currentColor">
                         <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
                       </svg>
                     </div>
@@ -614,15 +637,15 @@ export default function MessagesPage() {
                 </button>
               </div>
 
-              <div className="mb-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                <p className="text-sm text-purple-700">
+              <div className="mb-4 p-3 bg-purple-100 dark:bg-purple-900/30 rounded-lg border border-purple-300 dark:border-purple-700">
+                <p className="text-sm text-purple-700 dark:text-purple-400">
                   <span className="font-semibold">{filteredStudents.length}</span> parents will receive this message
                 </p>
               </div>
 
               {/* Recipients Info */}
               <div className="mb-4">
-                <div className="p-3 rounded-lg bg-purple-50 border-2 border-purple-200">
+                <div className="p-3 rounded-lg bg-purple-100 dark:bg-purple-900/30 border-2 border-purple-300 dark:border-purple-700">
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="font-medium text-[var(--foreground)] text-sm">Send to All Parents</p>
@@ -630,14 +653,14 @@ export default function MessagesPage() {
                         {filteredStudents.filter(s => getTelegramChatIds(s).contact).length} parents will receive this message via Telegram
                       </p>
                     </div>
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600" viewBox="0 0 20 20" fill="currentColor">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-700 dark:text-purple-400" viewBox="0 0 20 20" fill="currentColor">
                       <path d="M2 5a2 2 0 012-2h12a2 2 0 012 2v6a2 2 0 01-2 2H4a2 2 0 01-2-2V5z" />
                       <path fillRule="evenodd" d="M15.5 8.5a.5.5 0 01.5.5v1a2 2 0 11-4 0V9a.5.5 0 01.5-.5h3z" clipRule="evenodd" />
                     </svg>
                   </div>
                 </div>
                 {filteredStudents.filter(s => !getTelegramChatIds(s).contact).length > 0 && (
-                  <p className="text-xs text-amber-600 mt-2 p-2 bg-amber-50 rounded border border-amber-200">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-2 p-2 bg-amber-100 dark:bg-amber-900/30 rounded border border-amber-300 dark:border-amber-700">
                     ⚠️ {filteredStudents.filter(s => !getTelegramChatIds(s).contact).length} students don't have parent Telegram IDs and will be skipped
                   </p>
                 )}

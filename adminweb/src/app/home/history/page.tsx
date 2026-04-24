@@ -26,6 +26,8 @@ interface StudentDetailsModalProps {
 function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentDetailsModalProps) {
   const [recordSearchQuery, setRecordSearchQuery] = useState('');
   const [recordSelectedDate, setRecordSelectedDate] = useState('');
+  const [recordSelectedSubject, setRecordSelectedSubject] = useState('');
+  const [recordSelectedStatus, setRecordSelectedStatus] = useState('');
 
   if (!isOpen || !student) return null;
 
@@ -39,7 +41,13 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
     const matchesDate = recordSelectedDate === '' || 
       format(new Date(record.checkInTime || record.scanTime), 'yyyy-MM-dd') === recordSelectedDate;
     
-    return matchesSearch && matchesDate;
+    const matchesSubject = recordSelectedSubject === '' || 
+      (record.subject || '').toLowerCase() === recordSelectedSubject.toLowerCase();
+    
+    const matchesStatus = recordSelectedStatus === '' || 
+      (record.status || '').toLowerCase() === recordSelectedStatus.toLowerCase();
+    
+    return matchesSearch && matchesDate && matchesSubject && matchesStatus;
   });
 
   return (
@@ -172,8 +180,8 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
           </div>
 
           {/* Filters for Recent Attendance Records */}
-          <div className="mb-6 flex gap-4 items-end">
-            <div className="flex-1">
+          <div className="mb-6 flex gap-4 items-end flex-wrap">
+            <div className="flex-1 min-w-xs">
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Search</label>
               <div className="relative group">
                 <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -191,6 +199,32 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
               </div>
             </div>
             <div className="w-48">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Subject</label>
+              <select
+                className="w-full px-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
+                value={recordSelectedSubject}
+                onChange={(e) => setRecordSelectedSubject(e.target.value)}
+              >
+                <option value="">All Subjects</option>
+                {Array.from(new Set(student.recentAttendance.map(r => r.subject).filter(Boolean))).map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+            <div className="w-48">
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Status</label>
+              <select
+                className="w-full px-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
+                value={recordSelectedStatus}
+                onChange={(e) => setRecordSelectedStatus(e.target.value)}
+              >
+                <option value="">All Status</option>
+                {Array.from(new Set(student.recentAttendance.map(r => r.status).filter(Boolean))).map(status => (
+                  <option key={status} value={status}>{status}</option>
+                ))}
+              </select>
+            </div>
+            <div className="w-48">
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Date</label>
               <input
                 type="date"
@@ -199,11 +233,13 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                 onChange={(e) => setRecordSelectedDate(e.target.value)}
               />
             </div>
-            {(recordSearchQuery || recordSelectedDate) && (
+            {(recordSearchQuery || recordSelectedDate || recordSelectedSubject || recordSelectedStatus) && (
               <button
                 onClick={() => {
                   setRecordSearchQuery('');
                   setRecordSelectedDate('');
+                  setRecordSelectedSubject('');
+                  setRecordSelectedStatus('');
                 }}
                 className="px-3 py-2.5 bg-[var(--muted)] text-[var(--foreground)] rounded-lg hover:bg-[var(--secondary)] transition-colors duration-200 text-sm font-medium"
               >
