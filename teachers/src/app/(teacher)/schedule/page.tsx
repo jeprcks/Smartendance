@@ -156,70 +156,72 @@ export default function SchedulePage() {
         </div>
       ) : (
         <div className="space-y-6">
-          {Object.entries(byDay)
-            .sort(([a], [b]) => DAYS.indexOf(a) - DAYS.indexOf(b))
-            .map(([day, list]) => (
-              <div key={day} className="animate-fade-in-up">
-                <h2 
-                  className="text-xl font-bold mb-4 flex items-center gap-2" 
-                  style={{ 
-                    color: 'var(--primary-dark)',
-                    textShadow: '0 1px 2px rgba(46, 125, 50, 0.1)',
-                  }}
-                >
-                  <span className="w-1 h-6 rounded-full" style={{ background: 'var(--primary)' }}></span>
-                  {day}
-                </h2>
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {list
-                    .sort((a, b) =>
-                      String(a.timeSlot ?? '').localeCompare(
-                        String(b.timeSlot ?? '')
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {Object.entries(byDay)
+              .sort(([a], [b]) => DAYS.indexOf(a) - DAYS.indexOf(b))
+              .map(([day, list]) => (
+                <div key={day} className="animate-fade-in-up">
+                  <h2 
+                    className="text-xl font-bold mb-4 flex items-center gap-2" 
+                    style={{ 
+                      color: 'var(--primary-dark)',
+                      textShadow: '0 1px 2px rgba(46, 125, 50, 0.1)',
+                    }}
+                  >
+                    <span className="w-1 h-6 rounded-full" style={{ background: 'var(--primary)' }}></span>
+                    {day}
+                  </h2>
+                  <div className="space-y-3">
+                    {list
+                      .sort((a, b) =>
+                        String(a.timeSlot ?? '').localeCompare(
+                          String(b.timeSlot ?? '')
+                        )
                       )
-                    )
-                    .map((s, i) => (
-                      <Link
-                        key={i}
-                        href={`/schedule/${s._id ?? s.id ?? i}`}
-                        className="block p-5 rounded-xl border card-theme transition-all hover:border-[var(--primary)] schedule-card"
-                      >
-                        <p 
-                          className="text-lg font-bold mb-2" 
-                          style={{ 
-                            color: 'var(--primary-dark)',
-                            letterSpacing: '0.01em',
-                          }}
+                      .map((s, i) => (
+                        <Link
+                          key={i}
+                          href={`/schedule/${s._id ?? s.id ?? i}`}
+                          className="block p-5 rounded-xl border card-theme transition-all hover:border-[var(--primary)] schedule-card"
                         >
-                          {String(s.subject ?? 'N/A')}
-                        </p>
-                        <div className="flex items-center gap-2 mb-2">
-                          <span 
-                            className="text-sm font-semibold px-2 py-0.5 rounded-md" 
+                          <p 
+                            className="text-lg font-bold mb-2" 
                             style={{ 
-                              background: 'rgba(46, 125, 50, 0.1)',
                               color: 'var(--primary-dark)',
+                              letterSpacing: '0.01em',
                             }}
                           >
-                            {String(s.gradeLevel ?? '')}-{String(s.section ?? '')}
-                          </span>
-                          <span className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                            {String(s.shift ?? '')}
-                          </span>
-                        </div>
-                        <p 
-                          className="text-sm font-semibold flex items-center gap-1.5" 
-                          style={{ color: 'var(--primary)' }}
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                          {String(s.timeSlot ?? '')}
-                        </p>
-                      </Link>
-                    ))}
+                            {String(s.subject ?? 'N/A')}
+                          </p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <span 
+                              className="text-sm font-semibold px-2 py-0.5 rounded-md" 
+                              style={{ 
+                                background: 'rgba(46, 125, 50, 0.1)',
+                                color: 'var(--primary-dark)',
+                              }}
+                            >
+                              {String(s.gradeLevel ?? '')}-{String(s.section ?? '')}
+                            </span>
+                            <span className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                              {String(s.shift ?? '')}
+                            </span>
+                          </div>
+                          <p 
+                            className="text-sm font-semibold flex items-center gap-1.5" 
+                            style={{ color: 'var(--primary)' }}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            {String(s.timeSlot ?? '')}
+                          </p>
+                        </Link>
+                      ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))}
+          </div>
         </div>
       )}
     </div>

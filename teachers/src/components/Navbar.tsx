@@ -14,7 +14,7 @@ export default function Navbar({ onOpenMenu }: { onOpenMenu?: () => void }) {
   };
 
   return (
-    <header className="navbar-teacher sticky top-0 z-30 flex items-center justify-between gap-4 px-4 py-3 md:px-6 shrink-0 min-h-[4rem]">
+    <header className="navbar-teacher sticky top-0 z-30 flex items-center justify-between gap-4 px-4 py-3 md:px-6 md:pl-16 shrink-0 min-h-[4rem]">
       <div className="flex items-center gap-3 min-w-0">
         {onOpenMenu && (
           <button

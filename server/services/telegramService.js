@@ -41,15 +41,39 @@ class TelegramService {
     
     if (this.botToken) {
       try {
-        // No polling - webhook mode on Vercel (POST /api/telegram/webhook receives updates)
-        this.bot = new TelegramBot(this.botToken, { polling: false });
-        console.log('Telegram bot initialized (webhook mode)');
+        // Use polling for local development, webhook mode on Vercel
+        const usePolling = !process.env.VERCEL;
+        const options = usePolling 
+          ? { polling: { interval: 300, autoStart: true, params: { timeout: 10 } } }
+          : { polling: false };
+        
+        this.bot = new TelegramBot(this.botToken, options);
+        console.log(`Telegram bot initialized (${usePolling ? 'polling' : 'webhook'} mode)`);
         
         this.bot.getMe().then(botInfo => {
           console.log('Bot info:', botInfo.username);
         }).catch(err => {
           console.error('Bot verification failed:', err.message);
         });
+
+        // Set up command handlers for polling mode
+        if (usePolling && this.bot) {
+          this.bot.onText(/\/start|\/mychatid|\/help|\/history|\/studentinfo/, (msg) => {
+            this.handleWebhookUpdate({ message: msg });
+          });
+          this.bot.on('message', (msg) => {
+            if (msg.text && !msg.text.startsWith('/')) {
+              this.handleWebhookUpdate({ message: msg });
+            }
+          });
+        }
+
+        // Handle polling errors gracefully
+        if (usePolling && this.bot) {
+          this.bot.on('polling_error', (error) => {
+            console.error('Telegram polling error:', error.message);
+          });
+        }
       } catch (error) {
         console.error('Failed to initialize Telegram bot:', error.message);
       }
@@ -78,6 +102,16 @@ class TelegramService {
     const send = (t, opts = {}) => this.bot.sendMessage(chatId, t, { parse_mode: 'HTML', ...opts });
 
     if (text === '/start') {
+      const keyboard = {
+        reply_markup: {
+          keyboard: [
+            [{ text: '🆔 My Chat ID' }, { text: '📚 Student Info' }],
+            [{ text: '📅 History' }, { text: '💡 Help' }]
+          ],
+          resize_keyboard: true,
+          one_time_keyboard: false
+        }
+      };
       await send(
         `${THEME.icons.school} <b>Welcome to Smartendance Bot</b>\n` +
         `${THEME.sepLight}\n` +
@@ -88,11 +122,12 @@ class TelegramService {
         `${THEME.dot} /history ${THEME.arrow} Attendance history (last 15 days)\n` +
         `${THEME.dot} /help ${THEME.arrow} Show all commands\n\n` +
         `${THEME.icons.id} <b>Your Chat ID:</b> <code>${chatId}</code>\n\n` +
-        `${THEME.icons.info} Share this Chat ID with your school admin to receive attendance alerts.`
+        `${THEME.icons.info} Share this Chat ID with your school admin to receive attendance alerts.`,
+        keyboard
       );
       return;
     }
-    if (text === '/mychatid') {
+    if (text === '/mychatid' || text.includes('🆔 My Chat ID')) {
       await send(
         `${THEME.icons.id} <b>Your Telegram Chat ID</b>\n` +
         `${THEME.sepLight}\n` +
@@ -102,7 +137,7 @@ class TelegramService {
       );
       return;
     }
-    if (text === '/help') {
+    if (text === '/help' || text.includes('💡 Help')) {
       await send(
         `${THEME.icons.help} <b>Smartendance Bot</b>\n` +
         `${THEME.sep}\n` +
@@ -120,11 +155,11 @@ class TelegramService {
       );
       return;
     }
-    if (text === '/history') {
+    if (text === '/history' || text.includes('📅 History')) {
       await this._handleHistory(chatId);
       return;
     }
-    if (text === '/studentinfo') {
+    if (text === '/studentinfo' || text.includes('📚 Student Info')) {
       await this._handleStudentInfo(chatId);
       return;
     }

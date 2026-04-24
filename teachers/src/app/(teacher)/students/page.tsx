@@ -191,7 +191,8 @@ export default function StudentsPage() {
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader title="Students" icon={<StudentsIcon />} />
 
-      <div className="flex flex-wrap gap-6 items-end animate-fade-in-up animate-delay-1">
+      <div className="p-6 rounded-xl border-2 card-theme shadow-lg animate-fade-in-up animate-delay-1" style={{ borderColor: 'var(--primary)' }}>
+      <div className="flex flex-wrap gap-6 items-end">
         <div className="min-w-0 flex-1 max-w-md">
           <label className="flex items-center gap-2 text-sm font-bold mb-3" style={{ color: 'var(--primary-dark)' }}>
             <FilterIcon />
@@ -248,6 +249,7 @@ export default function StudentsPage() {
           </div>
         </div>
       </div>
+      </div>
 
       {selectedSchedule && (
         <div className="flex items-center gap-4 flex-wrap animate-fade-in-up animate-delay-2">
@@ -268,7 +270,7 @@ export default function StudentsPage() {
         </div>
       )}
 
-      <div className="rounded-2xl border overflow-hidden card-theme shadow-lg animate-fade-in-up animate-delay-3" style={{ borderColor: 'var(--border)' }}>
+      <div className="rounded-2xl border-2 overflow-hidden card-theme shadow-lg animate-fade-in-up animate-delay-3" style={{ borderColor: 'var(--primary)' }}>
         {loadingStudents ? (
           <div className="flex flex-col items-center justify-center py-16 gap-4">
             <div

@@ -242,7 +242,7 @@ export async function updateAttendanceRecord({
   if (reason) body.reason = reason;
 
   const res = await fetch(`${API_BASE}/history/${recordId}`, {
-    method: 'PATCH',
+    method: 'PUT',
     headers: getHeaders(token),
     body: JSON.stringify(body),
   });

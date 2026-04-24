@@ -48,55 +48,61 @@ export default function AttendanceTable({
           <thead>
             <tr>
               <th
-                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider text-white"
+                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-                  borderBottom: '2px solid var(--primary-dark)',
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
                 }}
               >
                 Student Name
               </th>
               <th
-                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider text-white"
+                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-                  borderBottom: '2px solid var(--primary-dark)',
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
                 }}
               >
                 Student ID
               </th>
               <th
-                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider text-white"
+                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-                  borderBottom: '2px solid var(--primary-dark)',
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
                 }}
               >
                 Gender
               </th>
               <th
-                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider text-white"
+                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-                  borderBottom: '2px solid var(--primary-dark)',
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
                 }}
               >
                 Status
               </th>
               <th
-                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider text-white"
+                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-                  borderBottom: '2px solid var(--primary-dark)',
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
                 }}
               >
                 Scan Time
               </th>
               <th
-                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider text-white"
+                className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)',
-                  borderBottom: '2px solid var(--primary-dark)',
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
                 }}
               >
                 Actions
@@ -107,7 +113,7 @@ export default function AttendanceTable({
             {rows.map((row, i) => (
               <tr
                 key={row.id}
-                className="border-t transition-all duration-200 hover:bg-gradient-to-r hover:from-[var(--muted)]/60 hover:to-transparent animate-fade-in-up"
+                className="border-t transition-all duration-200 hover:bg-transparent animate-fade-in-up"
                 style={{ 
                   borderColor: 'var(--border)',
                   animationDelay: `${i * 0.02}s`,

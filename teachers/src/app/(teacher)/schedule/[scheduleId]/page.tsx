@@ -335,23 +335,23 @@ export default function ScheduleDetailsPage({
         return (
           <>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in-up animate-delay-4">
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(67, 160, 71, 0.08)', borderLeftColor: 'var(--success)', borderColor: 'var(--border)' }}>
+              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(67, 160, 71, 0.22)', borderLeftColor: 'var(--success)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Present</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{stats.present}</p>
               </div>
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(216, 67, 21, 0.08)', borderLeftColor: 'var(--destructive)', borderColor: 'var(--border)' }}>
+              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(216, 67, 21, 0.22)', borderLeftColor: 'var(--destructive)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Absent</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--destructive)' }}>{stats.absent}</p>
               </div>
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(255, 193, 7, 0.1)', borderLeftColor: 'var(--accent)', borderColor: 'var(--border)' }}>
+              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(255, 193, 7, 0.28)', borderLeftColor: 'var(--accent)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Late</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>{stats.late}</p>
               </div>
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(230, 81, 0, 0.08)', borderLeftColor: 'var(--error)', borderColor: 'var(--border)' }}>
+              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(230, 81, 0, 0.22)', borderLeftColor: 'var(--error)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Cutting</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>{stats.cutting}</p>
               </div>
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(107, 114, 128, 0.08)', borderLeftColor: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
+              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(107, 114, 128, 0.22)', borderLeftColor: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Not Scanned</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--muted-foreground)' }}>{stats.notScanned}</p>
               </div>

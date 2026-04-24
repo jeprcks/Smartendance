@@ -330,7 +330,7 @@ export default function HistoryPage() {
       )}
 
       {/* Search and Filters */}
-      <div className="p-6 rounded-xl border card-theme shadow-lg" style={{ borderColor: 'var(--border)' }}>
+      <div className="p-6 rounded-xl border-2 card-theme shadow-lg" style={{ borderColor: 'var(--primary)' }}>
         <div className="flex flex-wrap items-center gap-4 mb-4">
           <div className="flex-1 min-w-[200px] relative">
             <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none" style={{ color: 'var(--muted-foreground)' }}>
@@ -478,7 +478,7 @@ export default function HistoryPage() {
       </div>
 
       {/* Timeline View */}
-      <div className="rounded-xl border overflow-hidden card-theme shadow-lg" style={{ borderColor: 'var(--border)' }}>
+      <div className="rounded-xl border-2 overflow-hidden card-theme shadow-lg" style={{ borderColor: 'var(--primary)' }}>
         {filteredRecords.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
             <div className="w-16 h-16 rounded-full bg-gradient-to-br from-muted to-color-mix(in srgb, var(--muted) 70%, var(--primary) 30%) flex items-center justify-center">
