@@ -1,6 +1,6 @@
-'use client';
+"use client";
 
-import { AttendancePattern, GradeLevelStats } from '../page';
+import { AttendancePattern, GradeLevelStats } from "../page";
 
 interface AttendanceChartsProps {
   attendancePatterns: AttendancePattern[];
@@ -20,38 +20,38 @@ export default function AttendanceCharts({
 }: AttendanceChartsProps) {
   // Chart components will be added here once recharts is installed
   // For now, showing data in table format
-  
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
       {/* Status Distribution - Will be Pie Chart */}
       <div className="content-section">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Status Distribution</h3>
+        <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Status Distribution</h3>
         <div className="space-y-3">
-          <div className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-900/30 rounded-lg">
-            <span className="text-sm font-medium text-gray-700 dark:text-green-300">Present</span>
-            <span className="text-lg font-bold text-green-700 dark:text-green-300">{overallStats.present}</span>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-green-bg)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Present</span>
+            <span className="text-lg font-bold" style={{ color: 'var(--accent-green)' }}>{overallStats.present}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/30 rounded-lg">
-            <span className="text-sm font-medium text-gray-700 dark:text-red-300">Absent</span>
-            <span className="text-lg font-bold text-red-700 dark:text-red-300">{overallStats.absent}</span>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-red-bg, #ffebee)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Absent</span>
+            <span className="text-lg font-bold" style={{ color: 'var(--accent-red)' }}>{overallStats.absent}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
-            <span className="text-sm font-medium text-gray-700 dark:text-yellow-300">Late</span>
-            <span className="text-lg font-bold text-yellow-700 dark:text-yellow-300">{overallStats.late}</span>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-yellow-bg)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Late</span>
+            <span className="text-lg font-bold" style={{ color: 'var(--accent-yellow)' }}>{overallStats.late}</span>
           </div>
-          <div className="flex items-center justify-between p-3 bg-orange-50 dark:bg-orange-900/30 rounded-lg">
-            <span className="text-sm font-medium text-gray-700 dark:text-orange-300">Cutting</span>
-            <span className="text-lg font-bold text-orange-700 dark:text-orange-300">{overallStats.cutting}</span>
+          <div className="flex items-center justify-between p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-orange-bg)' }}>
+            <span className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>Cutting</span>
+            <span className="text-lg font-bold" style={{ color: 'var(--accent-orange)' }}>{overallStats.cutting}</span>
           </div>
         </div>
       </div>
 
       {/* Grade Level Comparison - Will be Bar Chart */}
       <div className="content-section">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Grade Level Comparison</h3>
+        <h3 className="text-lg font-semibold text-[var(--foreground)] mb-4">Grade Level Comparison</h3>
         <div className="space-y-2">
           {gradeLevelStats
-            .filter(stat => stat.gradeLevel.toLowerCase() !== 'graduated')
+            .filter((stat) => stat.gradeLevel.toLowerCase() !== "graduated")
             .map((stat, index) => {
             const filteredStats = gradeLevelStats.filter(s => s.gradeLevel.toLowerCase() !== 'graduated');
             const maxStudents = Math.max(...filteredStats.map(s => s.totalStudents), 1);
@@ -59,16 +59,17 @@ export default function AttendanceCharts({
             return (
               <div key={index} className="space-y-1">
                 <div className="flex justify-between text-sm">
-                  <span className="font-medium text-gray-900 dark:text-white">{stat.gradeLevel}</span>
-                  <span className="text-gray-600 dark:text-gray-400">{stat.attendanceRate}%</span>
+                  <span className="font-medium" style={{ color: 'var(--foreground)' }}>{stat.gradeLevel}</span>
+                  <span style={{ color: 'var(--muted-foreground)' }}>{stat.attendanceRate}%</span>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
+                <div className="w-full rounded-full h-2" style={{ backgroundColor: 'var(--muted)' }}>
                   <div
-                    className={`h-2 rounded-full transition-all ${
-                      stat.attendanceRate >= 90 ? 'bg-green-500' :
-                      stat.attendanceRate >= 70 ? 'bg-yellow-500' : 'bg-red-500'
-                    }`}
-                    style={{ width: `${percentage}%` }}
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${percentage}%`,
+                      backgroundColor: stat.attendanceRate >= 90 ? 'var(--accent-green)' :
+                        stat.attendanceRate >= 70 ? 'var(--accent-yellow)' : 'var(--accent-red)'
+                    }}
                   />
                 </div>
               </div>

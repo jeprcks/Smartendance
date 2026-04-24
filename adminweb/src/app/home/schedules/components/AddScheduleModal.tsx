@@ -192,12 +192,13 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-black opacity-50"></div>
-      <div className="relative bg-white rounded-lg shadow-lg max-w-md w-full mx-4 p-6">
+      <div className="relative rounded-lg shadow-lg max-w-md w-full mx-4 p-6" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold text-gray-900">Add New Schedule</h2>
+          <h2 className="text-2xl font-bold" style={{ color: 'var(--foreground)' }}>Add New Schedule</h2>
           <button 
             onClick={onClose}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
+            style={{ color: 'var(--muted-foreground)' }}
+            className="hover:opacity-70 transition-opacity"
           >
             ✕
           </button>
@@ -205,20 +206,21 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
 
         <form onSubmit={handleSubmit} className="space-y-6">
           {submitError && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
-              <p className="text-sm text-red-700">{submitError}</p>
+            <div className="p-3 rounded-lg border" style={{ backgroundColor: 'var(--accent-red-bg)', borderColor: 'var(--accent-red)', color: 'var(--accent-red)' }}>
+              <p className="text-sm">{submitError}</p>
             </div>
           )}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 Grade Level
               </label>
               <select
                 name="gradeLevel"
                 value={formData.gradeLevel}
                 onChange={handleChange}
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+                style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
                 required
               >
                 <option value="">Select Grade Level</option>
@@ -229,7 +231,7 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 Section
               </label>
               <input
@@ -238,21 +240,23 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
                 value={formData.section}
                 onChange={handleChange}
                 placeholder="Enter section (e.g., A, B, C)"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+                style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 required
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
               Subject
             </label>
             <select
               name="subject"
               value={formData.subject}
               onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+              style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               required
             >
               <option value="">Select Subject</option>
@@ -263,14 +267,15 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
               Teacher
             </label>
             <select
               name="teacher"
               value={formData.teacher}
               onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+              style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               required
               disabled={loadingTeachers}
             >
@@ -287,13 +292,13 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
               ))}
             </select>
             {teachers.length === 0 && !loadingTeachers && !teacherError && (
-              <p className="text-xs text-gray-500 mt-1">No active teachers available</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--muted-foreground)' }}>No active teachers available</p>
             )}
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 Days (select one or more)
               </label>
               <div className="flex flex-wrap gap-2">
@@ -304,11 +309,12 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
                       type="button"
                       key={day}
                       onClick={() => toggleDay(day)}
-                      className={`px-3 py-2 rounded-lg border text-sm font-medium transition ${
-                        isSelected
-                          ? 'bg-green-100 text-green-700 border-green-300'
-                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                      }`}
+                      className="px-3 py-2 rounded-lg border text-sm font-medium transition"
+                      style={{
+                        backgroundColor: isSelected ? 'var(--accent-green-bg)' : 'var(--muted)',
+                        color: isSelected ? 'var(--accent-green)' : 'var(--foreground)',
+                        borderColor: isSelected ? 'var(--accent-green)' : 'var(--border)'
+                      }}
                     >
                       {day}
                     </button>
@@ -316,12 +322,12 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
                 })}
               </div>
               {formData.days.length === 0 && submitError && (
-                <p className="mt-1 text-sm text-red-600">Please select at least one day</p>
+                <p className="mt-1 text-sm" style={{ color: 'var(--accent-red)' }}>Please select at least one day</p>
               )}
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
                 Time Slot
               </label>
               <input
@@ -331,7 +337,8 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
                 value={formData.timeSlot}
                 onChange={handleChange}
                 placeholder="Enter time slot (e.g., 7:00 AM - 8:00 AM) or choose from suggestions"
-                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+                style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
                 required
               />
               <datalist id="timeSlots">
@@ -343,7 +350,7 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
               Room
             </label>
             <input
@@ -352,20 +359,22 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
               value={formData.room}
               onChange={handleChange}
               placeholder="Enter room number"
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+              style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
               Shift
             </label>
             <select
               name="shift"
               value={formData.shift}
               onChange={handleChange}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+              className="w-full p-2 border rounded-lg focus:ring-2 transition-all"
+              style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               required
             >
               <option value="">Select Shift</option>
@@ -378,14 +387,16 @@ export default function AddScheduleModal({ isOpen, onClose, onAdd, existingSched
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+              className="px-4 py-2 text-sm font-medium rounded-lg transition-colors"
+              style={{ color: 'var(--foreground)', backgroundColor: 'var(--muted)', border: `1px solid var(--border)` }}
               disabled={isSubmitting}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 text-white text-sm font-medium rounded-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed focus:ring-2 focus:ring-offset-2"
+              style={{ backgroundColor: 'var(--primary)', '--tw-ring-color': 'var(--primary)' } as React.CSSProperties}
               disabled={isSubmitting}
             >
               {isSubmitting ? 'Adding...' : 'Add Schedule'}

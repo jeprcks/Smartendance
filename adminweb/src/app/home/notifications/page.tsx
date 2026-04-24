@@ -15,11 +15,14 @@ export default function NotificationsPage() {
     absent: 0,
     cutting: 0,
     noTimeOut: 0,
+    unscanned: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSilentRefresh, setIsSilentRefresh] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [filter, setFilter] = useState<'all' | 'late' | 'absent' | 'cutting' | 'no_time_out'>('all');
+  const [filter, setFilter] = useState<'all' | 'late' | 'absent' | 'cutting' | 'no_time_out' | 'unscanned'>('all');
+  const [timePeriod, setTimePeriod] = useState<'7days' | '1month' | 'all'>('7days');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const fetchNotifications = async (silent = false) => {
     try {
@@ -29,7 +32,16 @@ export default function NotificationsPage() {
         setIsSilentRefresh(true);
       }
       setError(null);
-      const result = await notificationService.getNotifications(30);
+      
+      // Calculate days to check based on time period
+      let daysToCheck = 7;
+      if (timePeriod === '1month') {
+        daysToCheck = 30;
+      } else if (timePeriod === 'all') {
+        daysToCheck = 365; // Full year
+      }
+      
+      const result = await notificationService.getNotifications(daysToCheck);
       
       if (result.success) {
         setNotifications(result.notifications);
@@ -51,55 +63,72 @@ export default function NotificationsPage() {
     // Refresh every 10 seconds (silent) for near real-time notification updates
     const interval = setInterval(() => fetchNotifications(true), 10000); // 10 seconds
     return () => clearInterval(interval);
-  }, []);
+  }, [timePeriod]);
 
-  const filteredNotifications = filter === 'all' 
+  const filteredNotifications = (filter === 'all' 
     ? notifications 
-    : notifications.filter(n => n.type === filter);
+    : notifications.filter(n => n.type === filter))
+  .filter(n => {
+    // Search filter by student name, grade level, section, or message
+    const query = searchQuery.toLowerCase();
+    return (
+      (n.studentName || '').toLowerCase().includes(query) ||
+      (n.gradeLevel || '').toLowerCase().includes(query) ||
+      (n.section || '').toLowerCase().includes(query) ||
+      (n.message || '').toLowerCase().includes(query)
+    );
+  });
 
   const getNotificationIcon = (type: string) => {
+    const iconStyles = {
+      late: { color: 'var(--accent-yellow)' },
+      absent: { color: 'var(--accent-red)' },
+      cutting: { color: 'var(--accent-orange)' },
+      no_time_out: { color: 'var(--accent-purple)' },
+      unscanned: { color: 'var(--accent-blue)' },
+    };
+    const style = iconStyles[type as keyof typeof iconStyles] || { color: 'var(--foreground)' };
+    
     switch (type) {
       case 'late':
-        return <Clock className="text-yellow-600" size={20} />;
+        return <Clock style={style} size={20} />;
       case 'absent':
-        return <XCircle className="text-red-600" size={20} />;
+        return <XCircle style={style} size={20} />;
       case 'cutting':
-        return <Scissors className="text-orange-600" size={20} />;
+        return <Scissors style={style} size={20} />;
       case 'no_time_out':
-        return <Scan className="text-violet-600" size={20} />;
+        return <Scan style={style} size={20} />;
+      case 'unscanned':
+        return <Bell style={style} size={20} />;
       default:
-        return <Bell className="text-gray-600" size={20} />;
+        return <Bell style={style} size={20} />;
     }
   };
 
   const getNotificationColor = (type: string, severity: string) => {
     if (severity === 'critical') {
-      return 'border-red-500 bg-red-50';
+      return 'border-l-4';
     }
-    switch (type) {
-      case 'late':
-        return 'border-yellow-500 bg-yellow-50';
-      case 'absent':
-        return 'border-red-500 bg-red-50';
-      case 'cutting':
-        return 'border-orange-500 bg-orange-50';
-      case 'no_time_out':
-        return 'border-violet-500 bg-violet-50';
-      default:
-        return 'border-gray-500 bg-gray-50';
-    }
+    return 'border-l-4';
   };
 
   const getStatusBadge = (type: string) => {
-    const badges = {
-      late: { bg: 'bg-yellow-100', text: 'text-yellow-800', label: 'Late' },
-      absent: { bg: 'bg-red-100', text: 'text-red-800', label: 'Absent' },
-      cutting: { bg: 'bg-orange-100', text: 'text-orange-800', label: 'Cutting' },
-      no_time_out: { bg: 'bg-violet-100', text: 'text-violet-800', label: 'No Time Out' },
+    const badgeStyles = {
+      late: { bg: 'var(--accent-yellow-bg)', color: 'var(--accent-yellow)', label: 'Late' },
+      absent: { bg: 'var(--accent-red-bg)', color: 'var(--accent-red)', label: 'Absent' },
+      cutting: { bg: 'var(--accent-orange-bg)', color: 'var(--accent-orange)', label: 'Cutting' },
+      no_time_out: { bg: 'var(--accent-purple-bg)', color: 'var(--accent-purple)', label: 'No Time Out' },
+      unscanned: { bg: 'var(--accent-blue-bg)', color: 'var(--accent-blue)', label: 'Unscanned' },
     };
-    const badge = badges[type as keyof typeof badges] || badges.late;
+    const badge = badgeStyles[type as keyof typeof badgeStyles] || badgeStyles.late;
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-semibold ${badge.bg} ${badge.text}`}>
+      <span 
+        style={{ 
+          backgroundColor: badge.bg,
+          color: badge.color,
+        }}
+        className="px-2 py-1 rounded-full text-xs font-semibold"
+      >
         {badge.label}
       </span>
     );
@@ -131,11 +160,9 @@ export default function NotificationsPage() {
       </header>
 
       {error && (
-        <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-700/50 rounded-lg">
-          <div className="flex items-center gap-2">
-            <AlertTriangle className="text-red-600 dark:text-red-400" size={20} />
-            <p className="text-red-700 dark:text-red-300">{error}</p>
-          </div>
+        <div className="mb-4 p-4 rounded-lg border flex items-center gap-2" style={{ backgroundColor: 'var(--accent-red-bg)', borderColor: 'var(--accent-red)' }}>
+          <AlertTriangle size={20} style={{ color: 'var(--accent-red)' }} />
+          <p style={{ color: 'var(--accent-red)' }}>{error}</p>
         </div>
       )}
 
@@ -143,123 +170,215 @@ export default function NotificationsPage() {
       <div className="dashboard-grid mb-8">
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-              <Bell className="text-green-700 dark:text-green-400" size={24} />
+            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-green-bg)' }}>
+              <Bell size={24} style={{ color: 'var(--accent-green)' }} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Notifications</p>
-              <p className="text-3xl font-bold text-green-700 dark:text-green-400">{stats.total}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--accent-green)' }}>{stats.total}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-              <Clock className="text-yellow-700 dark:text-yellow-400" size={24} />
+            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-yellow-bg)' }}>
+              <Clock size={24} style={{ color: 'var(--accent-yellow)' }} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Late</p>
-              <p className="text-3xl font-bold text-yellow-700 dark:text-yellow-400">{stats.late}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--accent-yellow)' }}>{stats.late}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
-              <XCircle className="text-red-700 dark:text-red-400" size={24} />
+            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-red-bg)' }}>
+              <XCircle size={24} style={{ color: 'var(--accent-red)' }} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Absent</p>
-              <p className="text-3xl font-bold text-red-700 dark:text-red-400">{stats.absent}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--accent-red)' }}>{stats.absent}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-orange-50 dark:bg-orange-900/20 rounded-lg">
-              <Scissors className="text-orange-700 dark:text-orange-400" size={24} />
+            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-orange-bg)' }}>
+              <Scissors size={24} style={{ color: 'var(--accent-orange)' }} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">Consecutive Cutting</p>
-              <p className="text-3xl font-bold text-orange-700 dark:text-orange-400">{stats.cutting}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--accent-orange)' }}>{stats.cutting}</p>
             </div>
           </div>
         </div>
 
         <div className="stat-card">
           <div className="flex items-start justify-between mb-4">
-            <div className="p-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg">
-              <Scan className="text-violet-700 dark:text-violet-400" size={24} />
+            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-purple-bg)' }}>
+              <Scan size={24} style={{ color: 'var(--accent-purple)' }} />
             </div>
             <div className="text-right">
               <p className="text-sm text-[var(--muted-foreground)] mb-1">No Time Out (Abnormal)</p>
-              <p className="text-3xl font-bold text-violet-700 dark:text-violet-400">{stats.noTimeOut}</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--accent-purple)' }}>{stats.noTimeOut}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="flex items-start justify-between mb-4">
+            <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-blue-bg)' }}>
+              <Bell size={24} style={{ color: 'var(--accent-blue)' }} />
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-[var(--muted-foreground)] mb-1">Unscanned</p>
+              <p className="text-3xl font-bold" style={{ color: 'var(--accent-blue)' }}>{stats.unscanned}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filter Buttons */}
-      <div className="mb-6 flex flex-wrap gap-2">
+      {/* Time Period Filter */}
+      <div className="mb-6">
+        <p className="text-sm font-medium text-[var(--foreground)] mb-3">Time Period</p>
+        <div className="flex flex-wrap gap-2 mb-6">
+          <button
+            type="button"
+            onClick={() => setTimePeriod('7days')}
+            style={{
+              backgroundColor: timePeriod === '7days' ? 'var(--primary)' : 'var(--muted)',
+              color: timePeriod === '7days' ? 'white' : 'var(--foreground)',
+              borderColor: 'var(--border)',
+            }}
+            className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
+          >
+            Last 7 Days
+          </button>
+          <button
+            type="button"
+            onClick={() => setTimePeriod('1month')}
+            style={{
+              backgroundColor: timePeriod === '1month' ? 'var(--primary)' : 'var(--muted)',
+              color: timePeriod === '1month' ? 'white' : 'var(--foreground)',
+              borderColor: 'var(--border)',
+            }}
+            className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
+          >
+            Last 1 Month
+          </button>
+          <button
+            type="button"
+            onClick={() => setTimePeriod('all')}
+            style={{
+              backgroundColor: timePeriod === 'all' ? 'var(--primary)' : 'var(--muted)',
+              color: timePeriod === 'all' ? 'white' : 'var(--foreground)',
+              borderColor: 'var(--border)',
+            }}
+            className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
+          >
+            All Time
+          </button>
+        </div>
+      </div>
+
+      {/* Search Bar */}
+      <div className="mb-6">
+        <input
+          type="text"
+          placeholder="Search by student name, grade level, section, or message..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          style={{
+            backgroundColor: 'var(--muted)',
+            borderColor: 'var(--border)',
+            color: 'var(--foreground)',
+          }}
+          className="w-full px-4 py-2 rounded-[var(--radius)] border focus:outline-none focus:ring-2 focus:ring-[var(--primary)] transition-all"
+        />
+      </div>
+
+      {/* Notification Type Filter */}
+      <div className="mb-6\">
+        <p className="text-sm font-medium text-[var(--foreground)] mb-3\">Notification Type</p>
+        <div className="flex flex-wrap gap-2\">
         <button
           type="button"
           onClick={() => setFilter('all')}
-          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
-            filter === 'all'
-              ? 'bg-[var(--primary)] text-white hover:bg-[var(--primary-dark)] dark:hover:opacity-80'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
-          }`}
+          style={{
+            backgroundColor: filter === 'all' ? 'var(--primary)' : 'var(--muted)',
+            color: filter === 'all' ? 'white' : 'var(--foreground)',
+            borderColor: 'var(--border)',
+          }}
+          className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
         >
           All ({stats.total})
         </button>
         <button
           type="button"
           onClick={() => setFilter('late')}
-          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
-            filter === 'late'
-              ? 'bg-yellow-500 text-white hover:bg-yellow-600 dark:bg-yellow-600 dark:hover:bg-yellow-700'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
-          }`}
+          style={{
+            backgroundColor: filter === 'late' ? 'var(--accent-yellow-bg)' : 'var(--muted)',
+            color: filter === 'late' ? 'var(--accent-yellow)' : 'var(--foreground)',
+            borderColor: 'var(--border)',
+          }}
+          className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
         >
           Late ({stats.late})
         </button>
         <button
           type="button"
           onClick={() => setFilter('absent')}
-          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
-            filter === 'absent'
-              ? 'bg-red-500 text-white hover:bg-red-600 dark:bg-red-600 dark:hover:bg-red-700'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
-          }`}
+          style={{
+            backgroundColor: filter === 'absent' ? 'var(--accent-red-bg)' : 'var(--muted)',
+            color: filter === 'absent' ? 'var(--accent-red)' : 'var(--foreground)',
+            borderColor: 'var(--border)',
+          }}
+          className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
         >
           Absent ({stats.absent})
         </button>
         <button
           type="button"
           onClick={() => setFilter('cutting')}
-          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
-            filter === 'cutting'
-              ? 'bg-orange-500 text-white hover:bg-orange-600 dark:bg-orange-600 dark:hover:bg-orange-700'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
-          }`}
+          style={{
+            backgroundColor: filter === 'cutting' ? 'var(--accent-orange-bg)' : 'var(--muted)',
+            color: filter === 'cutting' ? 'var(--accent-orange)' : 'var(--foreground)',
+            borderColor: 'var(--border)',
+          }}
+          className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
         >
           Cutting ({stats.cutting})
         </button>
         <button
           type="button"
           onClick={() => setFilter('no_time_out')}
-          className={`px-4 py-2 rounded-[var(--radius)] font-medium transition-colors ${
-            filter === 'no_time_out'
-              ? 'bg-violet-500 text-white hover:bg-violet-600 dark:bg-violet-600 dark:hover:bg-violet-700'
-              : 'bg-[var(--muted)] text-[var(--foreground)] hover:bg-[var(--secondary)] border border-[var(--border)] dark:bg-slate-700 dark:hover:bg-slate-600'
-          }`}
+          style={{
+            backgroundColor: filter === 'no_time_out' ? 'var(--accent-purple-bg)' : 'var(--muted)',
+            color: filter === 'no_time_out' ? 'var(--accent-purple)' : 'var(--foreground)',
+            borderColor: 'var(--border)',
+          }}
+          className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
         >
           No Time Out ({stats.noTimeOut})
         </button>
+        <button
+          type="button"
+          onClick={() => setFilter('unscanned')}
+          style={{
+            backgroundColor: filter === 'unscanned' ? 'var(--accent-blue-bg)' : 'var(--muted)',
+            color: filter === 'unscanned' ? 'var(--accent-blue)' : 'var(--foreground)',
+            borderColor: 'var(--border)',
+          }}
+          className="px-4 py-2 rounded-[var(--radius)] font-medium transition-colors border"
+        >
+          Unscanned ({stats.unscanned})
+        </button>
+        </div>
       </div>
+      {/* End of Notification Type Filter */}
 
       {/* Notifications List */}
       <div className="content-section">
@@ -267,22 +386,61 @@ export default function NotificationsPage() {
           <LoadingSkeleton type="card" count={5} />
         ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-12 text-[var(--muted-foreground)]">
-            <Bell className="mx-auto mb-4 text-[var(--muted-foreground)] dark:text-slate-500" size={48} />
-            <p className="text-lg font-medium text-[var(--foreground)] dark:text-white">No notifications</p>
-            <p className="text-sm mt-2 dark:text-slate-400">
-              {filter === 'all'
-                ? 'No notifications (consecutive late/absent/cutting or no time out)'
+            <Bell className="mx-auto mb-4 text-[var(--muted-foreground)]" size={48} />
+            <p className="text-lg font-medium text-[var(--foreground)]">No notifications</p>
+            <p className="text-sm mt-2">
+              {searchQuery
+                ? `No results matching "${searchQuery}"`
+                : filter === 'all'
+                ? `No notifications in the last ${timePeriod === '7days' ? '7 days' : timePeriod === '1month' ? '1 month' : 'year'}`
                 : filter === 'no_time_out'
-                  ? 'No students who scanned in but did not scan out'
-                  : `No students with 3+ consecutive days of ${filter}`}
+                  ? `No students who scanned in but did not scan out in the last ${timePeriod === '7days' ? '7 days' : timePeriod === '1month' ? '1 month' : 'year'}`
+                  : `No students with 3+ consecutive days of ${filter} in the last ${timePeriod === '7days' ? '7 days' : timePeriod === '1month' ? '1 month' : 'year'}`}
             </p>
           </div>
         ) : (
           <div className="space-y-4">
-            {filteredNotifications.map((notification) => (
+            {filteredNotifications.map((notification) => {
+              let borderColor = 'var(--border)';
+              let bgColor = 'var(--surface)';
+              
+              if (notification.severity === 'critical') {
+                borderColor = 'var(--accent-red)';
+                bgColor = 'var(--accent-red-bg)';
+              } else {
+                switch (notification.type) {
+                  case 'late':
+                    borderColor = 'var(--accent-yellow)';
+                    bgColor = 'var(--accent-yellow-bg)';
+                    break;
+                  case 'absent':
+                    borderColor = 'var(--accent-red)';
+                    bgColor = 'var(--accent-red-bg)';
+                    break;
+                  case 'cutting':
+                    borderColor = 'var(--accent-orange)';
+                    bgColor = 'var(--accent-orange-bg)';
+                    break;
+                  case 'no_time_out':
+                    borderColor = 'var(--accent-purple)';
+                    bgColor = 'var(--accent-purple-bg)';
+                    break;
+                  case 'unscanned':
+                    borderColor = 'var(--accent-blue)';
+                    bgColor = 'var(--accent-blue-bg)';
+                    break;
+                }
+              }
+              
+              return (
               <div
                 key={notification.id}
-                className={`p-6 rounded-[var(--radius)] border-l-4 ${getNotificationColor(notification.type, notification.severity)} dark:bg-slate-800 dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow border border-[var(--border)]`}
+                style={{
+                  backgroundColor: bgColor,
+                  borderLeftColor: borderColor,
+                  borderColor: 'var(--border)',
+                }}
+                className="p-6 rounded-[var(--radius)] border-l-4 border shadow-sm hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex items-start gap-4 flex-1 min-w-0">
@@ -291,18 +449,18 @@ export default function NotificationsPage() {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-3 mb-2 flex-wrap">
-                        <h3 className="text-lg font-semibold text-[var(--foreground)] dark:text-white">
+                        <h3 className="text-lg font-semibold text-[var(--foreground)]">
                           {notification.studentName}
                         </h3>
                         {getStatusBadge(notification.type)}
                         {notification.severity === 'critical' && (
-                          <span className="px-2 py-1 bg-red-600 dark:bg-red-700 text-white rounded-full text-xs font-semibold">
+                          <span style={{ backgroundColor: 'var(--accent-red)', color: 'white' }} className="px-2 py-1 rounded-full text-xs font-semibold">
                             Critical
                           </span>
                         )}
                       </div>
-                      <p className="text-[var(--foreground)]/90 dark:text-slate-300 mb-2">{notification.message}</p>
-                      <div className="flex items-center gap-4 text-sm text-[var(--muted-foreground)] dark:text-slate-400 flex-wrap">
+                      <p className="text-[var(--foreground)]/90 mb-2">{notification.message}</p>
+                      <div className="flex items-center gap-4 text-sm text-[var(--muted-foreground)] flex-wrap">
                         <span>
                           {notification.gradeLevel} - {notification.section}
                         </span>
@@ -310,6 +468,10 @@ export default function NotificationsPage() {
                         {notification.type === 'no_time_out' ? (
                           <span>
                             Scanned in: {format(new Date(notification.lastOccurrence), 'MMM dd, yyyy, h:mm a')} ({formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })})
+                          </span>
+                        ) : notification.type === 'unscanned' ? (
+                          <span>
+                            Not scanned: {formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })}
                           </span>
                         ) : (
                           <>
@@ -327,13 +489,18 @@ export default function NotificationsPage() {
                   </div>
                   <Link
                     href={`/home/history?studentId=${notification.studentId}`}
-                    className="px-4 py-2 bg-[var(--primary)] text-white rounded-[var(--radius)] hover:bg-[var(--primary-dark)] dark:hover:opacity-80 transition-colors text-sm font-medium inline-flex flex-shrink-0"
+                    style={{
+                      backgroundColor: 'var(--primary)',
+                      color: 'white',
+                    }}
+                    className="px-4 py-2 rounded-[var(--radius)] transition-colors text-sm font-medium inline-flex flex-shrink-0 hover:opacity-90"
                   >
                     View History
                   </Link>
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>

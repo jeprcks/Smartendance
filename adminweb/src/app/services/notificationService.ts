@@ -4,7 +4,7 @@ import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 
 export interface Notification {
   id: string;
-  type: 'late' | 'absent' | 'cutting' | 'no_time_out';
+  type: 'late' | 'absent' | 'cutting' | 'no_time_out' | 'unscanned';
   studentId: string;
   studentName: string;
   gradeLevel: string;
@@ -21,6 +21,16 @@ export interface NotificationStats {
   absent: number;
   cutting: number;
   noTimeOut: number;
+  unscanned: number;
+}
+
+export interface UnscannedStudentData extends Student {
+  notificationId: string;
+  message: string;
+  lastScannedDate?: string;
+  studentCreatedDate?: string;
+  unscannedSinceDays?: number;
+  firstMissedDate?: string;
 }
 
 class NotificationService {
@@ -204,7 +214,44 @@ class NotificationService {
   }
 
   /**
-   * Get all notifications for consecutive late/absent/cutting and no-time-out
+   * Check for students who haven't scanned (no attendance records)
+   */
+  private checkUnscannedStudents(
+    students: Student[],
+    records: AttendanceRecord[],
+    daysToCheck: number = 1
+  ): Notification[] {
+    const notifications: Notification[] = [];
+    
+    // Get set of students who have scanned recently
+    const scannedStudentIds = new Set<string>();
+    records.forEach(record => {
+      scannedStudentIds.add(record.studentId);
+    });
+
+    // Check each student to see if they haven't scanned
+    students.forEach(student => {
+      if (!scannedStudentIds.has(student.studentId)) {
+        notifications.push({
+          id: `unscanned-${student.studentId}`,
+          type: 'unscanned',
+          studentId: student.studentId,
+          studentName: student.fullName || 'Unknown',
+          gradeLevel: student.gradeLevel || 'N/A',
+          section: student.section || 'N/A',
+          consecutiveCount: 1,
+          lastOccurrence: new Date().toISOString(),
+          severity: 'warning',
+          message: `${student.fullName || 'Student'} has not scanned in the last ${daysToCheck} day(s)`,
+        });
+      }
+    });
+
+    return notifications;
+  }
+
+  /**
+   * Get all notifications for consecutive late/absent/cutting, no-time-out, and unscanned students
    */
   async getNotifications(daysToCheck: number = 30): Promise<{
     success: boolean;
@@ -245,12 +292,16 @@ class NotificationService {
       // Check for scanned in but no time out (abnormal scanning) – last 7 days
       const noTimeOutNotifications = this.checkNoTimeOut(records, 7);
 
+      // Check for unscanned students (last 1 day)
+      const unscannedNotifications = this.checkUnscannedStudents(students, records, 1);
+
       // Combine all notifications
       const allNotifications = [
         ...lateNotifications,
         ...absentNotifications,
         ...cuttingNotifications,
         ...noTimeOutNotifications,
+        ...unscannedNotifications,
       ].sort((a, b) => new Date(b.lastOccurrence).getTime() - new Date(a.lastOccurrence).getTime());
 
       const stats: NotificationStats = {
@@ -259,6 +310,7 @@ class NotificationService {
         absent: absentNotifications.length,
         cutting: cuttingNotifications.length,
         noTimeOut: noTimeOutNotifications.length,
+        unscanned: unscannedNotifications.length,
       };
 
       return {
@@ -277,6 +329,7 @@ class NotificationService {
           absent: 0,
           cutting: 0,
           noTimeOut: 0,
+          unscanned: 0,
         },
       };
     }
@@ -292,6 +345,101 @@ class NotificationService {
     } catch (error) {
       console.error('Error getting notification count:', error);
       return 0;
+    }
+  }
+
+  /**
+   * Get all unscanned students with complete student data and date information
+   */
+  async getUnscannedStudents(daysToCheck: number = 1): Promise<{
+    success: boolean;
+    students: UnscannedStudentData[];
+    count: number;
+  }> {
+    try {
+      // Get all students
+      const allStudents = await studentService.getAllStudents().catch(() => []);
+
+      // Calculate date range for current period
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - daysToCheck);
+
+      // Fetch attendance records for the current date range
+      const currentResponse = await historyService.getAllRecords({
+        startDate: format(startDate, 'yyyy-MM-dd'),
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        limit: 10000,
+        attendanceType: 'All',
+      }).catch((error) => {
+        console.warn('Error fetching attendance records for unscanned students:', error);
+        return { success: false, records: [], pagination: {} };
+      });
+
+      const currentRecords = currentResponse.success ? currentResponse.records : [];
+
+      // Also fetch all historical records to find last scan date
+      const allHistoricalResponse = await historyService.getAllRecords({
+        startDate: format(new Date('2020-01-01'), 'yyyy-MM-dd'), // Get all records from the beginning
+        endDate: format(endDate, 'yyyy-MM-dd'),
+        limit: 100000,
+        attendanceType: 'All',
+      }).catch((error) => {
+        console.warn('Error fetching historical records:', error);
+        return { success: false, records: [], pagination: {} };
+      });
+
+      const allHistoricalRecords = allHistoricalResponse.success ? allHistoricalResponse.records : [];
+
+      // Get set of students who have scanned in current period
+      const scannedStudentIds = new Set<string>();
+      currentRecords.forEach(record => {
+        scannedStudentIds.add(record.studentId);
+      });
+
+      // Create a map of student ID to their most recent scan date
+      const lastScanMap = new Map<string, Date>();
+      allHistoricalRecords.forEach(record => {
+        const scanDate = new Date(record.scanTime);
+        const existing = lastScanMap.get(record.studentId);
+        if (!existing || scanDate > existing) {
+          lastScanMap.set(record.studentId, scanDate);
+        }
+      });
+
+      // Find unscanned students and combine with their full data
+      const unscannedStudentsData: UnscannedStudentData[] = allStudents
+        .filter(student => !scannedStudentIds.has(student.studentId))
+        .map(student => {
+          const lastScanDate = lastScanMap.get(student.studentId);
+          const unscannedSinceDays = lastScanDate 
+            ? Math.floor((endDate.getTime() - lastScanDate.getTime()) / (1000 * 60 * 60 * 24))
+            : undefined;
+          
+          return {
+            ...student,
+            notificationId: `unscanned-${student.studentId}`,
+            message: `${student.fullName} has not scanned in the last ${daysToCheck} day(s)`,
+            lastScannedDate: lastScanDate ? lastScanDate.toISOString() : undefined,
+            studentCreatedDate: student.birthDate, // Birth date is closest to when student was created
+            unscannedSinceDays: unscannedSinceDays,
+            firstMissedDate: startDate.toISOString(), // First missed date is the start of the period
+          };
+        })
+        .sort((a, b) => a.fullName.localeCompare(b.fullName));
+
+      return {
+        success: true,
+        students: unscannedStudentsData,
+        count: unscannedStudentsData.length,
+      };
+    } catch (error) {
+      console.error('Error getting unscanned students:', error);
+      return {
+        success: false,
+        students: [],
+        count: 0,
+      };
     }
   }
 }

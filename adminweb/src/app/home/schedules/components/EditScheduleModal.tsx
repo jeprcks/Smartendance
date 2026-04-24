@@ -156,40 +156,40 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, e
   return (
     <div className="fixed inset-0 flex items-center justify-center z-50">
       <div className="fixed inset-0 bg-black opacity-50 z-40" />
-      <div className="relative z-50 bg-white dark:bg-slate-900 rounded-lg shadow-lg border border-gray-200 dark:border-slate-700 p-6 max-w-2xl w-full mx-4">
+      <div className="relative z-50 rounded-lg shadow-lg border p-6 max-w-2xl w-full mx-4" style={{ backgroundColor: 'var(--card)', borderColor: 'var(--border)' }}>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Edit Schedule</h3>
-          <button onClick={onClose} className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300">✕</button>
+          <h3 className="text-xl font-semibold" style={{ color: 'var(--foreground)' }}>Edit Schedule</h3>
+          <button onClick={onClose} style={{ color: 'var(--muted-foreground)' }} className="hover:opacity-70">✕</button>
         </div>
 
-        {error && <div className="mb-4 text-sm text-red-600 dark:text-red-400">{error}</div>}
+        {error && <div className="mb-4 text-sm p-3 rounded" style={{ color: 'var(--accent-red)', backgroundColor: 'var(--accent-red-bg)' }}>{error}</div>}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Grade Level</label>
-              <select name="gradeLevel" value={form.gradeLevel} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Grade Level</label>
+              <select name="gradeLevel" value={form.gradeLevel} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}>
                 <option value="">Select Grade</option>
                 {gradeLevels.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Section</label>
-              <input name="section" value={form.section} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white" />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Section</label>
+              <input name="section" value={form.section} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Subject</label>
-              <select name="subject" value={form.subject} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Subject</label>
+              <select name="subject" value={form.subject} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}>
                 <option value="">Select Subject</option>
                 {subjects.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Teacher</label>
-              <select name="teacher" value={form.teacher} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white" disabled={loadingTeachers}>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Teacher</label>
+              <select name="teacher" value={form.teacher} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }} disabled={loadingTeachers}>
                 <option value="">{loadingTeachers ? 'Loading...' : 'Select Teacher'}</option>
                 {teachers.map(t => <option key={t._id} value={t.name}>{t.name}</option>)}
               </select>
@@ -198,12 +198,16 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, e
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Days (select one or more)</label>
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Days (select one or more)</label>
               <div className="flex flex-wrap gap-2">
                 {daysOfWeek.map(d => {
                   const isSelected = form.days.includes(d);
                   return (
-                    <button key={d} type="button" onClick={() => toggleDay(d)} className={`px-3 py-1 rounded ${isSelected ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' : 'bg-white dark:bg-slate-800 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-slate-600'}`}>
+                    <button key={d} type="button" onClick={() => toggleDay(d)} className="px-3 py-1 rounded border transition-colors" style={{ 
+                      backgroundColor: isSelected ? 'var(--accent-green-bg)' : 'var(--muted)',
+                      color: isSelected ? 'var(--accent-green)' : 'var(--foreground)',
+                      borderColor: isSelected ? 'var(--accent-green)' : 'var(--border)'
+                    }}>
                       {d}
                     </button>
                   );
@@ -211,20 +215,20 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, e
               </div>
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Time Slot</label>
-              <input list="timeSlots" name="timeSlot" value={form.timeSlot} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white" />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Time Slot</label>
+              <input list="timeSlots" name="timeSlot" value={form.timeSlot} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }} />
               <datalist id="timeSlots">{timeSlots.map(t => <option key={t} value={t} />)}</datalist>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Room</label>
-              <input name="room" value={form.room} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white" />
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Room</label>
+              <input name="room" value={form.room} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }} />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Shift</label>
-              <select name="shift" value={form.shift} onChange={handleChange} className="w-full p-2 border border-gray-300 dark:border-slate-600 rounded bg-white dark:bg-slate-800 text-gray-900 dark:text-white">
+              <label className="block text-sm font-medium mb-1" style={{ color: 'var(--foreground)' }}>Shift</label>
+              <select name="shift" value={form.shift} onChange={handleChange} className="w-full p-2 border rounded" style={{ backgroundColor: 'var(--muted)', borderColor: 'var(--border)', color: 'var(--foreground)' }}>
                 <option value="">Select Shift</option>
                 <option value="Morning">Morning</option>
                 <option value="Afternoon">Afternoon</option>
@@ -233,8 +237,8 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, e
           </div>
 
           <div className="flex justify-end space-x-3 mt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 border border-gray-300 dark:border-slate-600 rounded text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-slate-800">Cancel</button>
-            <button type="submit" disabled={isSubmitting} className="px-4 py-2 bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white rounded">
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-medium transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--muted)', hover: 'var(--secondary)' }}>Cancel</button>
+            <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded font-medium text-white transition-colors" style={{ backgroundColor: 'var(--primary)' }}>
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
