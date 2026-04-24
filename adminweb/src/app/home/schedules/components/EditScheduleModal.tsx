@@ -237,7 +237,7 @@ export default function EditScheduleModal({ isOpen, onClose, schedule, onEdit, e
           </div>
 
           <div className="flex justify-end space-x-3 mt-4">
-            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-medium transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--muted)', hover: 'var(--secondary)' }}>Cancel</button>
+            <button type="button" onClick={onClose} className="px-4 py-2 border rounded font-medium transition-colors" style={{ borderColor: 'var(--border)', color: 'var(--foreground)', backgroundColor: 'var(--muted)' }}>Cancel</button>
             <button type="submit" disabled={isSubmitting} className="px-4 py-2 rounded font-medium text-white transition-colors" style={{ backgroundColor: 'var(--primary)' }}>
               {isSubmitting ? 'Saving...' : 'Save Changes'}
             </button>
