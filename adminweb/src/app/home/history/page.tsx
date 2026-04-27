@@ -323,7 +323,9 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className="text-sm text-[var(--foreground)] transition-colors duration-200">
-                        {record.scheduleTeacher || 'N/A'}
+                        {record.subject?.toLowerCase() === 'general'
+                          ? 'N/A'
+                          : (record.scheduleTeacher || 'N/A')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

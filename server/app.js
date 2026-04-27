@@ -25,7 +25,9 @@ function isOriginAllowed(origin) {
   return all.includes(origin) ||
     /^http:\/\/localhost:\d+$/.test(origin) ||
     /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
-    /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin);
+    /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin) ||
+    // Allow CGNAT/Tailscale-style local network hosts (e.g. http://100.84.x.x:3000)
+    /^http:\/\/100\.\d+\.\d+\.\d+:\d+$/.test(origin);
 }
 
 // CORS first: set headers on every response and handle preflight so errors (503, etc.) still have CORS

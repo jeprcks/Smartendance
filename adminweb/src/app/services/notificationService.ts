@@ -219,19 +219,26 @@ class NotificationService {
   private checkUnscannedStudents(
     students: Student[],
     records: AttendanceRecord[],
-    daysToCheck: number = 1
+    _daysToCheck: number = 1
   ): Notification[] {
     const notifications: Notification[] = [];
-    
-    // Get set of students who have scanned recently
-    const scannedStudentIds = new Set<string>();
-    records.forEach(record => {
-      scannedStudentIds.add(record.studentId);
+
+    const today = new Date();
+
+    // Only consider students who scanned IN today.
+    // This makes "Unscanned" a true daily indicator.
+    const scannedTodayStudentIds = new Set<string>();
+    records.forEach((record) => {
+      const scanDate = parseISO(record.scanTime);
+      if (record.attendanceType === 'In' && isSameDay(scanDate, today)) {
+        scannedTodayStudentIds.add(record.studentId);
+      }
     });
 
     // Check each student to see if they haven't scanned
-    students.forEach(student => {
-      if (!scannedStudentIds.has(student.studentId)) {
+    students.forEach((student) => {
+      const isActiveStudent = !student.status || student.status === 'Active';
+      if (isActiveStudent && !scannedTodayStudentIds.has(student.studentId)) {
         notifications.push({
           id: `unscanned-${student.studentId}`,
           type: 'unscanned',
@@ -240,9 +247,9 @@ class NotificationService {
           gradeLevel: student.gradeLevel || 'N/A',
           section: student.section || 'N/A',
           consecutiveCount: 1,
-          lastOccurrence: new Date().toISOString(),
+          lastOccurrence: today.toISOString(),
           severity: 'warning',
-          message: `${student.fullName || 'Student'} has not scanned in the last ${daysToCheck} day(s)`,
+          message: `${student.fullName || 'Student'} has not scanned today`,
         });
       }
     });

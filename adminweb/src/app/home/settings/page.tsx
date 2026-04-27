@@ -242,10 +242,10 @@ export default function SettingsPage() {
                 onChange={(e) => setForm((f) => ({ ...f, lateThresholdMinutes: parseInt(e.target.value, 10) || 0 }))}
                 className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">Minutes after cutoff = Late</p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">Minutes after shift time-in before status becomes Late (e.g. 07:00 + 15 mins)</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Morning Shift Cutoff</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Morning Shift Time-in</label>
               <input
                 type="time"
                 value={form.morningShiftCutoff ?? '12:00'}
@@ -254,7 +254,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Afternoon Shift Cutoff</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Afternoon Shift Time-in</label>
               <input
                 type="time"
                 value={form.afternoonShiftCutoff ?? '17:00'}

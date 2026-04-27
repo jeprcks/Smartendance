@@ -15,6 +15,12 @@ function getApiBaseUrl(): string {
   // Prefer explicit backend URL so login/API work even if rewrites aren't configured
   if (envUrl) return envUrl;
 
+  // In local development, always target the backend dev server directly.
+  // This prevents accidental same-origin calls to :3000 when opening the app via LAN IP.
+  if (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production') {
+    return 'http://localhost:4000';
+  }
+
   if (typeof window !== 'undefined') {
     const o = window.location.origin;
     // On production (same origin), rewrites in next.config proxy /api/* to backend when NEXT_PUBLIC_API_URL was set at build
