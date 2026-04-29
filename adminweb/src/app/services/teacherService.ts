@@ -137,6 +137,8 @@ class TeacherService {
     name: string;
     role?: string;
     subjects: string[];
+    gender?: string;
+    birthDate?: string;
     email: string;
     phoneNumber: string;
     password: string;
