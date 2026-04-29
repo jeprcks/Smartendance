@@ -140,7 +140,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
       studentId: 'Student ID',
       fullName: 'Full Name',
       phoneNumber: 'Phone Number',
-      age: 'Age',
       birthDate: 'Birth Date',
       gradeLevel: 'Grade Level',
       section: 'Section',
@@ -167,7 +166,7 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
     }
 
     const age = formData.age;
-    if (age !== undefined && (age < 0 || age > 25)) {
+    if (age !== undefined && !Number.isNaN(age) && (age < 0 || age > 25)) {
       errors.push({
         field: 'age',
         message: 'Age must be between 0 and 25'
@@ -272,7 +271,9 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
 
     setFormData(prev => ({
       ...prev,
-      [name]: name === 'age' ? parseInt(value) : (name === 'status' ? value as 'Active' | 'Inactive' | 'Graduated' : value)
+      [name]: name === 'age'
+        ? (value === '' ? undefined : parseInt(value))
+        : (name === 'status' ? value as 'Active' | 'Inactive' | 'Graduated' : value)
     }));
   };
 
@@ -496,10 +497,9 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                         name="age"
                         value={formData.age || ''}
                         onChange={handleChange}
-                        min="12"
+                        min="0"
                         max="25"
                         className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        required
                       />
                     </div>
 
