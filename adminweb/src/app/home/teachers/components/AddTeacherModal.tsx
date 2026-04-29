@@ -46,7 +46,7 @@ interface ValidationErrors {
 }
 
 export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherModalProps) {
-  const [formData, setFormData] = useState<TeacherFormData>({
+  const initialFormData: TeacherFormData = {
     username: '',
     password: '',
     name: '',
@@ -61,11 +61,21 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
     city: '',
     province: '',
     zipCode: ''
+  };
+
+  const [formData, setFormData] = useState<TeacherFormData>({
+    ...initialFormData
   });
 
   const [errors, setErrors] = useState<ValidationErrors>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string>('');
+
+  const resetForm = () => {
+    setFormData({ ...initialFormData });
+    setErrors({});
+    setSubmitError('');
+  };
 
   // Validation functions
   const validateEmail = (email: string): boolean => {
@@ -162,6 +172,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
         dateJoined: new Date().toISOString(), 
         status: 'Active' 
       });
+      resetForm();
       onClose();
     } catch (error) {
       console.error('Error adding teacher:', error);
@@ -209,8 +220,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
 
   // Clear all errors when modal is closed
   const handleClose = () => {
-    setErrors({});
-    setSubmitError('');
+    resetForm();
     onClose();
   };
 
