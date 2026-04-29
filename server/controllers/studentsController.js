@@ -32,8 +32,8 @@ async function resolveGeneralScanStatus(studentShift, scanDate) {
         ? Number(settings.lateThresholdMinutes)
         : fallbackThreshold;
 
-    const morningStartMinutes = parseTimeToMinutes(settings?.morningShiftCutoff, fallbackMorningStart);
-    const afternoonStartMinutes = parseTimeToMinutes(settings?.afternoonShiftCutoff, fallbackAfternoonStart);
+    const morningStartMinutes = parseTimeToMinutes(settings?.morningShiftTimeIn, fallbackMorningStart);
+    const afternoonStartMinutes = parseTimeToMinutes(settings?.afternoonShiftTimeIn, fallbackAfternoonStart);
 
     const scanMinutes = scanDate.getHours() * 60 + scanDate.getMinutes();
     const shiftStart = studentShift === 'Afternoon' ? afternoonStartMinutes : morningStartMinutes;

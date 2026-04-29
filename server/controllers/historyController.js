@@ -37,6 +37,26 @@ const createAttendanceRecord = async (req, res) => {
         // When type is checkout (Out), status should be Out
         const finalStatus = attendanceType === 'Out' ? 'Out' : status;
 
+        // Guard against rapid duplicate check-in creation (e.g., scanner calling two endpoints).
+        // If there is a very recent In record for the same student+subject, reuse it.
+        if (attendanceType === 'In') {
+            const duplicateWindowStart = new Date(now.getTime() - 2 * 60 * 1000); // last 2 minutes
+            const recentExistingIn = await History.findOne({
+                studentId,
+                attendanceType: 'In',
+                subject,
+                scanTime: { $gte: duplicateWindowStart, $lte: now }
+            }).sort({ scanTime: -1 });
+
+            if (recentExistingIn) {
+                return res.status(200).json({
+                    success: true,
+                    message: 'Duplicate check-in ignored; existing record returned',
+                    record: recentExistingIn
+                });
+            }
+        }
+
         // Create new attendance record
         const attendanceRecord = new History({
             studentId,

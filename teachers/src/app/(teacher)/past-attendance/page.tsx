@@ -11,6 +11,7 @@ import PageHeader from '@/components/PageHeader';
 import PrintExcelModal from './components/printexcelmodal';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const MAX_CUSTOM_RANGE_DAYS = 310;
 
 function getDayName(weekday: number): string {
   return DAYS[weekday - 1];
@@ -50,12 +51,37 @@ function getDateRange(days: number): { date: Date; dateStr: string; dayName: str
   return dateArray;
 }
 
+function getDatesBetween(start: string, end: string): { date: Date; dateStr: string; dayName: string }[] {
+  if (!start || !end) return [];
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  if (Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate > endDate) {
+    return [];
+  }
+
+  const dateArray = [];
+  const current = new Date(startDate);
+  while (current <= endDate) {
+    if (dateArray.length >= MAX_CUSTOM_RANGE_DAYS) {
+      break;
+    }
+    dateArray.push({
+      date: new Date(current),
+      dateStr: getDateString(current),
+      dayName: getDayName(current.getDay() || 7),
+    });
+    current.setDate(current.getDate() + 1);
+  }
+  return dateArray;
+}
+
 interface StudentAttendance {
   studentId: string;
   studentName: string;
   gradeLevel: string;
   section: string;
   subject: string;
+  enrollmentDate: string; // earliest known attendance date (acts as enrollment boundary)
   attendance: Record<string, string>; // date -> status
   recordIds: Record<string, string>; // date -> recordId
 }
@@ -86,6 +112,9 @@ export default function PastAttendancePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [dateRangeFilter, setDateRangeFilter] = useState<number>(7);
+  const [startDateFilter, setStartDateFilter] = useState<string>('');
+  const [endDateFilter, setEndDateFilter] = useState<string>('');
+  const [dateInputError, setDateInputError] = useState<string>('');
   const [subjects, setSubjects] = useState<string[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
   const [sections, setSections] = useState<string[]>([]);
@@ -136,10 +165,11 @@ export default function PastAttendancePage() {
         const section = String(record.section || '');
         const subject = String(record.subject || '');
         const status = String(record.status || 'Absent');
-        const dateStr = String(record.createdAt || '').substring(0, 10);
+        const recordDateSource = String(record.scanTime || record.checkInTime || record.createdAt || '');
+        const dateStr = recordDateSource.substring(0, 10);
 
         if (!studentId || !studentName) return;
-        if (subject.toLowerCase() === 'general') return;
+        if (!dateStr) return;
 
         subjectsSet.add(subject);
         gradesSet.add(gradeLevel);
@@ -154,12 +184,16 @@ export default function PastAttendancePage() {
             gradeLevel,
             section,
             subject,
+            enrollmentDate: dateStr,
             attendance: {},
             recordIds: {},
           });
         }
 
         const student = studentMap.get(key)!;
+        if (!student.enrollmentDate || dateStr < student.enrollmentDate) {
+          student.enrollmentDate = dateStr;
+        }
         student.attendance[dateStr] = status;
         student.recordIds[dateStr] = String(record._id || '');
         console.log(`Stored record - studentId: ${studentId}, date: ${dateStr}, recordId: ${student.recordIds[dateStr]}, createdAt: ${record.createdAt}`);
@@ -194,6 +228,26 @@ export default function PastAttendancePage() {
   // Filter students based on criteria
   useEffect(() => {
     let filtered = allStudents;
+    const hasCustomDateInput = !!startDateFilter || !!endDateFilter;
+    const customRangeDays =
+      startDateFilter && endDateFilter
+        ? Math.floor(
+            (new Date(`${endDateFilter}T00:00:00`).getTime() -
+              new Date(`${startDateFilter}T00:00:00`).getTime()) /
+              86400000
+          ) + 1
+        : 0;
+    const hasInvalidCustomRange =
+      hasCustomDateInput &&
+      (!startDateFilter ||
+        !endDateFilter ||
+        Number.isNaN(customRangeDays) ||
+        customRangeDays <= 0 ||
+        customRangeDays > MAX_CUSTOM_RANGE_DAYS);
+    const activeDates =
+      !hasInvalidCustomRange && startDateFilter && endDateFilter
+        ? getDatesBetween(startDateFilter, endDateFilter)
+        : getDateRange(dateRangeFilter);
 
     if (selectedGrade) {
       filtered = filtered.filter((s) => s.gradeLevel === selectedGrade);
@@ -212,13 +266,43 @@ export default function PastAttendancePage() {
 
     if (statusFilter !== 'All') {
       filtered = filtered.filter((s) => {
-        const dates = getDateRange(dateRangeFilter);
-        return dates.some((day) => s.attendance[day.dateStr] === statusFilter);
+        return activeDates.some((day) => day.dateStr >= s.enrollmentDate && s.attendance[day.dateStr] === statusFilter);
       });
     }
 
     setFilteredStudents(filtered);
-  }, [allStudents, selectedGrade, selectedSection, searchQuery, statusFilter, dateRangeFilter]);
+  }, [allStudents, selectedGrade, selectedSection, searchQuery, statusFilter, dateRangeFilter, startDateFilter, endDateFilter]);
+
+  useEffect(() => {
+    const hasCustomDateInput = !!startDateFilter || !!endDateFilter;
+    if (!hasCustomDateInput) {
+      setDateInputError('');
+      return;
+    }
+    if (!startDateFilter || !endDateFilter) {
+      setDateInputError('Please select both start date and end date.');
+      return;
+    }
+
+    const start = new Date(`${startDateFilter}T00:00:00`);
+    const end = new Date(`${endDateFilter}T00:00:00`);
+    const dayCount = Math.floor((end.getTime() - start.getTime()) / 86400000) + 1;
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      setDateInputError('Invalid date range.');
+      return;
+    }
+    if (start > end) {
+      setDateInputError('Start date cannot be later than end date.');
+      return;
+    }
+    if (dayCount > MAX_CUSTOM_RANGE_DAYS) {
+      setDateInputError(`Custom date range is limited to ${MAX_CUSTOM_RANGE_DAYS} days.`);
+      return;
+    }
+
+    setDateInputError('');
+  }, [startDateFilter, endDateFilter]);
 
   const handleEditClick = (studentId: string, studentName: string, date: string, currentStatus: string, subject: string, gradeLevel: string, section: string) => {
     // Find the exact student record by matching all identifying fields
@@ -331,7 +415,41 @@ export default function PastAttendancePage() {
     }
   };
 
-  const displayedDates = getDateRange(dateRangeFilter);
+  const displayedDates =
+    !dateInputError && startDateFilter && endDateFilter
+      ? getDatesBetween(startDateFilter, endDateFilter)
+      : getDateRange(dateRangeFilter);
+  const statusSummary = filteredStudents.reduce(
+    (acc, student) => {
+      displayedDates.forEach((day) => {
+        if (day.dateStr < student.enrollmentDate) return;
+        const status = student.attendance[day.dateStr];
+        if (status === 'Present') {
+          acc.present += 1;
+          acc.total += 1;
+        } else if (status === 'Absent') {
+          acc.absent += 1;
+          acc.total += 1;
+        } else if (status === 'Late') {
+          acc.late += 1;
+          acc.total += 1;
+        } else if (status === 'Cutting') {
+          acc.cutting += 1;
+          acc.total += 1;
+        }
+      });
+      return acc;
+    },
+    { present: 0, absent: 0, late: 0, cutting: 0, total: 0 }
+  );
+  const exportDateRangeLabel =
+    !dateInputError && startDateFilter && endDateFilter
+      ? `${startDateFilter} to ${endDateFilter}`
+      : dateRangeFilter === 7
+        ? 'Last 7 Days'
+        : dateRangeFilter === 30
+          ? 'Last 30 Days'
+          : 'All History';
 
   if (loading) {
     return (
@@ -369,6 +487,44 @@ export default function PastAttendancePage() {
           <p className="text-sm">{error}</p>
         </div>
       )}
+
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+        <div
+          className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg dashboard-card"
+          style={{ background: 'rgba(67, 160, 71, 0.22)', borderLeftColor: 'var(--success)', borderColor: 'var(--border)' }}
+        >
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Present</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{statusSummary.present}</p>
+        </div>
+        <div
+          className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg dashboard-card"
+          style={{ background: 'rgba(216, 67, 21, 0.22)', borderLeftColor: 'var(--destructive)', borderColor: 'var(--border)' }}
+        >
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Absent</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--destructive)' }}>{statusSummary.absent}</p>
+        </div>
+        <div
+          className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg dashboard-card"
+          style={{ background: 'rgba(255, 193, 7, 0.28)', borderLeftColor: 'var(--accent)', borderColor: 'var(--border)' }}
+        >
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Late</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>{statusSummary.late}</p>
+        </div>
+        <div
+          className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg dashboard-card"
+          style={{ background: 'rgba(230, 81, 0, 0.22)', borderLeftColor: 'var(--error)', borderColor: 'var(--border)' }}
+        >
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Cutting</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>{statusSummary.cutting}</p>
+        </div>
+        <div
+          className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg dashboard-card"
+          style={{ background: 'var(--secondary)', borderLeftColor: 'var(--primary)', borderColor: 'var(--border)' }}
+        >
+          <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Total</p>
+          <p className="text-2xl font-bold" style={{ color: 'var(--primary-dark)' }}>{statusSummary.total}</p>
+        </div>
+      </div>
 
       {/* Filters */}
       <div
@@ -431,11 +587,15 @@ export default function PastAttendancePage() {
           {/* Date Range Filter */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Date Range
+              Preset Range
             </label>
             <select
               value={dateRangeFilter}
-              onChange={(e) => setDateRangeFilter(Number(e.target.value))}
+              onChange={(e) => {
+                setDateRangeFilter(Number(e.target.value));
+                setStartDateFilter('');
+                setEndDateFilter('');
+              }}
               className="w-full px-3 py-2 rounded-lg border"
               style={{
                 borderColor: 'var(--border)',
@@ -447,6 +607,42 @@ export default function PastAttendancePage() {
               <option value={30}>Last 30 Days</option>
               <option value={999}>All History</option>
             </select>
+          </div>
+
+          {/* Start Date Filter */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
+              Start Date
+            </label>
+            <input
+              type="date"
+              value={startDateFilter}
+              onChange={(e) => setStartDateFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border"
+              style={{
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--background)',
+                color: 'var(--foreground)',
+              }}
+            />
+          </div>
+
+          {/* End Date Filter */}
+          <div>
+            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
+              End Date
+            </label>
+            <input
+              type="date"
+              value={endDateFilter}
+              onChange={(e) => setEndDateFilter(e.target.value)}
+              className="w-full px-3 py-2 rounded-lg border"
+              style={{
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--background)',
+                color: 'var(--foreground)',
+              }}
+            />
           </div>
 
           {/* Status Filter */}
@@ -491,6 +687,19 @@ export default function PastAttendancePage() {
             />
           </div>
         </div>
+
+        {dateInputError && (
+          <div
+            className="rounded-lg border px-3 py-2 text-sm"
+            style={{
+              borderColor: 'var(--error)',
+              color: 'var(--error)',
+              backgroundColor: 'color-mix(in srgb, var(--error) 8%, transparent)',
+            }}
+          >
+            {dateInputError}
+          </div>
+        )}
       </div>
 
       {/* Attendance Table */}
@@ -558,8 +767,20 @@ export default function PastAttendancePage() {
                       {student.subject}
                     </td>
                     {displayedDates.map((day) => {
+                      const isBeforeEnrollment = day.dateStr < student.enrollmentDate;
+                      if (isBeforeEnrollment) {
+                        return (
+                          <td
+                            key={`${student.studentId}-${day.dateStr}`}
+                            className="px-2 py-3 text-center"
+                          />
+                        );
+                      }
+
                       const hasRecord = !!student.recordIds[day.dateStr];
-                      const status = hasRecord ? (student.attendance[day.dateStr] || 'Absent') : 'Unscanned';
+                      const status = hasRecord
+                        ? (student.attendance[day.dateStr] || 'Absent')
+                        : 'Unscanned';
                       const colors = getStatusColor(status);
                       return (
                         <td
@@ -607,8 +828,8 @@ export default function PastAttendancePage() {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         students={filteredStudents}
-        dateRangeLabel={dateRangeFilter === 7 ? 'Last 7 Days' : dateRangeFilter === 30 ? 'Last 30 Days' : 'All History'}
-        dateRangeFilter={dateRangeFilter}
+        dateRangeLabel={exportDateRangeLabel}
+        exportDates={displayedDates.map((d) => d.dateStr)}
       />
 
       {/* Edit Modal */}
