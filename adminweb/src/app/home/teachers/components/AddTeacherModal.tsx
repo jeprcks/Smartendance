@@ -16,6 +16,7 @@ interface TeacherFormData {
   password: string;
   name: string;
   subjects: string[];
+  department?: string;
   email: string;
   phoneNumber: string;
   gender: string;
@@ -32,6 +33,7 @@ interface ValidationErrors {
   password?: string;
   name?: string;
   subjects?: string;
+  department?: string;
   email?: string;
   phoneNumber?: string;
   gender?: string;
@@ -49,6 +51,7 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
     password: '',
     name: '',
     subjects: [],
+    department: '',
     email: '',
     phoneNumber: '',
     gender: '',
@@ -395,6 +398,37 @@ export default function AddTeacherModal({ isOpen, onClose, onAdd }: AddTeacherMo
                   <option value="Other">Other</option>
                 </select>
                 <FieldError error={errors.gender} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                  Birth Date
+                </label>
+                <input
+                  type="date"
+                  name="birthDate"
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.birthDate ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
+                  }`}
+                  value={formData.birthDate}
+                  onChange={handleChange}
+                />
+                <FieldError error={errors.birthDate} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                  Department
+                </label>
+                <input
+                  type="text"
+                  name="department"
+                  placeholder="Enter department"
+                  className={`w-full px-4 py-2.5 border rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] ${
+                    errors.department ? 'border-[var(--destructive)] bg-red-50/50' : 'border-[var(--border)]'
+                  }`}
+                  value={formData.department || ''}
+                  onChange={handleChange}
+                />
+                <FieldError error={errors.department} />
               </div>
             </div>
           </div>

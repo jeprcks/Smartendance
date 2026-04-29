@@ -134,23 +134,6 @@ studentSchema.virtual('qrCodeData').get(function () {
     };
 });
 
-// Hash password before saving
-const bcrypt = require('bcryptjs');
-
-studentSchema.pre('save', async function (next) {
-    // Only hash the password if it has been modified (or is new)
-    if (!this.isModified('password')) return next();
-
-    try {
-        // Generate salt and hash password
-        const salt = await bcrypt.genSalt(10);
-        this.password = await bcrypt.hash(this.password, salt);
-        next();
-    } catch (error) {
-        next(error);
-    }
-});
-
 // Add sparse index for optional email to prevent duplicate null errors
 studentSchema.index({ 'parentInfo.email': 1 }, { sparse: true });
 

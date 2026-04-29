@@ -16,21 +16,11 @@ export interface Teacher {
   dateJoined: string;
   status: 'Active' | 'Inactive' | 'Suspended';
   department?: string;
-  qualifications?: Array<{
-    degree: string;
-    institution: string;
-    year: number;
-  }>;
   address?: {
     street?: string;
     city?: string;
     province?: string;
     zipCode?: string;
-  };
-  emergencyContact?: {
-    name?: string;
-    relationship?: string;
-    contactNumber?: string;
   };
   schedule?: Array<{
     day: 'Monday' | 'Tuesday' | 'Wednesday' | 'Thursday' | 'Friday' | 'Saturday' | 'Sunday';
@@ -143,21 +133,11 @@ class TeacherService {
     phoneNumber: string;
     password: string;
     department?: string;
-    qualifications?: Array<{
-      degree: string;
-      institution: string;
-      year: number;
-    }>;
     address?: {
       street?: string;
       city?: string;
       province?: string;
       zipCode?: string;
-    };
-    emergencyContact?: {
-      name?: string;
-      relationship?: string;
-      contactNumber?: string;
     };
     schedule?: Array<{
       day: string;

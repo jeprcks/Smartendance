@@ -17,9 +17,7 @@ const createTeacher = async (req, res) => {
             birthDate,
             password,
             department,
-            qualifications = [],
             address = {},
-            emergencyContact = {},
             schedule = [],
             profilePicture
         } = req.body;
@@ -75,9 +73,7 @@ const createTeacher = async (req, res) => {
                 password: hashedPassword,
                 plainPassword: password,
                 department,
-                qualifications,
                 address,
-                emergencyContact,
                 schedule,
                 profilePicture,
                 status: 'Active'

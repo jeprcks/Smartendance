@@ -82,23 +82,12 @@ const teacherSchema = new Schema(
             required: false,
             trim: true
         },
-        qualifications: [{
-            degree: { type: String },
-            institution: { type: String },
-            year: { type: Number }
-        }],
         // Address information
         address: {
             street: { type: String },
             city: { type: String },
             province: { type: String },
             zipCode: { type: String }
-        },
-        // Emergency contact
-        emergencyContact: {
-            name: { type: String },
-            relationship: { type: String },
-            contactNumber: { type: String }
         },
         // Teaching schedule (optional)
         schedule: [{
