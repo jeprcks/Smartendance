@@ -94,12 +94,20 @@ function connectMongo() {
   const dns = require('dns');
   dns.setServers(['8.8.8.8', '8.8.4.4']);
   return mongoose.connect(uri, {
-    serverSelectionTimeoutMS: 30000,
-    connectTimeoutMS: 30000,
-    socketTimeoutMS: 45000,
-    family: 4,
+    // Regional optimization for HKG1 (Hong Kong)
+    serverSelectionTimeoutMS: 5000,   // Faster for same-region connections
+    connectTimeoutMS: 10000,          // Connection timeout
+    socketTimeoutMS: 45000,           // Keep-alive for long operations
+    maxPoolSize: 10,                  // Connection pool size
+    minPoolSize: 2,                   // Keep min connections alive
+    maxIdleTimeMS: 30000,             // Close idle connections
+    family: 4,                        // IPv4 only (faster for regional)
     retryWrites: true,
-    w: 'majority'
+    w: 'majority',
+    // Serverless optimization
+    bufferCommands: false,            // Don't buffer commands (serverless)
+    autoCreate: true,
+    autoIndex: true
   });
 }
 
@@ -150,6 +158,28 @@ const settingsRoutes = require("./routes/settingsRoutes");
 // Health check (GET /) so you can verify backend is deployed
 app.get("/", (req, res) => {
   res.json({ ok: true, message: "Smartendance API", api: "/api/users/login, /api/students, ..." });
+});
+
+// Keep-alive endpoint: prevents Vercel cold starts
+// Call this every 5 minutes via cron job to keep functions warm
+app.get("/api/keepalive", async (req, res) => {
+  try {
+    await connectMongo();
+    const isConnected = mongoose.connection.readyState === 1;
+    res.json({ 
+      ok: true, 
+      message: "Server is alive", 
+      dbConnected: isConnected,
+      timestamp: new Date().toISOString()
+    });
+  } catch (err) {
+    console.error("Keepalive check failed:", err);
+    res.status(503).json({ 
+      ok: false, 
+      message: "Server is alive but database unavailable",
+      error: err.message 
+    });
+  }
 });
 
 app.use("/api/users", userRoutes);
