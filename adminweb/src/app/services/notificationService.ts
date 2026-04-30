@@ -1,6 +1,6 @@
 import { historyService, AttendanceRecord } from './historyService';
 import { studentService, Student } from './studentService';
-import { format, parseISO, startOfDay } from 'date-fns';
+import { format, isSameDay, parseISO, startOfDay } from 'date-fns';
 
 export interface Notification {
   id: string;
@@ -219,48 +219,38 @@ class NotificationService {
   private checkUnscannedStudents(
     students: Student[],
     records: AttendanceRecord[],
-    daysToCheck: number = 30
+    _daysToCheck: number = 1
   ): Notification[] {
     const notifications: Notification[] = [];
-    const today = startOfDay(new Date());
-    const safeDaysToCheck = Math.max(1, daysToCheck);
 
-    // Track which student scanned IN on which date.
-    const scannedInByStudentDate = new Set<string>();
+    const today = new Date();
+
+    // Only consider students who scanned IN today.
+    // This makes "Unscanned" a true daily indicator.
+    const scannedTodayStudentIds = new Set<string>();
     records.forEach((record) => {
-      if (record.attendanceType !== 'In') return;
-      const scanDate = startOfDay(parseISO(record.scanTime));
-      const dateKey = format(scanDate, 'yyyy-MM-dd');
-      scannedInByStudentDate.add(`${record.studentId}-${dateKey}`);
+      const scanDate = parseISO(record.scanTime);
+      if (record.attendanceType === 'In' && isSameDay(scanDate, today)) {
+        scannedTodayStudentIds.add(record.studentId);
+      }
     });
 
-    // Create one notification per missed day, per active enrolled student.
+    // Check each student to see if they haven't scanned
     students.forEach((student) => {
       const isActiveStudent = !student.status || student.status === 'Active';
-      if (!isActiveStudent) return;
-      const enrollmentDate = student.createdAt ? startOfDay(new Date(student.createdAt)) : null;
-
-      for (let i = 0; i < safeDaysToCheck; i++) {
-        const targetDate = new Date(today);
-        targetDate.setDate(today.getDate() - i);
-        if (enrollmentDate && targetDate < enrollmentDate) continue;
-        const dateKey = format(targetDate, 'yyyy-MM-dd');
-        const hasScanned = scannedInByStudentDate.has(`${student.studentId}-${dateKey}`);
-
-        if (!hasScanned) {
-          notifications.push({
-            id: `unscanned-${student.studentId}-${dateKey}`,
-            type: 'unscanned',
-            studentId: student.studentId,
-            studentName: student.fullName || 'Unknown',
-            gradeLevel: student.gradeLevel || 'N/A',
-            section: student.section || 'N/A',
-            consecutiveCount: 1,
-            lastOccurrence: targetDate.toISOString(),
-            severity: 'warning',
-            message: `${student.fullName || 'Student'} did not scan on ${format(targetDate, 'MMM dd, yyyy')}`,
-          });
-        }
+      if (isActiveStudent && !scannedTodayStudentIds.has(student.studentId)) {
+        notifications.push({
+          id: `unscanned-${student.studentId}`,
+          type: 'unscanned',
+          studentId: student.studentId,
+          studentName: student.fullName || 'Unknown',
+          gradeLevel: student.gradeLevel || 'N/A',
+          section: student.section || 'N/A',
+          consecutiveCount: 1,
+          lastOccurrence: today.toISOString(),
+          severity: 'warning',
+          message: `${student.fullName || 'Student'} has not scanned today`,
+        });
       }
     });
 
@@ -309,8 +299,8 @@ class NotificationService {
       // Check for scanned in but no time out (abnormal scanning) – last 7 days
       const noTimeOutNotifications = this.checkNoTimeOut(records, 7);
 
-      // Check for unscanned students across selected history window
-      const unscannedNotifications = this.checkUnscannedStudents(students, records, daysToCheck);
+      // Check for unscanned students (last 1 day)
+      const unscannedNotifications = this.checkUnscannedStudents(students, records, 1);
 
       // Combine all notifications
       const allNotifications = [

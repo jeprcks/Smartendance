@@ -5,7 +5,6 @@ interface ViewTeacherModalProps {
   onClose: () => void;
   teacher: {
     teacherId: string;
-    username?: string;
     name: string;
     role: string;
     subject?: string;
@@ -88,14 +87,6 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
                 <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.name}</p>
               </div>
               <div>
-                <p className="text-sm font-medium text-[var(--muted-foreground)]">Username</p>
-                <p className="text-base text-[var(--foreground)] font-mono mt-0.5">{teacher.username || '*****'}</p>
-              </div>
-              <div>
-                <p className="text-sm font-medium text-[var(--muted-foreground)]">Password</p>
-                <p className="text-base text-[var(--foreground)] font-mono mt-0.5">{(teacher as any).plainPassword || '*****'}</p>
-              </div>
-              <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">Role</p>
                 <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.role}</p>
               </div>
@@ -126,6 +117,10 @@ export default function ViewTeacherModal({ isOpen, onClose, teacher }: ViewTeach
               <div>
                 <p className="text-sm font-medium text-[var(--muted-foreground)]">Email Address</p>
                 <p className="text-base text-[var(--foreground)] mt-0.5">{teacher.email}</p>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-[var(--muted-foreground)]">Password</p>
+                <p className="text-base text-[var(--foreground)] font-mono mt-0.5">{(teacher as any).plainPassword || 'N/A'}</p>
               </div>
             </div>
           </div>

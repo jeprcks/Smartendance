@@ -32,8 +32,8 @@ async function resolveGeneralScanStatus(studentShift, scanDate) {
         ? Number(settings.lateThresholdMinutes)
         : fallbackThreshold;
 
-    const morningStartMinutes = parseTimeToMinutes(settings?.morningShiftTimeIn, fallbackMorningStart);
-    const afternoonStartMinutes = parseTimeToMinutes(settings?.afternoonShiftTimeIn, fallbackAfternoonStart);
+    const morningStartMinutes = parseTimeToMinutes(settings?.morningShiftCutoff, fallbackMorningStart);
+    const afternoonStartMinutes = parseTimeToMinutes(settings?.afternoonShiftCutoff, fallbackAfternoonStart);
 
     const scanMinutes = scanDate.getHours() * 60 + scanDate.getMinutes();
     const shiftStart = studentShift === 'Afternoon' ? afternoonStartMinutes : morningStartMinutes;
@@ -663,42 +663,8 @@ const getStudentByQRCode = async (req, res) => {
             return res.status(404).json({ error: "Student not found" });
         }
 
-        // Create attendance record for QR code scan
-        // QR code scans are always "General" subject.
-        // Apply late-status rules only for General; subject-specific records stay Present.
-        try {
-            const scanTime = new Date();
-            const normalizedSubject = typeof subject === 'string' ? subject.trim() : 'General';
-            const isGeneralSubject = normalizedSubject.toLowerCase() === 'general';
-            const computedStatus = isGeneralSubject
-                ? await resolveDailyGeneralStatus(studentId, student.shift, scanTime)
-                : 'Present';
-
-            const attendanceRecord = new History({
-                studentId,
-                studentName: student.fullName,
-                subject: 'General', // Always General for QR code scans
-                attendanceType: 'In',
-                checkInTime: scanTime,
-                scanTime,
-                gradeLevel: student.gradeLevel,
-                section: student.section,
-                shift: student.shift,
-                status: computedStatus,
-                qrCodeData: parsedData,
-                location,
-                deviceInfo,
-                notes: notes || 'QR Code scanned - Teacher can update status for specific subjects'
-            });
-
-            // Save the attendance record
-            await attendanceRecord.save();
-
-            console.log(`QR Code attendance record created for student ${studentId}: General - ${computedStatus}`);
-        } catch (attendanceError) {
-            console.error('Error creating attendance record:', attendanceError);
-            // Continue with student info even if attendance record creation fails
-        }
+        // NOTE: QR scan should only fetch student info.
+        // Attendance creation is handled by `/api/history` so scanner/admin rules can't block scans.
 
         // Return only the essential information for mobile display
         const studentInfo = {
@@ -775,33 +741,35 @@ const validateCheckIn = async (req, res) => {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        // Find open check-in: Has 'In' attendanceType but no corresponding 'Out'
-        // Use explicit query: attendanceType='In' AND (checkOutTime does not exist OR checkOutTime is null)
-        const openCheckIn = await History.findOne({
+        // Check the latest check-in today and only block when that latest one is still open.
+        // This avoids false blocks caused by stale historical open records.
+        const latestInRecord = await History.findOne({
             studentId: studentId,
             attendanceType: 'In',
             scanTime: {
                 $gte: today,
                 $lt: tomorrow
             },
-            $or: [
-                { checkOutTime: { $exists: false } },
-                { checkOutTime: null }
-            ]
-        });
+            // Ignore auto-absent and "Out" records; only treat Present/Late as open check-in
+            status: { $in: ['Present', 'Late'] }
+        }).sort({ scanTime: -1 });
+
+        const hasOpenCheckIn = !!latestInRecord && (
+            latestInRecord.checkOutTime === null || latestInRecord.checkOutTime === undefined
+        );
 
         console.log(`🔍 Check-in validation for ${studentId}:`);
         console.log(`  - Date range: ${today} to ${tomorrow}`);
-        console.log(`  - Open check-in found: ${openCheckIn ? 'YES (BLOCKED)' : 'NO (ALLOWED)'}`);
-        if (openCheckIn) {
-            console.log(`  - In Record ID: ${openCheckIn._id}`);
-            console.log(`  - Check-in Time: ${openCheckIn.checkInTime}`);
-            console.log(`  - Check-out Time: ${openCheckIn.checkOutTime}`);
+        console.log(`  - Open check-in found: ${hasOpenCheckIn ? 'YES (BLOCKED)' : 'NO (ALLOWED)'}`);
+        if (latestInRecord) {
+            console.log(`  - Latest In Record ID: ${latestInRecord._id}`);
+            console.log(`  - Latest In Time: ${latestInRecord.checkInTime}`);
+            console.log(`  - Latest In Check-out Time: ${latestInRecord.checkOutTime}`);
         }
 
         res.status(200).json({
             success: true,
-            hasOpenCheckIn: openCheckIn !== null,
+            hasOpenCheckIn,
             studentName: student.fullName,
             studentId: student.studentId
         });

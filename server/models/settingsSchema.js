@@ -13,8 +13,6 @@ const settingsSchema = new Schema(
 
     // Attendance rules
     lateThresholdMinutes: { type: Number, default: 15 },
-    morningShiftTimeIn: { type: String, default: "07:00" }, // HH:mm - morning expected check-in start
-    afternoonShiftTimeIn: { type: String, default: "13:00" }, // HH:mm - afternoon expected check-in start
     morningShiftCutoff: { type: String, default: "12:00" }, // HH:mm - after this = late for morning
     afternoonShiftCutoff: { type: String, default: "17:00" }, // HH:mm - after this = late for afternoon
 

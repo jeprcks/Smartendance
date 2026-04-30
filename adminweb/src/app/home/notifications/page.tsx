@@ -471,7 +471,7 @@ export default function NotificationsPage() {
                           </span>
                         ) : notification.type === 'unscanned' ? (
                           <span>
-                            Not scanned date: {format(new Date(notification.lastOccurrence), 'MMM dd, yyyy')}
+                            Not scanned: {formatDistanceToNow(new Date(notification.lastOccurrence), { addSuffix: true })}
                           </span>
                         ) : (
                           <>

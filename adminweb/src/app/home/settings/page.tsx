@@ -26,8 +26,6 @@ export default function SettingsPage() {
           watermarkLogo: data.watermarkLogo,
           address: data.address ?? '',
           lateThresholdMinutes: data.lateThresholdMinutes ?? 15,
-          morningShiftTimeIn: data.morningShiftTimeIn ?? '07:00',
-          afternoonShiftTimeIn: data.afternoonShiftTimeIn ?? '13:00',
           morningShiftCutoff: data.morningShiftCutoff ?? '12:00',
           afternoonShiftCutoff: data.afternoonShiftCutoff ?? '17:00',
           academicYear: data.academicYear ?? '',
@@ -233,7 +231,7 @@ export default function SettingsPage() {
             <Clock size={20} className="text-[var(--primary)]" />
             Attendance Rules
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
               <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Late Threshold (minutes)</label>
               <input
@@ -247,42 +245,22 @@ export default function SettingsPage() {
               <p className="mt-1 text-xs text-[var(--muted-foreground)]">Minutes after shift time-in before status becomes Late (e.g. 07:00 + 15 mins)</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Morning Check-in Time</label>
-              <input
-                type="time"
-                value={form.morningShiftTimeIn ?? '07:00'}
-                onChange={(e) => setForm((f) => ({ ...f, morningShiftTimeIn: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Afternoon Check-in Time</label>
-              <input
-                type="time"
-                value={form.afternoonShiftTimeIn ?? '13:00'}
-                onChange={(e) => setForm((f) => ({ ...f, afternoonShiftTimeIn: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Morning Shift Cutoff Time</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Morning Shift Time-in</label>
               <input
                 type="time"
                 value={form.morningShiftCutoff ?? '12:00'}
                 onChange={(e) => setForm((f) => ({ ...f, morningShiftCutoff: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">After this time, morning students with no scan are treated as absent/late by rules.</p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Afternoon Shift Cutoff Time</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Afternoon Shift Time-in</label>
               <input
                 type="time"
                 value={form.afternoonShiftCutoff ?? '17:00'}
                 onChange={(e) => setForm((f) => ({ ...f, afternoonShiftCutoff: e.target.value }))}
                 className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
               />
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">After this time, afternoon students with no scan are treated as absent/late by rules.</p>
             </div>
           </div>
         </div>

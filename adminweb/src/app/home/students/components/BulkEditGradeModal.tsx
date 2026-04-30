@@ -99,13 +99,13 @@ export default function BulkEditGradeModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={handleClose} aria-hidden />
-      <div className="relative z-10 bg-[var(--surface)] rounded-xl shadow-xl border border-[var(--border)] p-6 w-full max-w-md mx-4">
-        <h3 className="text-lg font-semibold text-[var(--foreground)] mb-1">Bulk edit grade / section / shift</h3>
-        <p className="text-sm text-[var(--foreground)]/80 mb-4">{count} student(s) selected. Set the fields you want to apply to all.</p>
+      <div className="relative z-10 bg-white rounded-xl shadow-xl border border-gray-200 p-6 w-full max-w-md mx-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-1">Bulk edit grade / section / shift</h3>
+        <p className="text-sm text-gray-500 mb-4">{count} student(s) selected. Set the fields you want to apply to all.</p>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Status</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
             <select
               value={status}
               onChange={(e) => {
@@ -115,7 +115,7 @@ export default function BulkEditGradeModal({
                   setSchoolYearTo('');
                 }
               }}
-              className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--foreground)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] [color-scheme:light]"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
             >
               <option value="">— No change —</option>
               <option value="Active">Active</option>
@@ -125,16 +125,16 @@ export default function BulkEditGradeModal({
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Grade Level</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Grade Level</label>
             {isGraduated ? (
-              <div className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--muted)] text-[var(--muted-foreground)] font-medium text-sm">
+              <div className="w-full px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium text-sm">
                 N/A
               </div>
             ) : (
               <select
                 value={gradeLevel}
                 onChange={(e) => setGradeLevel(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--foreground)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] [color-scheme:light]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="">— No change —</option>
                 {gradeLevels.map((g) => (
@@ -147,7 +147,7 @@ export default function BulkEditGradeModal({
           {isGraduated && (
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">School year (from)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">School year (from)</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -155,11 +155,11 @@ export default function BulkEditGradeModal({
                   value={schoolYearFrom}
                   onChange={(e) => setSchoolYearFrom(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="e.g. 2023"
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">School year (to)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">School year (to)</label>
                 <input
                   type="text"
                   inputMode="numeric"
@@ -167,16 +167,16 @@ export default function BulkEditGradeModal({
                   value={schoolYearTo}
                   onChange={(e) => setSchoolYearTo(e.target.value.replace(/\D/g, '').slice(0, 4))}
                   placeholder="e.g. 2024"
-                  className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
                 />
               </div>
             </div>
           )}
 
           <div>
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Section</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Section</label>
             {isGraduated ? (
-              <div className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--muted)] text-[var(--muted-foreground)] font-medium text-sm">
+              <div className="w-full px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium text-sm">
                 N/A
               </div>
             ) : (
@@ -185,22 +185,22 @@ export default function BulkEditGradeModal({
                 value={section}
                 onChange={(e) => setSection(e.target.value)}
                 placeholder="e.g. A, B, C — leave blank to skip"
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--foreground)] placeholder:text-[var(--muted-foreground)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               />
             )}
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-1">Shift</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Shift</label>
             {isGraduated ? (
-              <div className="w-full px-3 py-2 rounded-lg border border-[var(--border)] bg-[var(--muted)] text-[var(--muted-foreground)] font-medium text-sm">
+              <div className="w-full px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 text-indigo-700 font-medium text-sm">
                 N/A
               </div>
             ) : (
               <select
                 value={shift}
                 onChange={(e) => setShift(e.target.value)}
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-lg bg-[var(--surface)] text-[var(--foreground)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] [color-scheme:light]"
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
               >
                 <option value="">— No change —</option>
                 <option value="Morning">Morning</option>
@@ -215,7 +215,7 @@ export default function BulkEditGradeModal({
             type="button"
             onClick={handleClose}
             disabled={isSubmitting}
-            className="px-4 py-2 text-sm font-medium text-[var(--foreground)] bg-[var(--muted)] rounded-lg hover:bg-[var(--secondary)] disabled:opacity-50"
+            className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 disabled:opacity-50"
           >
             Cancel
           </button>

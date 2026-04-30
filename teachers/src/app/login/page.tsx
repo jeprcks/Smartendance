@@ -63,7 +63,7 @@ export default function LoginPage() {
           'Cannot connect to server. Check internet connection and try again.'
         );
       } else if (msg.includes('401') || msg.includes('Invalid') || msg.includes('Unauthorized')) {
-        setError('Invalid email, ID, username, or password. Please try again.');
+        setError('Invalid email or password. Please try again.');
       } else {
         setError(msg);
       }
@@ -154,14 +154,14 @@ export default function LoginPage() {
                 className="block text-sm font-medium mb-1"
                 style={{ color: 'var(--foreground)' }}
               >
-                Email, ID or Username
+                Email or ID
               </label>
               <input
                 id="email"
                 type="text"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="Enter your email, ID, or username"
+                placeholder="Enter your email or ID"
                 className="w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
                 style={{
                   borderColor: 'var(--border)',

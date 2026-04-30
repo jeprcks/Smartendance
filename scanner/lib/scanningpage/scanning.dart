@@ -30,6 +30,9 @@ class _ScanningPageState extends State<ScanningPage> {
   // Student service instance
   final StudentService _studentService = StudentService();
   final AudioPlayer _beepPlayer = AudioPlayer();
+  bool _isProcessingScan = false;
+  String? _lastScanCode;
+  DateTime? _lastScanAt;
 
   @override
   void initState() {
@@ -62,112 +65,117 @@ class _ScanningPageState extends State<ScanningPage> {
 
   // Function to fetch student information from API
   Future<void> fetchStudentInfo(String qrData) async {
+    if (_isProcessingScan) return;
+    _isProcessingScan = true;
     setState(() {
       isLoading = true;
       errorMessage = null;
       studentInfo = null;
     });
 
-    // For Check-In: Only prevent if student has an open check-in (hasn't checked out yet)
-    // If student has checked out (status "Out"), allow check-in again
-    if (attendanceMode == 'In') {
-      final validationResult = await _studentService.validateCheckIn(qrData);
+    // For Check-In: prevent if student already has an open check-in.
+    // Student must check out first before checking in again.
+    try {
+      if (attendanceMode == 'In') {
+        final validationResult = await _studentService.validateCheckIn(qrData);
 
-      if (validationResult['hasOpenCheckIn'] == true) {
-        final studentName = validationResult['studentName'] ?? 'Unknown';
+        if (validationResult['hasOpenCheckIn'] == true) {
+          final studentName = validationResult['studentName'] ?? 'Unknown';
 
-        setState(() {
-          isLoading = false;
-          errorMessage =
-              '$studentName already checked in (status: Present).\n\nPlease checkout first before checking in again.';
-          studentInfo = null;
-        });
+          setState(() {
+            isLoading = false;
+            errorMessage =
+                '$studentName already checked in (status: Present).\n\nPlease checkout first before checking in again.';
+            studentInfo = null;
+          });
 
-        return; // Prevent check-in if there's an open check-in
+          return;
+        }
       }
-      // If hasOpenCheckIn is false, student can check in (either first time or after checkout)
-    }
 
     // For Check-Out: Only allow if student has checked in (status "Present")
     // Prevent if student hasn't checked in yet, already checked out, or has checked in 2 times
-    if (attendanceMode == 'Out') {
-      final validationResult = await _studentService.validateCheckIn(qrData);
-      final hasOpenCheckIn = validationResult['hasOpenCheckIn'] == true;
+      if (attendanceMode == 'Out') {
+        final validationResult = await _studentService.validateCheckIn(qrData);
+        final hasOpenCheckIn = validationResult['hasOpenCheckIn'] == true;
 
       // If student hasn't checked in yet, prevent checkout
-      if (!hasOpenCheckIn) {
-        final studentName = validationResult['studentName'] ?? 'Student';
+        if (!hasOpenCheckIn) {
+          final studentName = validationResult['studentName'] ?? 'Student';
 
-        setState(() {
-          isLoading = false;
-          errorMessage =
-              '$studentName has not checked in yet.\n\nPlease check-in first (status: Present) before checking out.';
-          studentInfo = null;
-        });
+          setState(() {
+            isLoading = false;
+            errorMessage =
+                '$studentName has not checked in yet.\n\nPlease check-in first (status: Present) before checking out.';
+            studentInfo = null;
+          });
 
-        return; // Prevent checkout if no check-in exists
-      }
+          return; // Prevent checkout if no check-in exists
+        }
 
       // Check if student already checked out today (without checking in again)
-      final checkoutValidation = await _studentService.validateCheckOut(qrData);
-      final alreadyCheckedOut = checkoutValidation['alreadyCheckedOut'] == true;
+        final checkoutValidation = await _studentService.validateCheckOut(qrData);
+        final alreadyCheckedOut = checkoutValidation['alreadyCheckedOut'] == true;
 
-      if (alreadyCheckedOut) {
-        // Student already checked out, need to check in again first
-        final studentName = checkoutValidation['studentName'] ?? 
-                           validationResult['studentName'] ?? 
-                           'Student';
+        if (alreadyCheckedOut) {
+          // Student already checked out, need to check in again first
+          final studentName = checkoutValidation['studentName'] ??
+              validationResult['studentName'] ??
+              'Student';
 
-        setState(() {
-          isLoading = false;
-          errorMessage =
-              '$studentName has already checked out (status: Out).\n\nPlease check-in again (status: Present) before checking out.';
-          studentInfo = null;
-        });
+          setState(() {
+            isLoading = false;
+            errorMessage =
+                '$studentName has already checked out (status: Out).\n\nPlease check-in again (status: Present) before checking out.';
+            studentInfo = null;
+          });
 
-        return; // Prevent checkout if already checked out
+          return; // Prevent checkout if already checked out
+        }
+        // Allow checkout after any check-in (including 2nd check-in)
       }
-      // Allow checkout after any check-in (including 2nd check-in)
-    }
 
-    // QR code scans are always "General" subject - teachers will update for specific subjects
-    final result = await _studentService.fetchStudentInfo(
-      qrData,
-      subject: 'General',
-      notes:
-          'QR Code scanned - Teacher can update status for specific subjects',
-    );
-
-    if (result['success'] == true && result['student'] != null) {
-      final student = result['student'];
-
-      // Now create attendance record with the new In/Out system
-      final attendanceResult = await _studentService.createAttendanceRecord(
-        student['studentId'],
-        student['fullName'],
-        attendanceType:
-            attendanceMode, // Use local variable instead of constant
+      // QR code scans are always "General" subject - teachers will update for specific subjects
+      final result = await _studentService.fetchStudentInfo(
+        qrData,
         subject: 'General',
-        qrCodeData: {'encodedText': qrData},
+        notes:
+            'QR Code scanned - Teacher can update status for specific subjects',
       );
 
-      setState(() {
-        if (attendanceResult['success'] == true) {
-          studentInfo = student;
-          errorMessage = null;
-        } else {
+      if (result['success'] == true && result['student'] != null) {
+        final student = result['student'];
+
+      // Now create attendance record with the new In/Out system
+        final attendanceResult = await _studentService.createAttendanceRecord(
+          student['studentId'],
+          student['fullName'],
+          attendanceType:
+              attendanceMode, // Use local variable instead of constant
+          subject: 'General',
+          qrCodeData: {'encodedText': qrData},
+        );
+
+        setState(() {
+          if (attendanceResult['success'] == true) {
+            studentInfo = student;
+            errorMessage = null;
+          } else {
+            studentInfo = null;
+            errorMessage =
+                attendanceResult['error'] ?? 'Failed to record attendance';
+          }
+          isLoading = false;
+        });
+      } else {
+        setState(() {
           studentInfo = null;
-          errorMessage =
-              attendanceResult['error'] ?? 'Failed to record attendance';
-        }
-        isLoading = false;
-      });
-    } else {
-      setState(() {
-        studentInfo = null;
-        errorMessage = result['error'];
-        isLoading = false;
-      });
+          errorMessage = result['error'];
+          isLoading = false;
+        });
+      }
+    } finally {
+      _isProcessingScan = false;
     }
   }
 
@@ -207,6 +215,7 @@ class _ScanningPageState extends State<ScanningPage> {
                     scannedCode = null;
                     errorMessage = null;
                   });
+                  cameraController.start();
                 },
               ),
             ),
@@ -231,6 +240,7 @@ class _ScanningPageState extends State<ScanningPage> {
                     scannedCode = null;
                     errorMessage = null;
                   });
+                  cameraController.start();
                 },
               ),
             ),
@@ -264,20 +274,32 @@ class _ScanningPageState extends State<ScanningPage> {
         children: [
           MobileScanner(
             controller: cameraController,
-            onDetect: (BarcodeCapture capture) {
+            onDetect: (BarcodeCapture capture) async {
               final List<Barcode> barcodes = capture.barcodes;
               if (barcodes.isNotEmpty) {
                 final String? code = barcodes.first.rawValue;
                 if (code != null && code != scannedCode) {
+                  final now = DateTime.now();
+                  if (_lastScanCode == code &&
+                      _lastScanAt != null &&
+                      now.difference(_lastScanAt!).inSeconds < 3) {
+                    return;
+                  }
+                  if (_isProcessingScan) {
+                    return;
+                  }
                   setState(() {
                     scannedCode = code;
                   });
+                  _lastScanCode = code;
+                  _lastScanAt = now;
+                  cameraController.stop();
 
                   // Play success beep when QR code is scanned
                   _playScanBeep();
 
                   // Fetch student information when QR code is scanned
-                  fetchStudentInfo(code);
+                  await fetchStudentInfo(code);
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
@@ -316,12 +338,14 @@ class _ScanningPageState extends State<ScanningPage> {
                   studentInfo = null;
                   scannedCode = null;
                 });
+                cameraController.start();
               },
               onClose: () {
                 setState(() {
                   studentInfo = null;
                   scannedCode = null;
                 });
+                cameraController.start();
               },
             ),
 
@@ -334,6 +358,7 @@ class _ScanningPageState extends State<ScanningPage> {
                   errorMessage = null;
                   scannedCode = null;
                 });
+                cameraController.start();
               },
             ),
         ],
