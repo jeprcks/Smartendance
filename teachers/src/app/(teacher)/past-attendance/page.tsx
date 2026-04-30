@@ -468,7 +468,7 @@ export default function PastAttendancePage() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center justify-between">
-        <PageHeader title="Past Attendance" icon={<CalendarIconForHeader />} />
+        <PageHeader title="Archive" icon={<CalendarIconForHeader />} />
         <button
           onClick={() => setIsPrintModalOpen(true)}
           className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"

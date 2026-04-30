@@ -21,6 +21,10 @@ interface AttendanceTableProps {
   mode?: 'records' | 'schedule';
   /** When true, the status action is disabled for that row (e.g. when student is Out) */
   isActionDisabled?: (row: AttendanceRow) => boolean;
+  selectedRowIds?: string[];
+  onToggleRowSelection?: (id: string) => void;
+  onToggleAllRows?: () => void;
+  isRowSelectable?: (row: AttendanceRow) => boolean;
 }
 
 export default function AttendanceTable({
@@ -29,6 +33,10 @@ export default function AttendanceTable({
   onStatusChange,
   updatingId,
   isActionDisabled,
+  selectedRowIds = [],
+  onToggleRowSelection,
+  onToggleAllRows,
+  isRowSelectable,
 }: AttendanceTableProps) {
   if (rows.length === 0) {
     return (
@@ -37,6 +45,10 @@ export default function AttendanceTable({
       </p>
     );
   }
+
+  const selectableRows = rows.filter((row) => (isRowSelectable ? isRowSelectable(row) : true));
+  const selectedCount = selectableRows.filter((row) => selectedRowIds.includes(row.id)).length;
+  const allSelected = selectableRows.length > 0 && selectedCount === selectableRows.length;
 
   return (
     <div
@@ -106,6 +118,22 @@ export default function AttendanceTable({
                 }}
               >
                 Actions
+              </th>
+              <th
+                className="w-8 text-center px-1 py-4 font-bold text-xs uppercase tracking-wider"
+                style={{
+                  background: 'transparent',
+                  borderBottom: '2px solid var(--border)',
+                  color: 'var(--foreground)',
+                }}
+              >
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  onChange={() => onToggleAllRows?.()}
+                  className="w-4 h-4 cursor-pointer"
+                  aria-label="Select all students"
+                />
               </th>
             </tr>
           </thead>
@@ -201,6 +229,16 @@ export default function AttendanceTable({
                       )}
                     </>
                   )}
+                </td>
+                <td className="w-8 px-1 py-4 text-center">
+                  <input
+                    type="checkbox"
+                    checked={selectedRowIds.includes(row.id)}
+                    onChange={() => onToggleRowSelection?.(row.id)}
+                    disabled={isRowSelectable ? !isRowSelectable(row) : false}
+                    className="w-4 h-4 cursor-pointer disabled:cursor-not-allowed"
+                    aria-label={`Select ${row.studentName}`}
+                  />
                 </td>
               </tr>
             ))}

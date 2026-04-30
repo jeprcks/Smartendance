@@ -187,6 +187,41 @@ function downloadCSV(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
+function toYmd(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function parseYmdToLocalDateStart(ymd: string) {
+  const d = new Date(`${ymd}T00:00:00`);
+  d.setHours(0, 0, 0, 0);
+  return d;
+}
+
+function parseYmdToLocalDateEnd(ymd: string) {
+  const d = new Date(`${ymd}T23:59:59`);
+  d.setHours(23, 59, 59, 999);
+  return d;
+}
+
+function getMinMaxRecordDates(records: Record<string, unknown>[]) {
+  let min: Date | null = null;
+  let max: Date | null = null;
+  for (const r of records) {
+    const t = r.scanTime ?? r.checkInTime ?? r.createdAt ?? r.date;
+    if (!t) continue;
+    const d = new Date(String(t));
+    if (Number.isNaN(d.getTime())) continue;
+    if (!min || d < min) min = d;
+    if (!max || d > max) max = d;
+  }
+  if (!min || !max) return null;
+  const start = new Date(min);
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(max);
+  end.setHours(23, 59, 59, 999);
+  return { start, end };
+}
+
 function WeeklyBreakdownTable({
   rows,
   periodLabel,
@@ -366,8 +401,12 @@ function ClassPerfTable({
 export default function ReportsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [records, setRecords] = useState<Record<string, unknown>[]>([]);
-  const [classPerf, setClassPerf] = useState<ClassPerformanceRow[]>([]);
+  const [baseRecords, setBaseRecords] = useState<Record<string, unknown>[]>([]);
+
+  const [rangePreset, setRangePreset] = useState<'week' | 'month' | 'custom' | 'all'>('week');
+  const [customStart, setCustomStart] = useState<string>('');
+  const [customEnd, setCustomEnd] = useState<string>('');
+  const [dateError, setDateError] = useState<string>('');
 
   const load = async () => {
     const token = getToken();
@@ -389,8 +428,13 @@ export default function ReportsPage() {
         }),
       ]);
       const filtered = filterRecordsBySchedules(recordsRes.records, schedules);
-      setRecords(filtered);
-      setClassPerf(calcClassPerformance(filtered));
+      setBaseRecords(filtered);
+
+      const minMax = getMinMaxRecordDates(filtered);
+      if (minMax) {
+        setCustomStart(toYmd(minMax.start));
+        setCustomEnd(toYmd(minMax.end));
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to load data');
     } finally {
@@ -402,7 +446,39 @@ export default function ReportsPage() {
     load();
   }, []);
 
+  const resolveRange = () => {
+    if (rangePreset === 'week') {
+      const week = getWeekRange();
+      return { start: week.start, end: week.end, label: week.label };
+    }
+    if (rangePreset === 'month') {
+      const month = getMonthRange();
+      return { start: month.start, end: month.end, label: month.label };
+    }
+    if (rangePreset === 'custom') {
+      if (!customStart || !customEnd) return null;
+      const s = parseYmdToLocalDateStart(customStart);
+      const e = parseYmdToLocalDateEnd(customEnd);
+      if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || s > e) return null;
+      return {
+        start: s,
+        end: e,
+        label: `${customStart} – ${customEnd}`,
+      };
+    }
+    // all
+    const minMax = getMinMaxRecordDates(baseRecords);
+    if (!minMax) return null;
+    return { start: minMax.start, end: minMax.end, label: 'All records loaded' };
+  };
+
+  const activeRange = resolveRange();
+  const filteredRecords =
+    activeRange != null ? filterRecordsByDateRange(baseRecords, activeRange.start, activeRange.end) : [];
+  const filteredClassPerf = calcClassPerformance(filteredRecords);
+
   const exportAttendanceReport = () => {
+    if (!activeRange) return;
     const headers = [
       'Date',
       'Student ID',
@@ -413,7 +489,7 @@ export default function ReportsPage() {
       'Status',
       'Scan Time',
     ];
-    const rows = records.map((r) => [
+    const rows = filteredRecords.map((r) => [
       String(r.createdAt ?? '').slice(0, 10),
       String(r.studentId ?? ''),
       String(r.studentName ?? ''),
@@ -429,11 +505,13 @@ export default function ReportsPage() {
       headers.join(',') +
       '\n' +
       rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const date = new Date().toISOString().slice(0, 10);
-    downloadCSV(csv, `attendance-report-${date}.csv`);
+    const today = new Date().toISOString().slice(0, 10);
+    const rangeLabel = `${toYmd(activeRange.start)}_to_${toYmd(activeRange.end)}`;
+    downloadCSV(csv, `attendance-report-${rangeLabel}-${today}.csv`);
   };
 
   const exportClassReport = () => {
+    if (!activeRange) return;
     const headers = [
       'Grade',
       'Section',
@@ -444,7 +522,7 @@ export default function ReportsPage() {
       'Cutting',
       'Total',
     ];
-    const rows = classPerf.map((r) => [
+    const rows = filteredClassPerf.map((r) => [
       String(r.gradeLevel ?? ''),
       String(r.section ?? ''),
       String(r.subject ?? ''),
@@ -458,27 +536,54 @@ export default function ReportsPage() {
       headers.join(',') +
       '\n' +
       rows.map((row) => row.join(',')).join('\n');
-    const date = new Date().toISOString().slice(0, 10);
-    downloadCSV(csv, `class-report-${date}.csv`);
+    const today = new Date().toISOString().slice(0, 10);
+    const rangeLabel = `${toYmd(activeRange.start)}_to_${toYmd(activeRange.end)}`;
+    downloadCSV(csv, `class-report-${rangeLabel}-${today}.csv`);
   };
 
   const handlePrintWeeklyBreakdown = () => {
-    const week = getWeekRange();
-    const weeklyRecords = filterRecordsByDateRange(records, week.start, week.end);
-    const weeklyBreakdownRows = calcWeeklyBreakdown(weeklyRecords, week.days);
-    printWeeklyBreakdown(weeklyBreakdownRows, `Breakdown by day · ${week.label}`);
+    if (!activeRange) return;
+    const days: Date[] = [];
+    const cursor = new Date(activeRange.start);
+    cursor.setHours(0, 0, 0, 0);
+    const end = new Date(activeRange.end);
+    end.setHours(0, 0, 0, 0);
+    while (cursor <= end) {
+      days.push(new Date(cursor));
+      cursor.setDate(cursor.getDate() + 1);
+      if (days.length > 366) break;
+    }
+    const breakdownRows = calcWeeklyBreakdown(filteredRecords, days);
+    printWeeklyBreakdown(breakdownRows, `Breakdown by day · ${activeRange.label}`);
   };
 
   const handlePrintMonthly = () => {
-    const month = getMonthRange();
-    const monthlyRecords = filterRecordsByDateRange(records, month.start, month.end);
-    const monthlyPerf = calcClassPerformance(monthlyRecords);
-    printClassPerformance(monthlyPerf, 'Monthly Class Performance Summary', month.label);
+    if (!activeRange) return;
+    printClassPerformance(filteredClassPerf, 'Class Performance Summary', activeRange.label);
   };
 
   const handlePrintAllTime = () => {
-    printClassPerformance(classPerf, 'Class Performance Summary (All time)', 'All records loaded');
+    if (!activeRange) return;
+    printClassPerformance(filteredClassPerf, 'Class Performance Summary', activeRange.label);
   };
+
+  useEffect(() => {
+    if (rangePreset !== 'custom') {
+      setDateError('');
+      return;
+    }
+    if (!customStart || !customEnd) {
+      setDateError('Please select both start and end dates.');
+      return;
+    }
+    const s = parseYmdToLocalDateStart(customStart);
+    const e = parseYmdToLocalDateEnd(customEnd);
+    if (Number.isNaN(s.getTime()) || Number.isNaN(e.getTime()) || s > e) {
+      setDateError('Invalid date range.');
+      return;
+    }
+    setDateError('');
+  }, [rangePreset, customStart, customEnd]);
 
   if (loading) {
     return (
@@ -515,6 +620,67 @@ export default function ReportsPage() {
     <div className="space-y-6 animate-fade-in-up">
       <PageHeader title="Reports" icon={<ReportsIcon />} />
 
+      <div
+        className="p-5 rounded-xl border card-theme shadow-lg animate-fade-in-up animate-delay-1"
+        style={{ borderColor: 'var(--border)' }}
+      >
+        <div className="flex flex-wrap items-end gap-4">
+          <div className="min-w-[220px]">
+            <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>
+              Date filter
+            </label>
+            <select
+              value={rangePreset}
+              onChange={(e) => setRangePreset(e.target.value as typeof rangePreset)}
+              className="w-full px-3 py-2 rounded-xl border input-theme"
+            >
+              <option value="week">This Week (Mon–Sat)</option>
+              <option value="month">This Month</option>
+              <option value="custom">Custom Range</option>
+              <option value="all">All Time</option>
+            </select>
+          </div>
+
+          {rangePreset === 'custom' && (
+            <>
+              <div className="min-w-[180px]">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>
+                  Start date
+                </label>
+                <input
+                  type="date"
+                  value={customStart}
+                  onChange={(e) => setCustomStart(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border input-theme"
+                />
+              </div>
+              <div className="min-w-[180px]">
+                <label className="block text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>
+                  End date
+                </label>
+                <input
+                  type="date"
+                  value={customEnd}
+                  onChange={(e) => setCustomEnd(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border input-theme"
+                />
+              </div>
+            </>
+          )}
+
+          <div className="ml-auto flex items-center gap-3">
+            <div className="text-sm font-semibold" style={{ color: 'var(--muted-foreground)' }}>
+              {activeRange ? `Showing: ${activeRange.label}` : 'Select a valid range'}
+            </div>
+          </div>
+        </div>
+        {dateError && (
+          <p className="mt-3 text-sm font-semibold" style={{ color: 'var(--error)' }}>
+            {dateError}
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-4 sm:grid-cols-2 animate-fade-in-up animate-delay-1">
         <div className="p-6 rounded-xl border card-theme shadow-lg dashboard-card transition-all duration-200 hover:shadow-xl" style={{ borderColor: 'var(--border)' }}>
           <div className="flex items-center gap-3 mb-3">
@@ -531,6 +697,7 @@ export default function ReportsPage() {
           <button
             type="button"
             onClick={exportAttendanceReport}
+            disabled={!activeRange || !!dateError}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white btn-primary transition-all duration-200 hover:scale-105 hover:shadow-lg font-semibold"
           >
             <DownloadIcon />
@@ -553,6 +720,7 @@ export default function ReportsPage() {
           <button
             type="button"
             onClick={exportClassReport}
+            disabled={!activeRange || !!dateError}
             className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-white btn-primary transition-all duration-200 hover:scale-105 hover:shadow-lg font-semibold"
           >
             <DownloadIcon />
@@ -562,30 +730,30 @@ export default function ReportsPage() {
       </div>
 
       {(() => {
-        const week = getWeekRange();
-        const month = getMonthRange();
-        const weeklyRecords = filterRecordsByDateRange(records, week.start, week.end);
-        const monthlyRecords = filterRecordsByDateRange(records, month.start, month.end);
-        const monthlyPerf = calcClassPerformance(monthlyRecords);
-        const weeklyBreakdownRows = calcWeeklyBreakdown(weeklyRecords, week.days);
+        if (!activeRange) return null;
+        const days: Date[] = [];
+        const cursor = new Date(activeRange.start);
+        cursor.setHours(0, 0, 0, 0);
+        const end = new Date(activeRange.end);
+        end.setHours(0, 0, 0, 0);
+        while (cursor <= end) {
+          days.push(new Date(cursor));
+          cursor.setDate(cursor.getDate() + 1);
+          if (days.length > 366) break;
+        }
+        const breakdownRows = calcWeeklyBreakdown(filteredRecords, days);
         return (
           <>
             <WeeklyBreakdownTable
-              rows={weeklyBreakdownRows}
-              periodLabel={`Breakdown by day · ${week.label}`}
-              onPrint={handlePrintWeeklyBreakdown}
+              rows={breakdownRows}
+              periodLabel={`Breakdown by day · ${activeRange.label}`}
+              onPrint={!dateError ? handlePrintWeeklyBreakdown : undefined}
             />
             <ClassPerfTable
-              title="Monthly Class Performance Summary"
-              periodLabel={month.label}
-              perf={monthlyPerf}
-              onPrint={handlePrintMonthly}
-            />
-            <ClassPerfTable
-              title="Class Performance Summary (All time)"
-              periodLabel="All records loaded"
-              perf={classPerf}
-              onPrint={handlePrintAllTime}
+              title="Class Performance Summary"
+              periodLabel={activeRange.label}
+              perf={filteredClassPerf}
+              onPrint={!dateError ? handlePrintMonthly : undefined}
             />
           </>
         );

@@ -10,7 +10,10 @@ import {
   getScheduleAttendanceRecords,
   updateStudentAttendance,
 } from '../../../../lib/api';
-import AttendanceTable from '@/components/AttendanceTable';
+import AttendanceTable from './AttendanceTable';
+import BulkAttendanceActionBar, {
+  applyBulkAttendanceStatus,
+} from './components/page';
 
 export const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Cut'];
 
@@ -65,6 +68,8 @@ export default function ScheduleDetailsPage({
   const [attendanceMap, setAttendanceMap] = useState<Record<string, Record<string, unknown>>>({});
   const [search, setSearch] = useState('');
   const [updating, setUpdating] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isBulkApplying, setIsBulkApplying] = useState(false);
 
   const getLocalDateString = () => {
     const now = new Date();
@@ -139,15 +144,6 @@ export default function ScheduleDetailsPage({
     load();
   }, [scheduleId]);
 
-  useEffect(() => {
-    // Keep attendance list fresh so auto-absent after cutoff appears without manual refresh.
-    const intervalId = setInterval(() => {
-      load();
-    }, 60 * 1000);
-
-    return () => clearInterval(intervalId);
-  }, [scheduleId]);
-
   const handleStatusChange = async (
     studentId: string,
     status: string
@@ -187,6 +183,12 @@ export default function ScheduleDetailsPage({
         return name.includes(q) || id.includes(q);
       })
     : students;
+
+  const isRowBulkSelectable = (status: string) => {
+    const s = status.toLowerCase();
+    if (s === 'not scanned') return false;
+    return s !== '' && s !== '-' && s !== 'out';
+  };
 
   if (loading) {
     return (
@@ -264,6 +266,59 @@ export default function ScheduleDetailsPage({
     month: 'long', 
     day: 'numeric' 
   });
+
+  const toggleRowSelection = (id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const toggleAllRows = () => {
+    const selectableIds = rows
+      .filter((row) => isRowBulkSelectable(row.status))
+      .map((row) => row.id);
+    const isAllSelected =
+      selectableIds.length > 0 && selectableIds.every((id) => selectedIds.includes(id));
+
+    setSelectedIds((prev) => {
+      if (isAllSelected) {
+        return prev.filter((id) => !selectableIds.includes(id));
+      }
+      const merged = new Set([...prev, ...selectableIds]);
+      return Array.from(merged);
+    });
+  };
+
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleApplyBulkStatus = async (status: string) => {
+    const token = getToken();
+    if (!token || !schedule || selectedIds.length === 0) return;
+
+    setIsBulkApplying(true);
+    try {
+      await applyBulkAttendanceStatus({
+        token,
+        scheduleId,
+        selectedStudentIds: selectedIds,
+        status,
+        subject: String(schedule.subject ?? ''),
+        gradeLevel: String(schedule.gradeLevel ?? ''),
+        section: String(schedule.section ?? ''),
+        onEachUpdated: (studentId, nextStatus) => {
+          setAttendanceMap((prev) => ({
+            ...prev,
+            [studentId]: { ...prev[studentId], status: nextStatus, studentId },
+          }));
+        },
+      });
+      clearSelection();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsBulkApplying(false);
+    }
+  };
 
   return (
     <div className="space-y-6 animate-fade-in-up">
@@ -345,13 +400,11 @@ export default function ScheduleDetailsPage({
           present: rows.filter((r) => r.status.toLowerCase() === 'present').length,
           absent: rows.filter((r) => r.status.toLowerCase() === 'absent').length,
           late: rows.filter((r) => r.status.toLowerCase() === 'late').length,
-          cutting: rows.filter((r) => r.status.toLowerCase() === 'cut').length,
-          notScanned: rows.filter((r) => r.status.toLowerCase() === 'not scanned').length,
         };
 
         return (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 animate-fade-in-up animate-delay-4">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 animate-fade-in-up animate-delay-4">
               <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(67, 160, 71, 0.22)', borderLeftColor: 'var(--success)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Present</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--success)' }}>{stats.present}</p>
@@ -363,14 +416,6 @@ export default function ScheduleDetailsPage({
               <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(255, 193, 7, 0.28)', borderLeftColor: 'var(--accent)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Late</p>
                 <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>{stats.late}</p>
-              </div>
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(230, 81, 0, 0.22)', borderLeftColor: 'var(--error)', borderColor: 'var(--border)' }}>
-                <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Cutting</p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--error)' }}>{stats.cutting}</p>
-              </div>
-              <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'rgba(107, 114, 128, 0.22)', borderLeftColor: 'var(--muted-foreground)', borderColor: 'var(--border)' }}>
-                <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Not Scanned</p>
-                <p className="text-2xl font-bold" style={{ color: 'var(--muted-foreground)' }}>{stats.notScanned}</p>
               </div>
               <div className="p-4 rounded-xl border-l-4 transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5 dashboard-card" style={{ background: 'var(--secondary)', borderLeftColor: 'var(--primary)', borderColor: 'var(--border)' }}>
                 <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--muted-foreground)' }}>Total</p>
@@ -388,6 +433,14 @@ export default function ScheduleDetailsPage({
                   {filtered.length} {filtered.length === 1 ? 'student' : 'students'}
                 </span>
               </div>
+              <div className="p-4 border-b" style={{ borderColor: 'var(--border)' }}>
+                <BulkAttendanceActionBar
+                  selectedCount={selectedIds.length}
+                  applying={isBulkApplying}
+                  onApplyBulkStatus={handleApplyBulkStatus}
+                  onClearSelection={clearSelection}
+                />
+              </div>
               <AttendanceTable
                 rows={rows}
                 statusOptions={STATUS_OPTIONS}
@@ -399,6 +452,10 @@ export default function ScheduleDetailsPage({
                   if (s === 'not scanned') return true;
                   return s === '' || s === '-' || s === 'out';
                 }}
+                selectedRowIds={selectedIds}
+                onToggleRowSelection={toggleRowSelection}
+                onToggleAllRows={toggleAllRows}
+                isRowSelectable={(row) => isRowBulkSelectable(row.status ?? '')}
               />
             </div>
           </>

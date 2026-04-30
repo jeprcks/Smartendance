@@ -47,7 +47,7 @@ const navItems = [
   { href: '/schedule', label: 'Schedule', icon: navIcons.schedule },
   { href: '/students', label: 'Students', icon: navIcons.students },
   { href: '/History', label: 'History', icon: navIcons.attendance },
-  { href: '/past-attendance', label: 'Past Attendance', icon: navIcons.pastAttendance },
+  { href: '/past-attendance', label: 'Archive', icon: navIcons.pastAttendance },
   { href: '/reports', label: 'Reports', icon: navIcons.reports },
   { href: '/profile', label: 'Profile', icon: navIcons.profile },
 ];
