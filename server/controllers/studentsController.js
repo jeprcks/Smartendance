@@ -166,12 +166,19 @@ const createStudent = async (req, res) => {
 // Get all students (optional filter: status=Active|Inactive)
 const getAllStudents = async (req, res) => {
     try {
-        const { status } = req.query;
+        const { status, limit = 100, page = 1 } = req.query;
         const filter = {};
         if (status && ['Active', 'Inactive'].includes(status)) {
             filter.status = status;
         }
-        const students = await Student.find(filter).sort({ createdAt: -1 });
+        
+        // Add pagination to prevent loading too much data
+        const skip = (Number(page) - 1) * Number(limit);
+        const students = await Student.find(filter)
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(Number(limit));
+        
         res.status(200).json(students);
     } catch (error) {
         res.status(400).json({ error: error.message });
