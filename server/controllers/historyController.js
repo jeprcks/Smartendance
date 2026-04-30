@@ -209,7 +209,7 @@ const getAllAttendanceRecords = async (req, res) => {
   try {
     const {
       page = 1,
-      limit = 200,
+      limit = 50,
       studentId,
       subject,
       status,
@@ -246,7 +246,8 @@ const getAllAttendanceRecords = async (req, res) => {
     }
 
     const skip = (Number(page) - 1) * Number(limit);
-    const totalRecords = await History.countDocuments(filter);
+    // Use fast estimation instead of full count (much faster on large collections)
+    const totalRecords = await History.estimatedDocumentCount();
     const records = await History.find(filter).sort({ scanTime: -1 }).skip(skip).limit(Number(limit));
 
     // Keep response shape compatible with adminweb.

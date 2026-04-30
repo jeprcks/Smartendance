@@ -69,5 +69,10 @@ historySchema.index({ studentId: 1, scanTime: -1 });
 historySchema.index({ attendanceType: 1, scanTime: -1 });
 historySchema.index({ linkedRecordId: 1 });
 historySchema.index({ gradeLevel: 1, section: 1, subject: 1 });
+// Composite indexes for common filter combinations
+historySchema.index({ gradeLevel: 1, section: 1, scanTime: -1 });
+historySchema.index({ shift: 1, scanTime: -1 });
+historySchema.index({ status: 1, attendanceType: 1 });
+historySchema.index({ scanTime: -1 }); // For date range queries
 
 module.exports = mongoose.model("History", historySchema);
