@@ -260,11 +260,11 @@ exports.getScheduleAttendanceRecords = async (req, res) => {
     // Build date range
     let dateFilter = {};
     if (date) {
-      // Parse YYYY-MM-DD as local day boundaries to avoid UTC date drift.
-      const [y, m, d] = String(date).split('-').map(Number);
-      const startDate = new Date(y, (m || 1) - 1, d || 1, 0, 0, 0, 0);
-      const endDate = new Date(y, (m || 1) - 1, d || 1, 23, 59, 59, 999);
-
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+      
       dateFilter = {
         $gte: startDate,
         $lte: endDate

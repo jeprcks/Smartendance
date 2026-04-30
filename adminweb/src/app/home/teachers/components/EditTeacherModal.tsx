@@ -108,7 +108,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
         province: teacher.address?.province || '',
         zipCode: teacher.address?.zipCode || '',
         password: '',
-        plainPassword: teacher.plainPassword || '*****',
+        plainPassword: teacher.plainPassword || 'N/A',
         status: teacher.status || 'Active'
       });
     }
@@ -419,7 +419,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   Current Password
                 </label>
                 <p className="text-base text-[var(--foreground)] font-mono bg-[var(--surface)] px-4 py-2.5 rounded-[var(--radius)] border border-[var(--border)]">
-                  {formData.plainPassword || '*****'}
+                  {formData.plainPassword || 'N/A'}
                 </p>
               </div>
             </div>

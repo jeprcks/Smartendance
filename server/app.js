@@ -114,14 +114,12 @@ if (process.env.VERCEL) {
       });
   });
 } else {
-  const { startAutoAbsentJob } = require("./services/autoAbsentService");
   connectMongo()
     .then(() => {
       console.log("Connected to MongoDB");
       try {
         const { createAdminUser } = require("./controllers/userController");
         createAdminUser().catch(err => console.error('createAdminUser failed:', err));
-        startAutoAbsentJob();
       } catch (err) {
         console.error('Error requiring userController:', err);
       }
