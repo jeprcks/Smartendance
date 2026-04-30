@@ -1,68 +1,9 @@
 const Student = require("../models/studentsSchema");
 const History = require("../models/historySchema");
-const Settings = require("../models/settingsSchema");
 const QRCode = require('qrcode');
 
 // Store pending requests to prevent duplicates
 const pendingRequests = new Map();
-
-function parseTimeToMinutes(timeValue, fallbackMinutes) {
-    if (!timeValue || typeof timeValue !== 'string' || !timeValue.includes(':')) {
-        return fallbackMinutes;
-    }
-    const [h, m] = timeValue.split(':').map((v) => Number(v));
-    if (Number.isNaN(h) || Number.isNaN(m)) return fallbackMinutes;
-    return h * 60 + m;
-}
-
-async function resolveGeneralScanStatus(studentShift, scanDate) {
-    // Defaults: Morning 07:00, Afternoon 13:00, threshold 15 minutes
-    const fallbackMorningStart = 7 * 60;
-    const fallbackAfternoonStart = 13 * 60;
-    const fallbackThreshold = 15;
-
-    let settings = null;
-    try {
-        settings = await Settings.get();
-    } catch (error) {
-        console.warn('Could not load settings for late-status check, using defaults');
-    }
-
-    const threshold = Number.isFinite(Number(settings?.lateThresholdMinutes))
-        ? Number(settings.lateThresholdMinutes)
-        : fallbackThreshold;
-
-    const morningStartMinutes = parseTimeToMinutes(settings?.morningShiftCutoff, fallbackMorningStart);
-    const afternoonStartMinutes = parseTimeToMinutes(settings?.afternoonShiftCutoff, fallbackAfternoonStart);
-
-    const scanMinutes = scanDate.getHours() * 60 + scanDate.getMinutes();
-    const shiftStart = studentShift === 'Afternoon' ? afternoonStartMinutes : morningStartMinutes;
-    const lateCutoff = shiftStart + Math.max(0, threshold);
-
-    return scanMinutes > lateCutoff ? 'Late' : 'Present';
-}
-
-async function resolveDailyGeneralStatus(studentId, studentShift, scanDate) {
-    const startOfDay = new Date(scanDate);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const endOfDay = new Date(scanDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    // First General "In" of the day decides the status for the whole day.
-    const firstGeneralIn = await History.findOne({
-        studentId,
-        subject: 'General',
-        attendanceType: 'In',
-        scanTime: { $gte: startOfDay, $lte: endOfDay },
-    }).sort({ scanTime: 1 });
-
-    if (firstGeneralIn && (firstGeneralIn.status === 'Present' || firstGeneralIn.status === 'Late')) {
-        return firstGeneralIn.status;
-    }
-
-    return resolveGeneralScanStatus(studentShift, scanDate);
-}
 
 // Create new student
 const createStudent = async (req, res) => {
@@ -663,42 +604,9 @@ const getStudentByQRCode = async (req, res) => {
             return res.status(404).json({ error: "Student not found" });
         }
 
-        // Create attendance record for QR code scan
-        // QR code scans are always "General" subject.
-        // Apply late-status rules only for General; subject-specific records stay Present.
-        try {
-            const scanTime = new Date();
-            const normalizedSubject = typeof subject === 'string' ? subject.trim() : 'General';
-            const isGeneralSubject = normalizedSubject.toLowerCase() === 'general';
-            const computedStatus = isGeneralSubject
-                ? await resolveDailyGeneralStatus(studentId, student.shift, scanTime)
-                : 'Present';
-
-            const attendanceRecord = new History({
-                studentId,
-                studentName: student.fullName,
-                subject: 'General', // Always General for QR code scans
-                attendanceType: 'In',
-                checkInTime: scanTime,
-                scanTime,
-                gradeLevel: student.gradeLevel,
-                section: student.section,
-                shift: student.shift,
-                status: computedStatus,
-                qrCodeData: parsedData,
-                location,
-                deviceInfo,
-                notes: notes || 'QR Code scanned - Teacher can update status for specific subjects'
-            });
-
-            // Save the attendance record
-            await attendanceRecord.save();
-
-            console.log(`QR Code attendance record created for student ${studentId}: General - ${computedStatus}`);
-        } catch (attendanceError) {
-            console.error('Error creating attendance record:', attendanceError);
-            // Continue with student info even if attendance record creation fails
-        }
+        // IMPORTANT:
+        // This endpoint only validates QR and returns student info.
+        // Attendance creation must happen only in /api/history to avoid duplicate records.
 
         // Return only the essential information for mobile display
         const studentInfo = {

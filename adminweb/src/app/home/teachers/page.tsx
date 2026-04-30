@@ -417,7 +417,7 @@ export default function TeachersPage() {
                         }
                         setSelectedTeachers(newSelected);
                       }}
-                      className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                      className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
                     />
                   </th>
                   <th>Profile</th>
@@ -433,7 +433,7 @@ export default function TeachersPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-3"></div>
                         Loading teachers...
@@ -442,7 +442,7 @@ export default function TeachersPage() {
                   </tr>
                 ) : filteredActiveTeachers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-gray-500">
+                    <td colSpan={9} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
                       No active teachers found
                     </td>
                   </tr>
@@ -450,7 +450,7 @@ export default function TeachersPage() {
                   filteredActiveTeachers.map((teacher) => {
                     const isSelected = selectedTeachers.has(teacher._id);
                     return (
-                    <tr key={teacher._id} className={`hover:bg-gray-50 ${isSelected ? 'bg-green-50' : ''}`}>
+                    <tr key={teacher._id} className={`hover:bg-[var(--muted)] ${isSelected ? 'bg-[var(--secondary)]' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -464,7 +464,7 @@ export default function TeachersPage() {
                             }
                             setSelectedTeachers(newSelected);
                           }}
-                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -581,7 +581,7 @@ export default function TeachersPage() {
                           }
                           setSelectedTeachers(newSelected);
                         }}
-                        className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                        className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
                       />
                     </th>
                     <th>Profile</th>
@@ -598,7 +598,7 @@ export default function TeachersPage() {
                   {filteredInactiveTeachers.map((teacher) => {
                     const isSelected = selectedTeachers.has(teacher._id);
                     return (
-                    <tr key={teacher._id} className={`hover:bg-gray-50 opacity-75 ${isSelected ? 'bg-green-50' : ''}`}>
+                    <tr key={teacher._id} className={`hover:bg-[var(--muted)] opacity-75 ${isSelected ? 'bg-[var(--secondary)]' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -612,7 +612,7 @@ export default function TeachersPage() {
                             }
                             setSelectedTeachers(newSelected);
                           }}
-                          className="rounded border-gray-300 text-green-600 focus:ring-green-500"
+                          className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
                         />
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">

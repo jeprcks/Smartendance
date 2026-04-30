@@ -201,6 +201,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
             <div className="w-48">
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Subject</label>
               <select
+                aria-label="Filter by subject"
                 className="w-full px-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
                 value={recordSelectedSubject}
                 onChange={(e) => setRecordSelectedSubject(e.target.value)}
@@ -214,6 +215,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
             <div className="w-48">
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Status</label>
               <select
+                aria-label="Filter by status"
                 className="w-full px-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
                 value={recordSelectedStatus}
                 onChange={(e) => setRecordSelectedStatus(e.target.value)}
@@ -228,6 +230,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Date</label>
               <input
                 type="date"
+                aria-label="Filter by date"
                 className="w-full px-4 py-2.5 bg-[var(--muted)] border border-[var(--border)] rounded-lg focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] focus:bg-[var(--surface)] transition-all duration-300 text-sm text-[var(--foreground)]"
                 value={recordSelectedDate}
                 onChange={(e) => setRecordSelectedDate(e.target.value)}
@@ -295,7 +298,7 @@ function StudentDetailsModal({ isOpen, onClose, onExportPDF, student }: StudentD
                           : 'bg-[var(--muted)] text-[var(--foreground)] ring-[var(--border)]'
                       }`}>
                         {record.statusHistory && record.statusHistory.length > 0 
-                          ? `Teacher (${record.statusHistory[record.statusHistory.length - 1].changedBy || 'Unknown'})` 
+                          ? 'Teacher' 
                           : record.attendanceType || 'N/A'}
                       </span>
                     </td>
@@ -660,6 +663,7 @@ export default function HistoryPage() {
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Date</label>
               <input
                 type="date"
+                aria-label="Filter by date"
                 className="w-full px-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
                 value={selectedDate}
                 onChange={(e) => setSelectedDate(e.target.value)}
@@ -668,6 +672,7 @@ export default function HistoryPage() {
             <div className="w-48">
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Status</label>
               <select
+                aria-label="Filter by status"
                 className="w-full px-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value as AttendanceRecord['status'] | '')}
@@ -683,6 +688,7 @@ export default function HistoryPage() {
             <div className="w-48">
               <label className="block text-sm font-medium text-[var(--foreground)] mb-1.5">Gender</label>
               <select
+                aria-label="Filter by gender"
                 className="w-full px-4 py-3 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
                 value={selectedGender}
                 onChange={(e) => setSelectedGender(e.target.value)}
@@ -700,9 +706,12 @@ export default function HistoryPage() {
           <table className="data-table">
             <thead>
               <tr>
+                <th>Schedule</th>
                 <th>Student ID</th>
                 <th>Name</th>
                 <th>Subject</th>
+                <th>Teacher</th>
+                <th>Type</th>
                 <th>Date</th>
                 <th>Time</th>
                 <th>Status</th>
@@ -711,7 +720,7 @@ export default function HistoryPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-[var(--muted-foreground)]">
+                  <td colSpan={9} className="text-center py-8 text-[var(--muted-foreground)]">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-2 border-[var(--primary)] border-t-transparent mr-3"></div>
                       Loading records...
@@ -720,7 +729,7 @@ export default function HistoryPage() {
                 </tr>
               ) : attendanceRecords.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-8 text-[var(--muted-foreground)]">
+                  <td colSpan={9} className="text-center py-8 text-[var(--muted-foreground)]">
                     No attendance records found
                   </td>
                 </tr>
@@ -731,6 +740,18 @@ export default function HistoryPage() {
                     className="hover:bg-[var(--secondary)] transition-colors duration-200 cursor-pointer"
                     onClick={() => fetchStudentDetails(record.studentId)}
                   >
+                    <td className="whitespace-nowrap">
+                      <div className="text-sm">
+                        {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0)
+                          ? 'N/A'
+                          : (record.scheduleDay || 'N/A')}
+                      </div>
+                      <div className="text-[var(--muted-foreground)] block text-xs mt-0.5">
+                        {(record.attendanceType === 'In' || record.attendanceType === 'Out') && (!record.statusHistory || record.statusHistory.length === 0)
+                          ? ''
+                          : (record.scheduleTimeSlot || 'N/A')}
+                      </div>
+                    </td>
                     <td className="whitespace-nowrap font-medium">{record.studentId}</td>
                     <td className="whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -753,6 +774,29 @@ export default function HistoryPage() {
                           {[record.gradeLevel?.trim(), record.section?.trim()].filter(Boolean).join(' - ')}
                         </span>
                       )}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      {record.subject?.toLowerCase() === 'general'
+                        ? 'N/A'
+                        : (record.scheduleTeacher
+                          || (record.statusHistory && record.statusHistory.length > 0
+                            ? record.statusHistory[record.statusHistory.length - 1].changedBy
+                            : 'N/A'))}
+                    </td>
+                    <td className="whitespace-nowrap">
+                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ring-1 ${
+                        record.statusHistory && record.statusHistory.length > 0
+                          ? 'bg-green-50 text-green-700 ring-green-200/50'
+                          : record.attendanceType === 'In'
+                          ? 'bg-green-50 text-green-700 ring-green-200/50'
+                          : record.attendanceType === 'Out'
+                          ? 'bg-purple-50 text-purple-700 ring-purple-200/50'
+                          : 'bg-[var(--muted)] text-[var(--foreground)] ring-[var(--border)]'
+                      } transition-colors duration-200`}>
+                        {record.statusHistory && record.statusHistory.length > 0
+                          ? 'Teacher'
+                          : (record.attendanceType || 'N/A')}
+                      </span>
                     </td>
                     <td className="whitespace-nowrap">{format(new Date(record.scanTime), 'MMM dd, yyyy')}</td>
                     <td className="whitespace-nowrap">

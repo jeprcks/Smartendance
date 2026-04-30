@@ -188,8 +188,12 @@ export default function AttendanceTable({
                             ? { background: 'rgba(216, 67, 21, 0.2)', color: 'var(--destructive)' }
                             : row.status === 'Late' || row.status === 'late'
                               ? { background: 'rgba(255, 193, 7, 0.2)', color: 'var(--accent)' }
+                                : row.status === 'Out' || row.status === 'out'
+                                  ? { background: 'rgba(126, 87, 194, 0.2)', color: '#7e57c2' }
                               : row.status === 'Cutting' || row.status === 'cutting'
                                 ? { background: 'rgba(230, 81, 0, 0.2)', color: 'var(--error)' }
+                                  : row.status === 'Cut' || row.status === 'cut'
+                                    ? { background: 'rgba(230, 81, 0, 0.2)', color: 'var(--error)' }
                                 : { background: 'var(--muted)', color: 'var(--muted-foreground)' }
                     }
                   >

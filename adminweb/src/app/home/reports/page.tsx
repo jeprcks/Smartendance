@@ -93,6 +93,13 @@ export default function ReportsPage() {
   });
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
+  // Helper function to get color based on attendance rate
+  const getAttendanceRateColor = (rate: number) => {
+    if (rate >= 90) return 'text-green-600';
+    if (rate >= 70) return 'text-yellow-600';
+    return 'text-red-600';
+  };
+
   const fetchReportData = useCallback(async () => {
     try {
       setIsLoading(true);
@@ -121,17 +128,39 @@ export default function ReportsPage() {
         : [];
       const totalStudents = activeStudents.length;
 
-      // Fetch attendance records
+      // Fetch all attendance records (without date parameters, filter client-side)
       const response = await historyService
-        .getAllRecords({
-          startDate,
-          endDate,
-          limit: 10000,
+        .getHistoryPageData({
+          limit: 5000,
+          page: 1,
         })
         .catch(() => ({ success: false, records: [], pagination: {} }));
 
-      const fetchedRecords = response.success ? response.records : [];
+      // Parse dates for filtering
+      const startDateTime = parseISO(startDate);
+      const endDateTime = parseISO(endDate);
+      
+      // Filter records by date range client-side
+      const filteredRecords = (response.records || []).filter(record => {
+        const recordDateStr = format(new Date(record.scanTime), 'yyyy-MM-dd');
+        // Compare as strings to avoid timezone issues
+        return recordDateStr >= startDate && recordDateStr <= endDate;
+      });
+
+      const fetchedRecords = filteredRecords;
       setRecords(fetchedRecords);
+
+      console.log('📊 Reports Debug:');
+      console.log('Total records fetched:', response.records?.length);
+      console.log(`Date range: ${startDate} to ${endDate}`);
+      console.log('Records after date filtering:', fetchedRecords.length);
+      console.log('Sample records:', fetchedRecords.slice(0, 3).map(r => ({
+        name: r.studentName,
+        date: format(new Date(r.scanTime), 'yyyy-MM-dd HH:mm:ss'),
+        status: r.status,
+        grade: r.gradeLevel,
+        section: r.section
+      })));
 
       // Calculate overall stats from records
       const stats = fetchedRecords.reduce<{
@@ -175,12 +204,13 @@ export default function ReportsPage() {
 
       // Calculate attendance patterns (daily breakdown)
       const patternsMap = new Map<string, AttendancePattern>();
-      const dateRange = [];
       const start = parseISO(startDate);
       const end = parseISO(endDate);
 
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const dateKey = format(d, "yyyy-MM-dd");
+      // Create date range properly without mutating in loop condition
+      let currentDate = new Date(start);
+      while (currentDate <= end) {
+        const dateKey = format(currentDate, 'yyyy-MM-dd');
         patternsMap.set(dateKey, {
           date: dateKey,
           present: 0,
@@ -190,10 +220,11 @@ export default function ReportsPage() {
           total: 0,
           attendanceRate: 0,
         });
+        currentDate.setDate(currentDate.getDate() + 1);
       }
 
       fetchedRecords.forEach((record) => {
-        const dateKey = format(parseISO(record.scanTime), "yyyy-MM-dd");
+        const dateKey = format(new Date(record.scanTime), "yyyy-MM-dd");
         const pattern = patternsMap.get(dateKey);
         if (pattern) {
           pattern.total++;
@@ -356,8 +387,10 @@ export default function ReportsPage() {
       pdf.setFontSize(12);
       pdf.setFont("helvetica", "normal");
       pdf.setTextColor(0, 0, 0);
+      const pdfStartDate = filters.startDate ? format(parseISO(filters.startDate), "MMM dd, yyyy") : format(new Date(), "MMM dd, yyyy");
+      const pdfEndDate = filters.endDate ? format(parseISO(filters.endDate), "MMM dd, yyyy") : format(new Date(), "MMM dd, yyyy");
       pdf.text(
-        `Period: ${format(parseISO(filters.startDate), "MMM dd, yyyy")} - ${format(parseISO(filters.endDate), "MMM dd, yyyy")}`,
+        `Period: ${pdfStartDate} - ${pdfEndDate}`,
         margin,
         yPosition,
       );
@@ -497,7 +530,7 @@ export default function ReportsPage() {
             pdf.addPage();
             yPosition = 20;
           }
-          pdf.text(format(parseISO(pattern.date), "MMM dd"), margin, yPosition);
+          pdf.text(pattern.date ? format(parseISO(pattern.date), "MMM dd") : "", margin, yPosition);
           pdf.text(pattern.present.toString(), margin + 30, yPosition);
           pdf.text(pattern.absent.toString(), margin + 45, yPosition);
           pdf.text(pattern.late.toString(), margin + 55, yPosition);
@@ -576,6 +609,7 @@ export default function ReportsPage() {
             <select
               value={filters.reportType}
               onChange={(e) => handleReportTypeChange(e.target.value as any)}
+              aria-label="Select report type"
               className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
             >
               <option value="daily">Daily</option>
@@ -591,14 +625,15 @@ export default function ReportsPage() {
             </label>
             <input
               type="date"
-              value={filters.startDate}
-              onChange={(e) =>
+              value={filters.startDate || ''}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFilters({
                   ...filters,
-                  startDate: e.target.value,
+                  startDate: e.target.value || format(new Date(), 'yyyy-MM-dd'),
                   reportType: "custom",
                 })
               }
+              aria-label="Start date"
               className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
             />
           </div>
@@ -608,14 +643,15 @@ export default function ReportsPage() {
             </label>
             <input
               type="date"
-              value={filters.endDate}
-              onChange={(e) =>
+              value={filters.endDate || ''}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                 setFilters({
                   ...filters,
-                  endDate: e.target.value,
+                  endDate: e.target.value || format(new Date(), 'yyyy-MM-dd'),
                   reportType: "custom",
                 })
               }
+              aria-label="End date"
               className="w-full px-4 py-2 bg-[var(--muted)] border border-[var(--border)] rounded-[var(--radius)] focus:ring-2 focus:ring-[var(--ring)] focus:border-[var(--primary)] transition-all duration-300"
             />
           </div>
@@ -640,56 +676,56 @@ export default function ReportsPage() {
           <div className="dashboard-grid mb-6">
             <div className="stat-card">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-green-bg)' }}>
-                  <Users style={{ color: 'var(--accent-green)' }} size={24} />
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950">
+                  <Users className="text-green-600 dark:text-green-400" size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Students</p>
-                  <p className="text-3xl font-bold" style={{ color: 'var(--accent-green)' }}>{overallStats.totalStudents}</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{overallStats.totalStudents}</p>
                 </div>
               </div>
             </div>
             <div className="stat-card">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-blue-bg)' }}>
-                  <FileText style={{ color: 'var(--accent-blue)' }} size={24} />
+                <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950">
+                  <FileText className="text-blue-600 dark:text-blue-400" size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Records</p>
-                  <p className="text-3xl font-bold" style={{ color: 'var(--accent-blue)' }}>{overallStats.totalRecords}</p>
+                  <p className="text-3xl font-bold text-blue-600 dark:text-blue-400">{overallStats.totalRecords}</p>
                 </div>
               </div>
             </div>
             <div className="stat-card">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-green-bg)' }}>
-                  <TrendingUp style={{ color: 'var(--accent-green)' }} size={24} />
+                <div className="p-3 rounded-lg bg-green-50 dark:bg-green-950">
+                  <TrendingUp className="text-green-600 dark:text-green-400" size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">Attendance Rate</p>
-                  <p className="text-3xl font-bold" style={{ color: 'var(--accent-green)' }}>{overallStats.attendanceRate}%</p>
+                  <p className="text-3xl font-bold text-green-600 dark:text-green-400">{overallStats.attendanceRate}%</p>
                 </div>
               </div>
             </div>
             <div className="stat-card">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-red-bg)' }}>
-                  <AlertCircle style={{ color: 'var(--accent-red)' }} size={24} />
+                <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950">
+                  <AlertCircle className="text-red-600 dark:text-red-400" size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">Absent</p>
-                  <p className="text-3xl font-bold" style={{ color: 'var(--accent-red)' }}>{overallStats.absent}</p>
+                  <p className="text-3xl font-bold text-red-600 dark:text-red-400">{overallStats.absent}</p>
                 </div>
               </div>
             </div>
             <div className="stat-card">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-3 rounded-lg" style={{ backgroundColor: 'var(--accent-purple-bg)' }}>
-                  <BarChart3 style={{ color: 'var(--accent-purple)' }} size={24} />
+                <div className="p-3 rounded-lg bg-purple-50 dark:bg-purple-950">
+                  <BarChart3 className="text-purple-600 dark:text-purple-400" size={24} />
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-[var(--muted-foreground)] mb-1">Total Classes</p>
-                  <p className="text-3xl font-bold" style={{ color: 'var(--accent-purple)' }}>{gradeLevelStats.length}</p>
+                  <p className="text-3xl font-bold text-purple-600 dark:text-purple-400">{gradeLevelStats.length}</p>
                 </div>
               </div>
             </div>
@@ -735,12 +771,12 @@ export default function ReportsPage() {
                         <tr className="bg-[var(--muted)]/50 hover:bg-[var(--secondary)] transition-colors duration-200">
                           <td className="font-medium">{stat.gradeLevel}</td>
                           <td>{stat.totalStudents}</td>
-                          <td className="font-semibold" style={{ color: 'var(--accent-green)' }}>{stat.present}</td>
-                          <td className="font-semibold" style={{ color: 'var(--accent-red)' }}>{stat.absent}</td>
-                          <td className="font-semibold" style={{ color: 'var(--accent-yellow)' }}>{stat.late}</td>
-                          <td className="font-semibold" style={{ color: 'var(--accent-orange)' }}>{stat.cutting}</td>
+                          <td className="font-semibold text-green-600 dark:text-green-400">{stat.present}</td>
+                          <td className="font-semibold text-red-600 dark:text-red-400">{stat.absent}</td>
+                          <td className="font-semibold text-yellow-600 dark:text-yellow-400">{stat.late}</td>
+                          <td className="font-semibold text-orange-600 dark:text-orange-400">{stat.cutting}</td>
                           <td>
-                            <span className="font-semibold" style={{ color: stat.attendanceRate >= 90 ? 'var(--accent-green)' : stat.attendanceRate >= 70 ? 'var(--accent-yellow)' : 'var(--accent-red)' }}>
+                            <span className={`font-semibold ${getAttendanceRateColor(stat.attendanceRate)}`}>
                               {stat.attendanceRate}%
                             </span>
                           </td>
@@ -749,12 +785,12 @@ export default function ReportsPage() {
                           <tr key={`${index}-${si}`} className="text-sm hover:bg-[var(--secondary)] transition-colors duration-200">
                             <td className="pl-8">— {s.section}</td>
                             <td>{s.totalStudents}</td>
-                            <td className="font-semibold" style={{ color: 'var(--accent-green)' }}>{s.present}</td>
-                            <td className="font-semibold" style={{ color: 'var(--accent-red)' }}>{s.absent}</td>
-                            <td className="font-semibold" style={{ color: 'var(--accent-yellow)' }}>{s.late}</td>
-                            <td className="font-semibold" style={{ color: 'var(--accent-orange)' }}>{s.cutting}</td>
+                            <td className="font-semibold text-green-600 dark:text-green-400">{s.present}</td>
+                            <td className="font-semibold text-red-600 dark:text-red-400">{s.absent}</td>
+                            <td className="font-semibold text-yellow-600 dark:text-yellow-400">{s.late}</td>
+                            <td className="font-semibold text-orange-600 dark:text-orange-400">{s.cutting}</td>
                             <td>
-                              <span className="font-semibold" style={{ color: s.attendanceRate >= 90 ? 'var(--accent-green)' : s.attendanceRate >= 70 ? 'var(--accent-yellow)' : 'var(--accent-red)' }}>
+                              <span className={`font-semibold ${getAttendanceRateColor(s.attendanceRate)}`}>
                                 {s.attendanceRate}%
                               </span>
                             </td>
@@ -792,13 +828,13 @@ export default function ReportsPage() {
                     {attendancePatterns.map((pattern, index) => (
                       <tr key={index} className="hover:bg-[var(--secondary)] transition-colors duration-200">
                         <td className="font-medium">{format(parseISO(pattern.date), 'MMM dd, yyyy')}</td>
-                        <td className="font-semibold" style={{ color: 'var(--accent-green)' }}>{pattern.present}</td>
-                        <td className="font-semibold" style={{ color: 'var(--accent-red)' }}>{pattern.absent}</td>
-                        <td className="font-semibold" style={{ color: 'var(--accent-yellow)' }}>{pattern.late}</td>
-                        <td className="font-semibold" style={{ color: 'var(--accent-orange)' }}>{pattern.cutting}</td>
+                        <td className="font-semibold text-green-600 dark:text-green-400">{pattern.present}</td>
+                        <td className="font-semibold text-red-600 dark:text-red-400">{pattern.absent}</td>
+                        <td className="font-semibold text-yellow-600 dark:text-yellow-400">{pattern.late}</td>
+                        <td className="font-semibold text-orange-600 dark:text-orange-400">{pattern.cutting}</td>
                         <td>{pattern.total}</td>
                         <td>
-                          <span className="font-semibold" style={{ color: pattern.attendanceRate >= 90 ? 'var(--accent-green)' : pattern.attendanceRate >= 70 ? 'var(--accent-yellow)' : 'var(--accent-red)' }}>
+                          <span className={`font-semibold ${getAttendanceRateColor(pattern.attendanceRate)}`}>
                             {pattern.attendanceRate}%
                           </span>
                         </td>

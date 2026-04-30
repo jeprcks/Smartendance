@@ -20,6 +20,13 @@ function getDateString(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
 }
 
+function toLocalDateString(value: unknown): string {
+  if (!value) return '';
+  const d = new Date(String(value));
+  if (Number.isNaN(d.getTime())) return '';
+  return getDateString(d);
+}
+
 function getLast7Days(): { date: Date; dateStr: string; dayName: string }[] {
   const days = [];
   const today = new Date();
@@ -50,6 +57,26 @@ function getDateRange(days: number): { date: Date; dateStr: string; dayName: str
   return dateArray;
 }
 
+function getCustomDateRange(startDate: string, endDate: string): { date: Date; dateStr: string; dayName: string }[] {
+  if (!startDate || !endDate) return [];
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return [];
+
+  const dateArray = [];
+  const cursor = new Date(start);
+  while (cursor <= end) {
+    dateArray.push({
+      date: new Date(cursor),
+      dateStr: getDateString(cursor),
+      dayName: getDayName(cursor.getDay() || 7),
+    });
+    cursor.setDate(cursor.getDate() + 1);
+    if (dateArray.length > 366) break;
+  }
+  return dateArray;
+}
+
 interface StudentAttendance {
   studentId: string;
   studentName: string;
@@ -75,6 +102,24 @@ const CalendarIconForHeader = () => (
   </svg>
 );
 
+const SearchIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  </svg>
+);
+
+const FilterIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+  </svg>
+);
+
+const DownloadIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  </svg>
+);
+
 export default function PastAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -86,6 +131,9 @@ export default function PastAttendancePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('All');
   const [dateRangeFilter, setDateRangeFilter] = useState<number>(7);
+  const [isCustomDateRange, setIsCustomDateRange] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
   const [subjects, setSubjects] = useState<string[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
   const [sections, setSections] = useState<string[]>([]);
@@ -99,6 +147,7 @@ export default function PastAttendancePage() {
   });
   const [updateLoading, setUpdateLoading] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
 
   const load = async () => {
     const token = getToken();
@@ -136,10 +185,10 @@ export default function PastAttendancePage() {
         const section = String(record.section || '');
         const subject = String(record.subject || '');
         const status = String(record.status || 'Absent');
-        const dateStr = String(record.createdAt || '').substring(0, 10);
+        const dateStr = toLocalDateString(record.scanTime || record.checkInTime || record.createdAt);
 
         if (!studentId || !studentName) return;
-        if (subject.toLowerCase() === 'general') return;
+        if (!dateStr) return;
 
         subjectsSet.add(subject);
         gradesSet.add(gradeLevel);
@@ -194,6 +243,9 @@ export default function PastAttendancePage() {
   // Filter students based on criteria
   useEffect(() => {
     let filtered = allStudents;
+    const activeDates = isCustomDateRange
+      ? getCustomDateRange(customStartDate, customEndDate)
+      : getDateRange(dateRangeFilter);
 
     if (selectedGrade) {
       filtered = filtered.filter((s) => s.gradeLevel === selectedGrade);
@@ -212,13 +264,22 @@ export default function PastAttendancePage() {
 
     if (statusFilter !== 'All') {
       filtered = filtered.filter((s) => {
-        const dates = getDateRange(dateRangeFilter);
-        return dates.some((day) => s.attendance[day.dateStr] === statusFilter);
+        return activeDates.some((day) => s.attendance[day.dateStr] === statusFilter);
       });
     }
 
     setFilteredStudents(filtered);
-  }, [allStudents, selectedGrade, selectedSection, searchQuery, statusFilter, dateRangeFilter]);
+  }, [
+    allStudents,
+    selectedGrade,
+    selectedSection,
+    searchQuery,
+    statusFilter,
+    dateRangeFilter,
+    isCustomDateRange,
+    customStartDate,
+    customEndDate,
+  ]);
 
   const handleEditClick = (studentId: string, studentName: string, date: string, currentStatus: string, subject: string, gradeLevel: string, section: string) => {
     // Find the exact student record by matching all identifying fields
@@ -331,7 +392,9 @@ export default function PastAttendancePage() {
     }
   };
 
-  const displayedDates = getDateRange(dateRangeFilter);
+  const displayedDates = isCustomDateRange
+    ? getCustomDateRange(customStartDate, customEndDate)
+    : getDateRange(dateRangeFilter);
 
   if (loading) {
     return (
@@ -349,19 +412,7 @@ export default function PastAttendancePage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6">
-      <div className="flex items-center justify-between">
-        <PageHeader title="Archive" icon={<CalendarIconForHeader />} />
-        <button
-          onClick={() => setIsPrintModalOpen(true)}
-          className="px-4 py-2 rounded-lg font-medium transition-all hover:shadow-md"
-          style={{
-            backgroundColor: 'var(--primary)',
-            color: '#ffffff',
-          }}
-        >
-          � Export Excel
-        </button>
-      </div>
+      <PageHeader title="Archive" icon={<CalendarIconForHeader />} />
 
       {error && (
         <div className="p-4 rounded-lg border-2" style={{ borderColor: 'var(--error)', backgroundColor: 'transparent', color: 'var(--error)' }}>
@@ -370,16 +421,58 @@ export default function PastAttendancePage() {
         </div>
       )}
 
-      {/* Filters */}
+      {/* Search + Actions */}
       <div
-        className="rounded-lg border-2 p-4 space-y-4"
+        className="rounded-lg border-2 p-4"
         style={{ borderColor: 'var(--primary)', backgroundColor: 'transparent' }}
       >
-        <h3 className="font-semibold text-base" style={{ color: 'var(--foreground)' }}>
-          Filters
-        </h3>
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex-1 min-w-[220px] relative">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted-foreground)' }}>
+              <SearchIcon />
+            </div>
+            <input
+              type="text"
+              placeholder="Search by student name or ID..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-lg border"
+              style={{
+                borderColor: 'var(--border)',
+                backgroundColor: 'var(--background)',
+                color: 'var(--foreground)',
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowFilters((prev) => !prev)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border font-medium transition-all hover:shadow-md"
+            style={{
+              borderColor: 'var(--border)',
+              backgroundColor: showFilters ? 'var(--secondary)' : 'var(--background)',
+              color: 'var(--foreground)',
+            }}
+          >
+            <FilterIcon />
+            Filters
+          </button>
+          <button
+            type="button"
+            onClick={() => setIsPrintModalOpen(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md"
+            style={{
+              backgroundColor: 'var(--primary)',
+              color: '#ffffff',
+            }}
+          >
+            <DownloadIcon />
+            Export Excel
+          </button>
+        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {showFilters && (
+        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Grade Filter */}
           <div>
             <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
@@ -434,8 +527,19 @@ export default function PastAttendancePage() {
               Date Range
             </label>
             <select
-              value={dateRangeFilter}
-              onChange={(e) => setDateRangeFilter(Number(e.target.value))}
+              value={isCustomDateRange ? 'custom' : String(dateRangeFilter)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value === 'custom') {
+                  setIsCustomDateRange(true);
+                  const today = getDateString(new Date());
+                  if (!customStartDate) setCustomStartDate(today);
+                  if (!customEndDate) setCustomEndDate(today);
+                  return;
+                }
+                setIsCustomDateRange(false);
+                setDateRangeFilter(Number(value));
+              }}
               className="w-full px-3 py-2 rounded-lg border"
               style={{
                 borderColor: 'var(--border)',
@@ -446,7 +550,34 @@ export default function PastAttendancePage() {
               <option value={7}>Last 7 Days</option>
               <option value={30}>Last 30 Days</option>
               <option value={999}>All History</option>
+              <option value="custom">Custom Range</option>
             </select>
+            {isCustomDateRange && (
+              <div className="mt-3 grid grid-cols-1 gap-2">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--foreground)',
+                  }}
+                />
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-lg border"
+                  style={{
+                    borderColor: 'var(--border)',
+                    backgroundColor: 'var(--background)',
+                    color: 'var(--foreground)',
+                  }}
+                />
+              </div>
+            )}
           </div>
 
           {/* Status Filter */}
@@ -471,26 +602,8 @@ export default function PastAttendancePage() {
               <option value="Cutting">Cutting</option>
             </select>
           </div>
-
-          {/* Search */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Search Student
-            </label>
-            <input
-              type="text"
-              placeholder="Name or ID..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
-              }}
-            />
-          </div>
         </div>
+        )}
       </div>
 
       {/* Attendance Table */}
@@ -503,7 +616,13 @@ export default function PastAttendancePage() {
           className="rounded-xl border-2 overflow-hidden card-theme"
           style={{ borderColor: 'var(--primary)' }}
         >
-          <div className="overflow-x-auto">
+          <div
+            className="overflow-auto max-h-[70vh]"
+            style={{
+              overscrollBehavior: 'contain',
+              WebkitOverflowScrolling: 'touch',
+            }}
+          >
             <table className="w-full text-sm">
               <thead>
                 <tr style={{ backgroundColor: 'transparent', borderBottom: '2px solid var(--border)' }}>
@@ -607,8 +726,18 @@ export default function PastAttendancePage() {
         isOpen={isPrintModalOpen}
         onClose={() => setIsPrintModalOpen(false)}
         students={filteredStudents}
-        dateRangeLabel={dateRangeFilter === 7 ? 'Last 7 Days' : dateRangeFilter === 30 ? 'Last 30 Days' : 'All History'}
-        dateRangeFilter={dateRangeFilter}
+        dateRangeLabel={
+          isCustomDateRange
+            ? customStartDate && customEndDate
+              ? `Custom: ${customStartDate} to ${customEndDate}`
+              : 'Custom Range'
+            : dateRangeFilter === 7
+              ? 'Last 7 Days'
+              : dateRangeFilter === 30
+                ? 'Last 30 Days'
+                : 'All History'
+        }
+        dateRangeFilter={isCustomDateRange ? Math.max(displayedDates.length, 1) : dateRangeFilter}
       />
 
       {/* Edit Modal */}

@@ -2,7 +2,7 @@
 
 import { updateStudentAttendance } from '../../../../../lib/api';
 
-export const BULK_STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Cut'];
+export const BULK_STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Cutting'];
 
 interface BulkAttendanceActionBarProps {
   selectedCount: number;

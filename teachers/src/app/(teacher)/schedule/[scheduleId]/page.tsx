@@ -15,7 +15,14 @@ import BulkAttendanceActionBar, {
   applyBulkAttendanceStatus,
 } from './components/page';
 
-export const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Cut'];
+export const STATUS_OPTIONS = ['Present', 'Absent', 'Late', 'Cutting'];
+
+function getLocalDateYmd(baseDate = new Date()): string {
+  const year = baseDate.getFullYear();
+  const month = String(baseDate.getMonth() + 1).padStart(2, '0');
+  const day = String(baseDate.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
 
 // Icon Components
 const ArrowLeftIcon = () => (
@@ -114,7 +121,8 @@ export default function ScheduleDetailsPage({
         getScheduleAttendanceRecords({
           token,
           scheduleId,
-          date: new Date().toISOString().slice(0, 10),
+          // Use local date to avoid UTC day shift causing false "NOT SCANNED".
+          date: getLocalDateYmd(),
         }),
       ]);
 
@@ -230,8 +238,15 @@ export default function ScheduleDetailsPage({
     const sid = String(st.studentId ?? st.id ?? '');
     const rec = attendanceMap[sid];
     const hasScanned = !!rec;
+    const rawStatus = String(rec?.status ?? '');
+    const isGeneralInRecord =
+      String(rec?.subject ?? '').toLowerCase() === 'general' &&
+      String(rec?.attendanceType ?? '').toLowerCase() === 'in';
+    // Subject attendance view: QR-scanned General "Late" should still show Present.
+    const normalizedStatus =
+      isGeneralInRecord && rawStatus.toLowerCase() === 'late' ? 'Present' : rawStatus;
     const status = hasScanned
-      ? (String(rec?.status ?? '').toLowerCase() ? String(rec?.status ?? '') : '-')
+      ? (String(normalizedStatus ?? '').toLowerCase() ? String(normalizedStatus ?? '') : '-')
       : 'NOT SCANNED';
     const scanTime = rec?.scanTime
       ? new Date(String(rec.scanTime)).toLocaleTimeString([], {

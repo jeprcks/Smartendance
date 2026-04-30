@@ -72,39 +72,54 @@ export default function DashboardPage() {
       const today = format(new Date(), 'yyyy-MM-dd');
 
       // Fetch all data in parallel
-      const [students, todayRecords, teacherStats, schedules] = await Promise.all([
+      const [students, teacherStats, schedules] = await Promise.all([
         studentService.getAllStudents().catch(() => []),
-        historyService.getHistoryPageData({ 
-          startDate: today, 
-          endDate: today,
-          limit: 1000 // Get all today's records
-        }).catch(() => ({ success: false, records: [], stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 }, pagination: {} })),
         teacherService.getTeacherStats().catch(() => ({ success: false, stats: { active: 0, inactive: 0, suspended: 0, total: 0 } })),
         scheduleService.getAllSchedules({ isActive: true }).catch(() => []),
       ]);
 
       // Fetch recent activity (only In/Out records for activity feed)
       const recentRecords = await historyService.getHistoryPageData({
-        limit: 10,
+        limit: 100,
         page: 1,
       }).catch(() => ({ success: false, records: [], stats: { present: 0, absent: 0, late: 0, cutting: 0, total: 0 }, pagination: {} }));
 
       // Debug: Log ALL records first
       console.log('📊 Dashboard Debug:');
-      console.log('Total records today:', todayRecords.records.length);
+      console.log('Today date:', today);
+      console.log('Total records fetched:', recentRecords.records?.length);
+      
+      // Filter to only today's records
+      const todayFilteredRecords = recentRecords.records?.filter(record => {
+        const recordDate = format(new Date(record.scanTime), 'yyyy-MM-dd');
+        return recordDate === today;
+      }) || [];
+      
+      console.log('Total records TODAY (after filtering):', todayFilteredRecords.length);
       console.log('\n🔍 ALL Today\'s Records:');
-      todayRecords.records.forEach((record, index) => {
-        console.log(`${index + 1}. ${record.studentName} - Status: "${record.status}" - Type: "${record.attendanceType}" - Time: ${format(new Date(record.scanTime), 'HH:mm:ss')}`);
+      todayFilteredRecords.forEach((record, index) => {
+        console.log(`${index + 1}. ${record.studentName} - Status: "${record.status}" - Type: "${record.attendanceType}" - Subject: "${record.subject}" - Time: ${format(new Date(record.scanTime), 'HH:mm:ss')}`);
       });
       
       // Filter to only get check-in/check-out records (QR scanner), not subject-specific
-      const checkInOutRecords = todayRecords.records.filter(record => 
-        record.attendanceType === 'In' || record.attendanceType === 'Out'
+      // AND only for 'General' subject
+      const checkInOutRecords = todayFilteredRecords.filter(record => 
+        (record.attendanceType === 'In' || record.attendanceType === 'Out') &&
+        record.subject?.toLowerCase() === 'general'
       );
 
       console.log('\n✅ Check-in/out records (filtered):', checkInOutRecords.length);
+      checkInOutRecords.forEach((record, index) => {
+        console.log(`  ${index + 1}. ${record.studentName} - Status: "${record.status}" - Subject: "${record.subject}" - Type: "${record.attendanceType}"`);
+      });
       if (checkInOutRecords.length === 0) {
-        console.log('⚠️ WARNING: No check-in/out records found! Check attendanceType values above.');
+        console.log('⚠️ WARNING: No check-in/out records found!');
+        console.log('Checking why - all today records with General subject:');
+        const generalRecords = todayFilteredRecords.filter(r => r.subject?.toLowerCase() === 'general');
+        console.log(`Total General subject records: ${generalRecords.length}`);
+        generalRecords.forEach((record, index) => {
+          console.log(`  ${index + 1}. ${record.studentName} - Type: "${record.attendanceType}" - Status: "${record.status}"`);
+        });
       }
 
       // Track students: Get the LATEST status for each student
@@ -151,6 +166,17 @@ export default function DashboardPage() {
       });
       console.log(`\n🎯 TOTAL PRESENT TODAY: ${presentToday}`);
 
+      // Late Today = count unique students whose LATEST status is "Late"
+      let lateToday = 0;
+      console.log('\n🎯 Calculating Late Today:');
+      studentLatestStatus.forEach((data, studentId) => {
+        if (data.status === 'Late') {
+          lateToday++;
+          console.log(`  ⏰ LATE: ${data.studentName} (Status: "Late")`);
+        }
+      });
+      console.log(`\n🎯 TOTAL LATE TODAY: ${lateToday}`);
+
       // Absent Today = Students who did NOT scan their QR code at all today
       const studentsWhoScanned = studentLatestStatus.size;
       const absentToday = totalStudents - studentsWhoScanned;
@@ -168,9 +194,6 @@ export default function DashboardPage() {
         time: format(data.scanTime, 'HH:mm:ss')
       })));
       
-      // Late Today = 0 for now (no late time cutoff set up yet)
-      const lateToday = 0;
-
       const totalClasses = Array.isArray(schedules) ? schedules.length : 0;
       const totalTeachers = teacherStats.success ? (teacherStats.stats?.total || 0) : 0;
 
@@ -196,27 +219,41 @@ export default function DashboardPage() {
       setRecentActivity(recentRecords.records || []);
 
       // Fetch weekly trends (last 7 days) - only check-in/check-out records
+      // Fetch records for the entire last 7 days in one go, then filter client-side
       const weeklyData: WeeklyTrendData[] = [];
       const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
       
-      for (let i = 6; i >= 0; i--) {
-        const date = subDays(new Date(), i);
-        const dateStr = format(date, 'yyyy-MM-dd');
-        const dayName = days[date.getDay()];
+      try {
+        // Fetch all records (we'll filter by date client-side)
+        const allRecordsForWeek = await historyService.getHistoryPageData({
+          limit: 500,
+          page: 1,
+        }).catch(() => ({ success: false, records: [], stats: {}, pagination: {} }));
+
+        console.log('\n📊 Weekly Trends Debug:');
+        console.log('Total records fetched for week:', allRecordsForWeek.records?.length);
         
-        try {
-          // Fetch all records for this day
-          const dayRecords = await historyService.getHistoryPageData({ 
-            startDate: dateStr, 
-            endDate: dateStr,
-            limit: 1000
-          });
+        for (let i = 6; i >= 0; i--) {
+          const date = subDays(new Date(), i);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          const dayName = days[date.getDay()];
           
-          if (dayRecords.success && dayRecords.records) {
-            // Filter to only check-in/check-out records
-            const dayCheckInOuts = dayRecords.records.filter(
-              record => record.attendanceType === 'In' || record.attendanceType === 'Out'
+          // Filter records for this specific day
+          const dayRecords = allRecordsForWeek.records?.filter(record => {
+            const recordDate = format(new Date(record.scanTime), 'yyyy-MM-dd');
+            return recordDate === dateStr;
+          }) || [];
+          
+          console.log(`\n📅 ${dayName} (${dateStr}): ${dayRecords.length} records`);
+          
+          if (dayRecords.length > 0) {
+            // Filter to only check-in/check-out records AND only 'General' subject
+            const dayCheckInOuts = dayRecords.filter(
+              record => (record.attendanceType === 'In' || record.attendanceType === 'Out') &&
+              record.subject?.toLowerCase() === 'general'
             );
+            
+            console.log(`  └─ Check-in/out + General: ${dayCheckInOuts.length} records`);
             
             // Track students: Get LATEST status for each student this day
             const dayStudentLatestStatus = new Map<string, { status: string; scanTime: Date }>();
@@ -235,23 +272,22 @@ export default function DashboardPage() {
               }
             });
             
-            // For historical data: count students whose latest status is NOT "Out"
-            // This shows who attended (checked in) on that day
-            let dayPresent = 0;
+            // Count students by latest status
+            let dayLateCount = 0;
             dayStudentLatestStatus.forEach((data) => {
-              // For past days, count anyone who checked in (even if they checked out later)
-              // For real-time (Today), this is handled by the main dashboard logic above
-              if (data.status !== 'Out') {
-                dayPresent++;
+              if (data.status === 'Late') {
+                dayLateCount++;
               }
             });
             
-            const studentsWhoCheckedIn = dayStudentLatestStatus.size; // Total who scanned
+            const studentsWhoCheckedIn = dayStudentLatestStatus.size;
             const absent = totalStudents - studentsWhoCheckedIn;
-            const present = studentsWhoCheckedIn; // Count all who attended
-            const late = 0; // No late tracking yet
+            const present = studentsWhoCheckedIn - dayLateCount; // Present = checked in but not late
+            const late = dayLateCount;
             const total = totalStudents;
             const rate = total > 0 ? Math.round((studentsWhoCheckedIn / total) * 100) : 0;
+            
+            console.log(`  └─ Present: ${present}, Late: ${late}, Absent: ${absent}, Rate: ${rate}%`);
             
             weeklyData.push({
               date: dateStr,
@@ -274,8 +310,15 @@ export default function DashboardPage() {
               attendanceRate: 0,
             });
           }
-        } catch {
-          // If fetch fails, add empty data
+        }
+      } catch (err) {
+        console.error('Error fetching weekly trends:', err);
+        // Add empty data for all 7 days
+        for (let i = 6; i >= 0; i--) {
+          const date = subDays(new Date(), i);
+          const dateStr = format(date, 'yyyy-MM-dd');
+          const dayName = days[date.getDay()];
+          
           weeklyData.push({
             date: dateStr,
             day: i === 0 ? 'Today' : dayName,

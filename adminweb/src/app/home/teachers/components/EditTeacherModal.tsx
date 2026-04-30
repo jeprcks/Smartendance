@@ -419,7 +419,7 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
                   Current Password
                 </label>
                 <p className="text-base text-[var(--foreground)] font-mono bg-[var(--surface)] px-4 py-2.5 rounded-[var(--radius)] border border-[var(--border)]">
-                  {formData.plainPassword || 'N/A'}
+                  *******
                 </p>
               </div>
             </div>
@@ -429,6 +429,28 @@ export default function EditTeacherModal({ isOpen, onClose, onEdit, teacher }: E
           <div className="p-6 rounded-[var(--radius)] border border-[var(--border)]">
             <h3 className="text-lg font-semibold text-[var(--primary-dark)] mb-4">Basic Information</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                  Username
+                </label>
+                <input
+                  type="text"
+                  value={formData.username}
+                  disabled
+                  className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--muted)] text-[var(--muted-foreground)]"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
+                  Password
+                </label>
+                <input
+                  type="text"
+                  value="*******"
+                  disabled
+                  className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--muted)] text-[var(--muted-foreground)] font-mono"
+                />
+              </div>
               <div>
                 <label className="block text-sm font-medium text-[var(--foreground)] mb-1">
                   Full Name*
