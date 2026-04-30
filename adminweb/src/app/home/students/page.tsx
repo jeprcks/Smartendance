@@ -454,6 +454,7 @@ export default function StudentsPage() {
                       type="checkbox"
                       checked={selectedStudents.size === sortedFilteredStudents.length && sortedFilteredStudents.length > 0}
                       onChange={handleSelectAll}
+                      aria-label="Select all students"
                       className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                     />
                   </th>
@@ -503,6 +504,7 @@ export default function StudentsPage() {
                           }
                           setSelectedStudents(newSelected);
                         }}
+                        aria-label={`Select ${student.fullName}`}
                         className="rounded border-gray-300 text-green-600 focus:ring-green-500"
                       />
                     </td>

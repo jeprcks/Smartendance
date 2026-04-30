@@ -212,6 +212,7 @@ export default function StudentsPage() {
                 );
                 setSelectedSchedule((s ?? null) as Record<string, unknown> | null);
               }}
+              aria-label="Select a class"
               className="w-full px-4 py-3 pl-12 rounded-xl border input-theme transition-all duration-200 hover:shadow-md focus:shadow-lg appearance-none cursor-pointer"
               style={{ backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%232e7d32'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E")`, backgroundRepeat: 'no-repeat', backgroundPosition: 'right 0.75rem center', backgroundSize: '1.5em 1.5em' }}
             >
@@ -244,6 +245,7 @@ export default function StudentsPage() {
               placeholder="Search by name or student ID..."
               value={studentSearch}
               onChange={(e) => setStudentSearch(e.target.value)}
+              aria-label="Search students by name or ID"
               className="w-full px-4 py-3 pl-12 rounded-xl border input-theme transition-all duration-200 hover:shadow-md focus:shadow-lg"
             />
           </div>

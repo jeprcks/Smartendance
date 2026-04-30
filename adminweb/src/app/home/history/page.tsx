@@ -536,13 +536,31 @@ export default function HistoryPage() {
     fetchData();
   }, [fetchData]);
 
-  // Auto-refresh every 5 seconds (silent background update for near real-time)
+  // Auto-refresh every 30 seconds (reduced from 5s to prevent API overload)
+  // Only refresh if user is actively viewing the page
   useEffect(() => {
-    const interval = setInterval(() => {
-      fetchData(true); // Silent refresh - no loading spinner
-    }, 5000); // 5 seconds - near real-time updates
+    let interval: NodeJS.Timeout | null = null;
+    let isPageActive = true;
 
-    return () => clearInterval(interval);
+    const handleVisibilityChange = () => {
+      isPageActive = document.visibilityState === 'visible';
+    };
+
+    // Reduce refresh when page is not visible (tab not focused)
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    if (isPageActive) {
+      interval = setInterval(() => {
+        if (isPageActive) {
+          fetchData(true); // Silent refresh - no loading spinner
+        }
+      }, 30000); // 30 seconds - reasonable balance between updates and performance
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [fetchData]);
 
   return (
