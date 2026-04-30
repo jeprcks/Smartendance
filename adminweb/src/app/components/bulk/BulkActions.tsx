@@ -96,7 +96,7 @@ export default function BulkActions<T>({
       <div className="flex items-center gap-2 mb-4">
         <button
           onClick={handleSelectAll}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-lg transition-colors"
+          className="flex items-center gap-2 px-3 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)] hover:bg-[var(--muted)] rounded-lg transition-colors"
         >
           <Square size={18} />
           Select All
@@ -106,18 +106,18 @@ export default function BulkActions<T>({
   }
 
   return (
-    <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-4">
+    <div className="bg-[var(--secondary)] border border-[var(--border)] rounded-lg p-4 mb-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <button
             onClick={handleSelectAll}
-            className="flex items-center gap-2 text-sm font-medium text-gray-700 hover:text-gray-900"
+            className="flex items-center gap-2 text-sm font-medium text-[var(--foreground)] hover:text-[var(--primary)]"
             disabled={isProcessing}
           >
             {allSelected ? <CheckSquare size={18} className="text-green-600" /> : <Square size={18} />}
             {allSelected ? 'Deselect All' : 'Select All'}
           </button>
-          <span className="text-sm text-gray-600">
+          <span className="text-sm text-[var(--foreground)]/80">
             {selectedCount} item{selectedCount !== 1 ? 's' : ''} selected
           </span>
         </div>
@@ -127,7 +127,7 @@ export default function BulkActions<T>({
             <button
               onClick={handleBulkExport}
               disabled={isProcessing || selectedCount === 0}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-3 py-2 text-sm bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               <Download size={16} />
               Export
@@ -137,7 +137,7 @@ export default function BulkActions<T>({
             <button
               onClick={handleBulkPrintQR}
               disabled={isProcessing || selectedCount === 0}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-3 py-2 text-sm bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               <QrCode size={16} />
               Print QR
@@ -147,7 +147,7 @@ export default function BulkActions<T>({
             <button
               onClick={handleBulkMessage}
               disabled={isProcessing || selectedCount === 0}
-              className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+              className="px-3 py-2 text-sm bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors disabled:opacity-50 flex items-center gap-2"
             >
               <Mail size={16} />
               Message
@@ -159,7 +159,7 @@ export default function BulkActions<T>({
               <button
                 onClick={() => setShowMenu(!showMenu)}
                 disabled={isProcessing || selectedCount === 0}
-                className="px-3 py-2 text-sm bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors disabled:opacity-50 flex items-center gap-2"
+                className="px-3 py-2 text-sm bg-[var(--surface)] text-[var(--foreground)] border border-[var(--border)] rounded-lg hover:bg-[var(--muted)] transition-colors disabled:opacity-50 flex items-center gap-2"
               >
                 <MoreVertical size={16} />
                 Actions
@@ -171,14 +171,14 @@ export default function BulkActions<T>({
                     className="fixed inset-0 z-10"
                     onClick={() => setShowMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-white rounded-lg shadow-lg border border-gray-200 z-20">
+                  <div className="absolute right-0 mt-2 w-56 bg-[var(--surface)] rounded-lg shadow-lg border border-[var(--border)] z-20">
                     {onBulkEditGrade && (
                       <button
                         onClick={() => {
                           setShowMenu(false);
                           onBulkEditGrade(Array.from(selectedItems));
                         }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] flex items-center gap-2"
                       >
                         <Edit size={16} />
                         Edit grade / section / shift
@@ -190,7 +190,7 @@ export default function BulkActions<T>({
                           setShowMenu(false);
                           toast.success('Bulk update feature coming soon');
                         }}
-                        className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2"
+                        className="w-full text-left px-4 py-2 text-sm text-[var(--foreground)] hover:bg-[var(--muted)] flex items-center gap-2"
                       >
                         <Edit size={16} />
                         Update Status
@@ -214,7 +214,7 @@ export default function BulkActions<T>({
 
           <button
             onClick={onDeselectAll}
-            className="px-3 py-2 text-sm text-gray-600 hover:text-gray-900"
+            className="px-3 py-2 text-sm text-[var(--muted-foreground)] hover:text-[var(--foreground)]"
           >
             Clear
           </button>

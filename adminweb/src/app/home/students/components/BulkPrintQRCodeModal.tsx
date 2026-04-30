@@ -83,17 +83,17 @@ export default function BulkPrintQRCodeModal({ isOpen, onClose, students }: Bulk
     <>
       <div id="bulk-print-root" className="fixed inset-0 flex items-center justify-center z-50">
         <div className="fixed inset-0 bg-black/50 print:hidden" aria-hidden onClick={onClose} />
-        <div className="bg-white rounded-lg shadow-lg border border-gray-200 p-8 max-w-2xl w-full mx-4 relative z-10 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="bg-[var(--surface)] rounded-lg shadow-lg border border-[var(--border)] p-8 max-w-2xl w-full mx-4 relative z-10 max-h-[90vh] overflow-hidden flex flex-col" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between print:hidden mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Bulk Print QR Codes</h2>
-            <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600 p-1">
+            <h2 className="text-xl font-bold text-[var(--foreground)]">Bulk Print QR Codes</h2>
+            <button type="button" onClick={onClose} className="text-[var(--muted-foreground)] hover:text-[var(--foreground)] p-1">
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
 
-          <p className="text-sm text-gray-600 print:hidden mb-4">
+          <p className="text-sm text-[var(--foreground)]/80 print:hidden mb-4">
             {students.length} student{students.length !== 1 ? 's' : ''} selected. {loading ? 'Loading QR codes…' : canDownload ? `${loadedCount} ready to download.` : 'No QR codes loaded.'}
           </p>
 
@@ -102,23 +102,23 @@ export default function BulkPrintQRCodeModal({ isOpen, onClose, students }: Bulk
               const qr = s._id ? qrMap[s._id] : null;
               const err = s._id ? errors[s._id] : null;
               return (
-                <div key={s._id || s.studentId} className="flex items-center gap-3 p-2 rounded-lg border border-gray-200 bg-gray-50/50">
-                  <span className="text-sm font-medium text-gray-800 truncate flex-1">{s.fullName}</span>
-                  <span className="text-xs text-gray-500">{s.studentId}</span>
+                <div key={s._id || s.studentId} className="flex items-center gap-3 p-2 rounded-lg border border-[var(--border)] bg-[var(--muted)]/40">
+                  <span className="text-sm font-medium text-[var(--foreground)] truncate flex-1">{s.fullName}</span>
+                  <span className="text-xs text-[var(--foreground)]/70">{s.studentId}</span>
                   {loading && !qr && !err ? (
-                    <span className="text-xs text-amber-600">Loading…</span>
+                    <span className="text-xs text-amber-600 dark:text-amber-400">Loading…</span>
                   ) : err ? (
-                    <span className="text-xs text-red-600">{err}</span>
+                    <span className="text-xs text-[var(--destructive)]">{err}</span>
                   ) : qr ? (
-                    <img src={qr} alt="" className="w-8 h-8 rounded border border-gray-200" />
+                    <img src={qr} alt="" className="w-8 h-8 rounded border border-[var(--border)]" />
                   ) : null}
                 </div>
               );
             })}
           </div>
 
-          <div className="flex justify-end gap-3 print:hidden pt-4 border-t border-gray-200">
-            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+          <div className="flex justify-end gap-3 print:hidden pt-4 border-t border-[var(--border)]">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-[var(--foreground)] border border-[var(--border)] rounded-lg hover:bg-[var(--muted)]">
               Cancel
             </button>
             <button

@@ -1,11 +1,9 @@
 const History = require("../models/historySchema");
 const Student = require("../models/studentsSchema");
 const telegramService = require("../services/telegramService");
-const pendingAttendanceRequests = new Set();
 
 // Create new attendance record
 const createAttendanceRecord = async (req, res) => {
-    let requestKey = null;
     try {
         const {
             studentId,
@@ -35,101 +33,13 @@ const createAttendanceRecord = async (req, res) => {
         }
 
         const now = new Date();
-        requestKey = `${studentId}-${attendanceType}-${subject}`;
-
-        if (pendingAttendanceRequests.has(requestKey)) {
-            const duplicateWindowStart = new Date(now.getTime() - 2 * 60 * 1000);
-            const recentExisting = await History.findOne({
-                studentId,
-                attendanceType,
-                subject,
-                scanTime: { $gte: duplicateWindowStart, $lte: now }
-            }).sort({ scanTime: -1 });
-
-            if (recentExisting) {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Duplicate request ignored; existing record returned',
-                    record: recentExisting
-                });
-            }
-
-            // Another request for same student/type/subject is still processing.
-            // Block this one to prevent race-condition duplicate inserts.
-            return res.status(409).json({
-                success: false,
-                error: 'Attendance request already processing. Please try again.',
-                code: 'ATTENDANCE_REQUEST_IN_PROGRESS'
-            });
-        }
-        pendingAttendanceRequests.add(requestKey);
 
         // When type is checkout (Out), status should be Out
         const finalStatus = attendanceType === 'Out' ? 'Out' : status;
 
-<<<<<<< Updated upstream
-=======
         // Guard against rapid duplicate check-in creation (e.g., scanner calling two endpoints).
         // If there is a very recent In record for the same student+subject, reuse it.
         if (attendanceType === 'In') {
-            // If an auto-absent record exists for today, allow the scan to "override" it.
-            // This prevents the scanner from getting stuck due to cutoff-based Absent placeholders.
-            const startOfDay = new Date(now);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(now);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            const existingAutoAbsent = await History.findOne({
-                studentId,
-                attendanceType: 'In',
-                subject,
-                status: 'Absent',
-                scanTime: { $gte: startOfDay, $lte: endOfDay },
-                $or: [
-                    { checkOutTime: { $exists: false } },
-                    { checkOutTime: null }
-                ]
-            }).sort({ scanTime: -1 });
-
-            if (existingAutoAbsent) {
-                existingAutoAbsent.status = finalStatus;
-                existingAutoAbsent.checkInTime = now;
-                existingAutoAbsent.scanTime = now;
-                existingAutoAbsent.notes = [
-                    existingAutoAbsent.notes,
-                    'Overridden by QR scan.'
-                ].filter(Boolean).join(' ');
-                await existingAutoAbsent.save();
-
-                return res.status(201).json({
-                    success: true,
-                    message: 'Check-in recorded (overrode auto-absent)',
-                    record: existingAutoAbsent
-                });
-            }
-
-            // Hard rule: only one open check-in at a time.
-            // If there's already an open Present/Late "In" today, don't create a duplicate.
-            const existingOpenIn = await History.findOne({
-                studentId,
-                attendanceType: 'In',
-                subject,
-                status: { $in: ['Present', 'Late'] },
-                scanTime: { $gte: startOfDay, $lte: endOfDay },
-                $or: [
-                    { checkOutTime: { $exists: false } },
-                    { checkOutTime: null }
-                ]
-            }).sort({ scanTime: -1 });
-
-            if (existingOpenIn) {
-                return res.status(200).json({
-                    success: true,
-                    message: 'Already checked in; existing open record returned',
-                    record: existingOpenIn
-                });
-            }
-
             const duplicateWindowStart = new Date(now.getTime() - 2 * 60 * 1000); // last 2 minutes
             const recentExistingIn = await History.findOne({
                 studentId,
@@ -147,7 +57,6 @@ const createAttendanceRecord = async (req, res) => {
             }
         }
 
->>>>>>> Stashed changes
         // Create new attendance record
         const attendanceRecord = new History({
             studentId,
@@ -214,21 +123,6 @@ const createAttendanceRecord = async (req, res) => {
                 console.log(`  - Duration: ${attendanceRecord.durationMinutes} minutes`);
                 console.log(`  - Update acknowledged: ${updateResult.acknowledged}`);
                 console.log(`  - Docs modified: ${updateResult.modifiedCount}`);
-
-                // Safety: close any other stale open "In" records for today to avoid future false blocks.
-                await History.updateMany(
-                    {
-                        studentId,
-                        attendanceType: 'In',
-                        _id: { $ne: inRecord._id },
-                        scanTime: { $gte: startOfDay, $lte: now },
-                        $or: [
-                            { checkOutTime: { $exists: false } },
-                            { checkOutTime: null }
-                        ]
-                    },
-                    { $set: { checkOutTime: now } }
-                );
             } else {
                 // Reject check-out if no open check-in (handles concurrent scan race)
                 console.log(`⚠️ No unclosed check-in found for ${studentId} checkout - rejecting`);
@@ -267,10 +161,6 @@ const createAttendanceRecord = async (req, res) => {
     } catch (error) {
         console.error('Error creating attendance record:', error);
         res.status(400).json({ error: error.message || "Failed to create attendance record" });
-    } finally {
-        if (requestKey) {
-            pendingAttendanceRequests.delete(requestKey);
-        }
     }
 };
 

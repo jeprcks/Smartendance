@@ -18,6 +18,8 @@ const updateSettings = async (req, res) => {
       watermarkLogo,
       address,
       lateThresholdMinutes,
+      morningShiftTimeIn,
+      afternoonShiftTimeIn,
       morningShiftCutoff,
       afternoonShiftCutoff,
       academicYear,
@@ -34,6 +36,8 @@ const updateSettings = async (req, res) => {
     if (watermarkLogo !== undefined) settings.watermarkLogo = watermarkLogo;
     if (address !== undefined) settings.address = address;
     if (lateThresholdMinutes !== undefined) settings.lateThresholdMinutes = Number(lateThresholdMinutes);
+    if (morningShiftTimeIn !== undefined) settings.morningShiftTimeIn = morningShiftTimeIn;
+    if (afternoonShiftTimeIn !== undefined) settings.afternoonShiftTimeIn = afternoonShiftTimeIn;
     if (morningShiftCutoff !== undefined) settings.morningShiftCutoff = morningShiftCutoff;
     if (afternoonShiftCutoff !== undefined) settings.afternoonShiftCutoff = afternoonShiftCutoff;
     if (academicYear !== undefined) settings.academicYear = academicYear;

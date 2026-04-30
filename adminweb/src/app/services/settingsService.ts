@@ -7,6 +7,8 @@ export interface Settings {
   watermarkLogo?: string | null;
   address?: string;
   lateThresholdMinutes: number;
+  morningShiftTimeIn: string;
+  afternoonShiftTimeIn: string;
   morningShiftCutoff: string;
   afternoonShiftCutoff: string;
   academicYear?: string;
@@ -19,6 +21,8 @@ const defaultSettings: Settings = {
   watermarkLogo: undefined,
   address: '',
   lateThresholdMinutes: 15,
+  morningShiftTimeIn: '07:00',
+  afternoonShiftTimeIn: '13:00',
   morningShiftCutoff: '12:00',
   afternoonShiftCutoff: '17:00',
   academicYear: '',

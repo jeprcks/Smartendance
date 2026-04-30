@@ -450,7 +450,7 @@ export default function TeachersPage() {
                   filteredActiveTeachers.map((teacher) => {
                     const isSelected = selectedTeachers.has(teacher._id);
                     return (
-                    <tr key={teacher._id} className={`hover:bg-gray-50 ${isSelected ? 'bg-green-50' : ''}`}>
+                    <tr key={teacher._id} className={`hover:bg-[var(--muted)] ${isSelected ? 'bg-[var(--secondary)]' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -484,10 +484,10 @@ export default function TeachersPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.teacherId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.teacherId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.username}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.role}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex flex-wrap gap-1">
                           {getTeacherSubjects(teacher).map((sub) => (
@@ -598,7 +598,7 @@ export default function TeachersPage() {
                   {filteredInactiveTeachers.map((teacher) => {
                     const isSelected = selectedTeachers.has(teacher._id);
                     return (
-                    <tr key={teacher._id} className={`hover:bg-gray-50 opacity-75 ${isSelected ? 'bg-green-50' : ''}`}>
+                    <tr key={teacher._id} className={`hover:bg-[var(--muted)] opacity-75 ${isSelected ? 'bg-[var(--secondary)]' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <input
                           type="checkbox"
@@ -632,10 +632,10 @@ export default function TeachersPage() {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.teacherId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.teacherId}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.username}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.name}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-[var(--foreground)]">{teacher.role}</td>
                       <td className="px-6 py-4 text-sm">
                         <div className="flex flex-wrap gap-1">
                           {getTeacherSubjects(teacher).map((sub) => (

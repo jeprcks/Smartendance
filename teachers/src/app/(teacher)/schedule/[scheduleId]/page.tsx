@@ -71,6 +71,14 @@ export default function ScheduleDetailsPage({
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [isBulkApplying, setIsBulkApplying] = useState(false);
 
+  const getLocalDateString = () => {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const load = async () => {
     const token = getToken();
     const data = getTeacherData();
@@ -114,14 +122,14 @@ export default function ScheduleDetailsPage({
         getScheduleAttendanceRecords({
           token,
           scheduleId,
-          date: new Date().toISOString().slice(0, 10),
+          date: getLocalDateString(),
         }),
       ]);
 
       setStudents(studentList);
       const map: Record<string, Record<string, unknown>> = {};
       for (const r of attendance) {
-        const sid = String(r.studentId ?? r.student ?? '');
+        const sid = String(r.studentId ?? r.student ?? '').trim();
         if (sid) map[sid] = r;
       }
       setAttendanceMap(map);
@@ -227,7 +235,7 @@ export default function ScheduleDetailsPage({
   }
 
   const rows = filtered.map((st) => {
-    const sid = String(st.studentId ?? st.id ?? '');
+    const sid = String(st.studentId ?? st.id ?? '').trim();
     const rec = attendanceMap[sid];
     const hasScanned = !!rec;
     const status = hasScanned

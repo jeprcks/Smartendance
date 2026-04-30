@@ -9,6 +9,7 @@ interface StudentAttendance {
   subject: string;
   gradeLevel: string;
   section: string;
+  enrollmentDate?: string;
   attendance: Record<string, string>;
 }
 
@@ -17,7 +18,7 @@ interface PrintPDFModalProps {
   onClose: () => void;
   students: StudentAttendance[];
   dateRangeLabel: string;
-  dateRangeFilter: number;
+  exportDates: string[];
 }
 
 const PrintPDFModal: React.FC<PrintPDFModalProps> = ({
@@ -25,24 +26,9 @@ const PrintPDFModal: React.FC<PrintPDFModalProps> = ({
   onClose,
   students,
   dateRangeLabel,
-  dateRangeFilter,
+  exportDates,
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
-
-  // Helper function to generate all dates in the selected range
-  const getAllDatesInRange = (): string[] => {
-    const dates: string[] = [];
-    const today = new Date();
-    const days = dateRangeFilter === 7 ? 7 : dateRangeFilter === 30 ? 30 : 365; // Default to 365 for 'All History'
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = new Date(today);
-      date.setDate(date.getDate() - i);
-      const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-      dates.push(dateStr);
-    }
-    return dates;
-  };
 
   const generateExcel = async () => {
     setIsGenerating(true);
@@ -51,8 +37,11 @@ const PrintPDFModal: React.FC<PrintPDFModalProps> = ({
         throw new Error('No students to export');
       }
 
-      // Get all dates in the selected range
-      const sortedDates = getAllDatesInRange();
+      // Use the exact date columns currently shown in the page filter.
+      const sortedDates = [...exportDates];
+      if (sortedDates.length === 0) {
+        throw new Error('No dates available in the selected range');
+      }
 
       // Helper function to get day name
       const getDayName = (dateStr: string): string => {
@@ -74,8 +63,7 @@ const PrintPDFModal: React.FC<PrintPDFModalProps> = ({
       // Add date columns with day names and date
       sortedDates.forEach(date => {
         const day = getDayName(date);
-        const dayOfMonth = date.split('-')[2];
-        dateHeaders[`${day} ${dayOfMonth}`] = `${day} ${dayOfMonth}`;
+        dateHeaders[`${day} ${date}`] = `${day} ${date}`;
       });
 
       // Add student rows with attendance status for each date
@@ -89,8 +77,11 @@ const PrintPDFModal: React.FC<PrintPDFModalProps> = ({
         // Add attendance status for each date
         sortedDates.forEach(date => {
           const day = getDayName(date);
-          const dayOfMonth = date.split('-')[2];
-          row[`${day} ${dayOfMonth}`] = student.attendance[date] || 'Absent';
+          if (student.enrollmentDate && date < student.enrollmentDate) {
+            row[`${day} ${date}`] = '';
+          } else {
+            row[`${day} ${date}`] = student.attendance[date] || 'Unscanned';
+          }
         });
 
         excelData.push(row);
