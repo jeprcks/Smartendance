@@ -30,6 +30,9 @@ class _ScanningPageState extends State<ScanningPage> {
   // Student service instance
   final StudentService _studentService = StudentService();
   final AudioPlayer _beepPlayer = AudioPlayer();
+  bool _isProcessingScan = false;
+  String? _lastScanCode;
+  DateTime? _lastScanAt;
 
   @override
   void initState() {
@@ -268,16 +271,31 @@ class _ScanningPageState extends State<ScanningPage> {
               final List<Barcode> barcodes = capture.barcodes;
               if (barcodes.isNotEmpty) {
                 final String? code = barcodes.first.rawValue;
-                if (code != null && code != scannedCode) {
+                final now = DateTime.now();
+                final isRapidDuplicate =
+                    code != null &&
+                    _lastScanCode == code &&
+                    _lastScanAt != null &&
+                    now.difference(_lastScanAt!).inMilliseconds < 1800;
+
+                if (code != null && code != scannedCode && !_isProcessingScan && !isRapidDuplicate) {
                   setState(() {
                     scannedCode = code;
+                    _isProcessingScan = true;
                   });
+                  _lastScanCode = code;
+                  _lastScanAt = now;
 
                   // Play success beep when QR code is scanned
                   _playScanBeep();
 
                   // Fetch student information when QR code is scanned
-                  fetchStudentInfo(code);
+                  fetchStudentInfo(code).whenComplete(() {
+                    if (!mounted) return;
+                    setState(() {
+                      _isProcessingScan = false;
+                    });
+                  });
 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(

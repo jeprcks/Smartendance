@@ -484,6 +484,14 @@ exports.updateStudentAttendance = async (req, res) => {
         // Update existing record
         historyRecord.status = status;
         historyRecord.studentName = studentName; // Update student name
+        historyRecord.subject = schedule.subject;
+        historyRecord.scheduleDay = schedule.day;
+        historyRecord.scheduleTimeSlot = schedule.timeSlot;
+        historyRecord.scheduleTeacher = schedule.teacher;
+        historyRecord.scheduleSubject = schedule.subject;
+        historyRecord.isVerified = true;
+        historyRecord.verifiedBy = schedule.teacher;
+        historyRecord.verifiedAt = new Date();
         historyRecord.statusHistory = historyRecord.statusHistory || [];
         historyRecord.statusHistory.push({
           status: status,
@@ -506,6 +514,10 @@ exports.updateStudentAttendance = async (req, res) => {
           gradeLevel: schedule.gradeLevel,
           section: schedule.section,
           shift: schedule.shift,
+          scheduleDay: schedule.day,
+          scheduleTimeSlot: schedule.timeSlot,
+          scheduleTeacher: schedule.teacher,
+          scheduleSubject: schedule.subject,
           statusHistory: [{
             status: status,
             changedAt: new Date(),
@@ -513,7 +525,8 @@ exports.updateStudentAttendance = async (req, res) => {
             reason: 'Teacher recorded status'
           }],
           isVerified: true,
-          verifiedBy: schedule.teacher
+          verifiedBy: schedule.teacher,
+          verifiedAt: new Date()
         });
         await historyRecord.save();
         console.log('Created new history record for student:', studentId);

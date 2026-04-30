@@ -2,8 +2,8 @@ class Environment {
   // Production Vercel server URL
   static const String apiUrl = 'https://smartendance-lilac.vercel.app';
 
-  // Set to true for local development, false for production
-  static const bool isDevelopment = false;
+  // Local development should be enabled while testing scanner/backend changes.
+  static const bool isDevelopment = true;
 
   static String get baseUrl {
     if (isDevelopment) {

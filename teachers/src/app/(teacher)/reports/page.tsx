@@ -146,7 +146,7 @@ function calcWeeklyBreakdown(
     const dayRecords = filterRecordsByDateRange(records, dayStart, dayEnd);
     const perf = calcClassPerformance(dayRecords);
     const dateLabel = day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
-    const dateKey = day.toISOString().slice(0, 10);
+    const dateKey = toYmd(day);
     for (const row of perf) {
       rows.push({
         date: dateKey,
@@ -188,7 +188,10 @@ function downloadCSV(content: string, filename: string) {
 }
 
 function toYmd(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
 }
 
 function parseYmdToLocalDateStart(ymd: string) {
@@ -505,7 +508,7 @@ export default function ReportsPage() {
       headers.join(',') +
       '\n' +
       rows.map((row) => row.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toYmd(new Date());
     const rangeLabel = `${toYmd(activeRange.start)}_to_${toYmd(activeRange.end)}`;
     downloadCSV(csv, `attendance-report-${rangeLabel}-${today}.csv`);
   };
@@ -536,7 +539,7 @@ export default function ReportsPage() {
       headers.join(',') +
       '\n' +
       rows.map((row) => row.join(',')).join('\n');
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toYmd(new Date());
     const rangeLabel = `${toYmd(activeRange.start)}_to_${toYmd(activeRange.end)}`;
     downloadCSV(csv, `class-report-${rangeLabel}-${today}.csv`);
   };

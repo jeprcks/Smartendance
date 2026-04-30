@@ -224,6 +224,7 @@ export default function HistoryPage() {
     if (s === 'present') return { bg: 'rgba(67, 160, 71, 0.1)', color: 'var(--success)', border: 'var(--success)' };
     if (s === 'absent') return { bg: 'rgba(216, 67, 21, 0.1)', color: 'var(--destructive)', border: 'var(--destructive)' };
     if (s === 'late') return { bg: 'rgba(255, 193, 7, 0.1)', color: 'var(--accent)', border: 'var(--accent)' };
+    if (s === 'out') return { bg: 'rgba(126, 87, 194, 0.1)', color: '#7e57c2', border: '#7e57c2' };
     if (s === 'cutting' || s === 'cut') return { bg: 'rgba(230, 81, 0, 0.1)', color: 'var(--error)', border: 'var(--error)' };
     return { bg: 'rgba(107, 114, 128, 0.1)', color: 'var(--muted-foreground)', border: 'var(--muted-foreground)' };
   };
@@ -453,6 +454,7 @@ export default function HistoryPage() {
                 <option value="Present">Present</option>
                 <option value="Absent">Absent</option>
                 <option value="Late">Late</option>
+                <option value="Out">Out</option>
                 <option value="Cutting">Cutting</option>
               </select>
             </div>
