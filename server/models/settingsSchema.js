@@ -12,6 +12,8 @@ const settingsSchema = new mongoose.Schema(
     academicYear: { type: String, default: "" },
     theme: { type: String, default: "light", enum: ["light", "dark"] },
     lastDailyReset: { type: Date, default: null },
+    lastAutoCloseAt10PM: { type: Date, default: null },
+    lastDailyResetAt12AM: { type: Date, default: null },
   },
   { timestamps: true },
 );

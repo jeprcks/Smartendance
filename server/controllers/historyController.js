@@ -184,7 +184,7 @@ async function resolveGeneralInStatus(studentId, shift, scanTime) {
 async function shouldPerformDailyReset() {
   try {
     const settings = await Settings.findOne({}).lean();
-    if (!settings || !settings.lastDailyReset) {
+    if (!settings || !settings.lastDailyResetAt12AM) {
       return true; // First time, should reset
     }
 
@@ -194,16 +194,19 @@ async function shouldPerformDailyReset() {
     const thisMonth = phNow.getUTCMonth();
     const thisYear = phNow.getUTCFullYear();
 
-    const lastResetPh = new Date(settings.lastDailyReset.getTime() + PH_TIME_OFFSET_MS);
+    const lastResetPh = new Date(settings.lastDailyResetAt12AM.getTime() + PH_TIME_OFFSET_MS);
     const lastResetDay = lastResetPh.getUTCDate();
     const lastResetMonth = lastResetPh.getUTCMonth();
     const lastResetYear = lastResetPh.getUTCFullYear();
 
-    // Different day = should reset
+    // Different day AND past 12 AM = should reset
+    const phHour = phNow.getUTCHours();
+    const isPast12AM = phHour >= 0; // Always true after midnight
+    
     return (
-      today !== lastResetDay ||
-      thisMonth !== lastResetMonth ||
-      thisYear !== lastResetYear
+      (today !== lastResetDay ||
+        thisMonth !== lastResetMonth ||
+        thisYear !== lastResetYear) && isPast12AM
     );
   } catch (error) {
     console.error("Error checking if reset needed:", error);
@@ -212,29 +215,73 @@ async function shouldPerformDailyReset() {
 }
 
 /**
- * Perform daily reset: Create "Absent" records for all students
- * Called at first API call of the new day
+ * Check if 10 PM auto-close should be performed
+ * Returns true if it's past 10 PM (22:00) today and hasn't been done yet
  */
-async function performDailyReset() {
+async function shouldPerform10PMAutoClose() {
   try {
-    console.log("🔄 Performing daily reset - closing previous day check-ins and resetting to Unscanned...");
+    const settings = await Settings.findOne({}).lean();
+    
+    const now = new Date();
+    const phNow = new Date(now.getTime() + PH_TIME_OFFSET_MS);
+    const phHour = phNow.getUTCHours();
+    const phDate = phNow.getUTCDate();
+    const phMonth = phNow.getUTCMonth();
+    const phYear = phNow.getUTCFullYear();
+
+    // Check if it's past 10 PM (22:00)
+    const isPast10PM = phHour >= 22;
+    
+    if (!isPast10PM) {
+      return false; // Not 10 PM yet
+    }
+
+    // Check if we've already done this today
+    if (settings?.lastAutoCloseAt10PM) {
+      const lastClosePh = new Date(settings.lastAutoCloseAt10PM.getTime() + PH_TIME_OFFSET_MS);
+      const lastCloseDay = lastClosePh.getUTCDate();
+      const lastCloseMonth = lastClosePh.getUTCMonth();
+      const lastCloseYear = lastClosePh.getUTCFullYear();
+
+      const alreadyDone = 
+        phDate === lastCloseDay &&
+        phMonth === lastCloseMonth &&
+        phYear === lastCloseYear;
+
+      if (alreadyDone) {
+        return false; // Already done today
+      }
+    }
+
+    return true; // Should perform 10 PM auto-close
+  } catch (error) {
+    console.error("Error checking if 10 PM auto-close needed:", error);
+    return false;
+  }
+}
+
+/**
+ * Perform 10 PM auto-close: Close all unclosed check-ins from TODAY
+ * Called when it's 10 PM or later
+ */
+async function perform10PMAutoClose() {
+  try {
+    console.log("🔄 Performing 10 PM auto-close - closing today's unclosed check-ins...");
 
     const now = new Date();
-    const { start, end } = getStartAndEndOfDay(now);
+    const { start: todayStart, end: todayEnd } = getStartAndEndOfDay(now);
 
-    // ✅ STEP 1: Close all unclosed check-ins from PREVIOUS DAYS
+    // Find unclosed check-ins from TODAY ONLY
     const unclosedCheckIns = await History.find({
       attendanceType: "In",
-      scanTime: { $lt: start }, // Before today
+      scanTime: { $gte: todayStart, $lte: todayEnd }, // TODAY only
       $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
     });
 
     let closedCount = 0;
     for (const record of unclosedCheckIns) {
-      // Calculate approximate end-of-day for that day (shift end + 2 hours buffer)
-      const recordDate = new Date(record.scanTime);
-      const { end: dayEnd } = getStartAndEndOfDay(recordDate);
-      const autoCheckOutTime = new Date(dayEnd.getTime() - 2 * 60 * 60 * 1000); // 2 hours before day end
+      // Auto-close at 10 PM with 1 hour buffer (until 11 PM, then day ends)
+      const autoCheckOutTime = now; // Close at exactly 10 PM call time
 
       const duration = Math.max(
         0,
@@ -249,15 +296,40 @@ async function performDailyReset() {
           $set: {
             checkOutTime: autoCheckOutTime,
             durationMinutes: duration,
-            notes: `${record.notes || "Auto-checkout"} - Auto-closed during daily reset`,
+            notes: `${record.notes || ""} - Auto-closed at 10 PM (end of school day)`,
           },
         },
       );
       closedCount++;
-      console.log(`  ✓ Auto-closed check-in for student ${record.studentId} from ${record.scanTime}`);
+      console.log(`  ✓ Auto-closed check-in for student ${record.studentId}`);
     }
 
-    // ✅ STEP 2: Create "Unscanned" records for all active students for TODAY
+    // Update lastAutoCloseAt10PM timestamp
+    await Settings.updateOne({}, { $set: { lastAutoCloseAt10PM: now } }, { upsert: true });
+
+    console.log(`✅ 10 PM auto-close completed: ${closedCount} check-ins auto-closed`);
+    return { success: true, closedCount };
+  } catch (error) {
+    console.error("❌ Error during 10 PM auto-close:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Perform daily reset at 12 AM: Create "Unscanned" records for all students
+ * Called at 12 AM (start of new day)
+ */
+async function performDailyResetAt12AM() {
+  try {
+    console.log("🔄 Performing 12 AM daily reset - starting new day with Unscanned records...");
+
+    const now = new Date();
+    const { start, end } = getStartAndEndOfDay(now);
+
+    // Note: All unclosed check-ins from previous day should already be closed by 10 PM auto-close
+    // This just resets everyone to "Unscanned" for the new day
+
+    // ✅ Create "Unscanned" records for all active students for TODAY
     const allStudents = await Student.find({ isActive: true }).lean();
 
     let unscannedCount = 0;
@@ -281,7 +353,7 @@ async function performDailyReset() {
           gradeLevel: student.gradeLevel,
           section: student.section,
           shift: student.shift,
-          notes: "Auto-generated daily reset - student has not scanned",
+          notes: "Daily reset at 12 AM - new school day started",
         });
 
         await unscannedRecord.save();
@@ -289,13 +361,13 @@ async function performDailyReset() {
       }
     }
 
-    // Update lastDailyReset timestamp
-    await Settings.updateOne({}, { $set: { lastDailyReset: now } }, { upsert: true });
+    // Update lastDailyResetAt12AM timestamp
+    await Settings.updateOne({}, { $set: { lastDailyResetAt12AM: now } }, { upsert: true });
 
-    console.log(`✅ Daily reset completed: ${closedCount} previous check-ins closed, ${unscannedCount} students marked Unscanned`);
-    return { success: true, closedCount, unscannedCount };
+    console.log(`✅ 12 AM daily reset completed: ${unscannedCount} students marked Unscanned`);
+    return { success: true, unscannedCount };
   } catch (error) {
-    console.error("❌ Error during daily reset:", error);
+    console.error("❌ Error during 12 AM daily reset:", error);
     return { success: false, error: error.message };
   }
 }
@@ -328,12 +400,21 @@ const createAttendanceRecord = async (req, res) => {
         });
     }
 
-    // ✅ DAILY RESET: Check if it's a new day and reset all students to Absent
+    // ✅ 10 PM AUTO-CLOSE: Check if it's 10 PM and close today's unclosed check-ins
+    const needs10PMClose = await shouldPerform10PMAutoClose();
+    if (needs10PMClose) {
+      const closeResult = await perform10PMAutoClose();
+      if (closeResult.success) {
+        console.log(`10 PM auto-close triggered at ${new Date().toISOString()}`);
+      }
+    }
+
+    // ✅ 12 AM DAILY RESET: Check if it's a new day (12 AM) and reset all students to Unscanned
     const needsReset = await shouldPerformDailyReset();
     if (needsReset) {
-      const resetResult = await performDailyReset();
+      const resetResult = await performDailyResetAt12AM();
       if (resetResult.success) {
-        console.log(`Daily reset triggered at ${new Date().toISOString()}`);
+        console.log(`12 AM daily reset triggered at ${new Date().toISOString()}`);
       }
     }
 
