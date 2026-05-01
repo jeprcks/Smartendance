@@ -479,12 +479,11 @@ export default function ProfilePage() {
           </div>
 
           <div>
-            <label htmlFor="gender" className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
+            <label className="block text-sm font-semibold mb-2" style={{ color: 'var(--foreground)' }}>
               Gender
             </label>
             {editing ? (
               <select
-                id="gender"
                 value={formData.gender}
                 onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border input-theme"
