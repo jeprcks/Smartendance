@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 export interface AttendanceRow {
   id: string;
@@ -18,7 +18,7 @@ interface AttendanceTableProps {
   statusOptions: string[];
   onStatusChange: (id: string, status: string) => void | Promise<void>;
   updatingId?: string | null;
-  mode?: 'records' | 'schedule';
+  mode?: "records" | "schedule";
   /** When true, the status action is disabled for that row (e.g. when student is Out) */
   isActionDisabled?: (row: AttendanceRow) => boolean;
   selectedRowIds?: string[];
@@ -40,20 +40,28 @@ export default function AttendanceTable({
 }: AttendanceTableProps) {
   if (rows.length === 0) {
     return (
-      <p className="py-8 text-center" style={{ color: 'var(--muted-foreground)' }}>
+      <p
+        className="py-8 text-center"
+        style={{ color: "var(--muted-foreground)" }}
+      >
         No records to display
       </p>
     );
   }
 
-  const selectableRows = rows.filter((row) => (isRowSelectable ? isRowSelectable(row) : true));
-  const selectedCount = selectableRows.filter((row) => selectedRowIds.includes(row.id)).length;
-  const allSelected = selectableRows.length > 0 && selectedCount === selectableRows.length;
+  const selectableRows = rows.filter((row) =>
+    isRowSelectable ? isRowSelectable(row) : true,
+  );
+  const selectedCount = selectableRows.filter((row) =>
+    selectedRowIds.includes(row.id),
+  ).length;
+  const allSelected =
+    selectableRows.length > 0 && selectedCount === selectableRows.length;
 
   return (
     <div
       className="rounded-xl border overflow-hidden card-theme"
-      style={{ borderColor: 'var(--border)' }}
+      style={{ borderColor: "var(--border)" }}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -62,9 +70,9 @@ export default function AttendanceTable({
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 Student Name
@@ -72,9 +80,9 @@ export default function AttendanceTable({
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 Student ID
@@ -82,9 +90,9 @@ export default function AttendanceTable({
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 Gender
@@ -92,9 +100,9 @@ export default function AttendanceTable({
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 Status
@@ -102,9 +110,9 @@ export default function AttendanceTable({
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 Scan Time
@@ -112,9 +120,9 @@ export default function AttendanceTable({
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 Actions
@@ -122,9 +130,9 @@ export default function AttendanceTable({
               <th
                 className="w-8 text-center px-1 py-4 font-bold text-xs uppercase tracking-wider"
                 style={{
-                  background: 'transparent',
-                  borderBottom: '2px solid var(--border)',
-                  color: 'var(--foreground)',
+                  background: "transparent",
+                  borderBottom: "2px solid var(--border)",
+                  color: "var(--foreground)",
                 }}
               >
                 <input
@@ -142,76 +150,121 @@ export default function AttendanceTable({
               <tr
                 key={row.id}
                 className="border-t transition-all duration-200 hover:bg-transparent animate-fade-in-up"
-                style={{ 
-                  borderColor: 'var(--border)',
+                style={{
+                  borderColor: "var(--border)",
                   animationDelay: `${i * 0.02}s`,
                 }}
               >
-                <td className="px-5 py-4 font-semibold" style={{ color: 'var(--foreground)' }}>
+                <td
+                  className="px-5 py-4 font-semibold"
+                  style={{ color: "var(--foreground)" }}
+                >
                   {row.studentName}
                 </td>
-                <td className="px-5 py-4 font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                <td
+                  className="px-5 py-4 font-medium"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
                   {row.studentId}
                 </td>
                 <td className="px-5 py-4">
                   {row.gender ? (
-                    <span 
+                    <span
                       className="inline-flex px-3 py-1.5 rounded-md text-xs font-bold transition-all duration-200 hover:scale-105"
                       style={{
-                        background: String(row.gender).toLowerCase() === 'female' 
-                          ? 'rgba(236, 72, 153, 0.15)' 
-                          : String(row.gender).toLowerCase() === 'male' 
-                          ? 'rgba(59, 130, 246, 0.15)' 
-                          : 'rgba(107, 114, 128, 0.1)',
-                        color: String(row.gender).toLowerCase() === 'female' 
-                          ? '#ec4899' 
-                          : String(row.gender).toLowerCase() === 'male' 
-                          ? '#3b82f6' 
-                          : 'var(--muted-foreground)',
+                        background:
+                          String(row.gender).toLowerCase() === "female"
+                            ? "rgba(236, 72, 153, 0.15)"
+                            : String(row.gender).toLowerCase() === "male"
+                              ? "rgba(59, 130, 246, 0.15)"
+                              : "rgba(107, 114, 128, 0.1)",
+                        color:
+                          String(row.gender).toLowerCase() === "female"
+                            ? "#ec4899"
+                            : String(row.gender).toLowerCase() === "male"
+                              ? "#3b82f6"
+                              : "var(--muted-foreground)",
                       }}
                     >
                       {row.gender}
                     </span>
                   ) : (
-                    <span className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>—</span>
+                    <span
+                      className="text-sm font-medium"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
+                      —
+                    </span>
                   )}
                 </td>
                 <td className="px-5 py-4">
                   <span
                     className="inline-flex px-2 py-0.5 rounded text-xs font-medium"
                     style={
-                      row.status === 'NOT SCANNED' || row.status === 'not scanned'
-                        ? { background: 'var(--muted)', color: 'var(--muted-foreground)' }
-                        : row.status === 'Present' || row.status === 'present'
-                          ? { background: 'rgba(67, 160, 71, 0.2)', color: 'var(--success)' }
-                          : row.status === 'Absent' || row.status === 'absent'
-                            ? { background: 'rgba(216, 67, 21, 0.2)', color: 'var(--destructive)' }
-                            : row.status === 'Late' || row.status === 'late'
-                              ? { background: 'rgba(255, 193, 7, 0.2)', color: 'var(--accent)' }
-                                : row.status === 'Out' || row.status === 'out'
-                                  ? { background: 'rgba(126, 87, 194, 0.2)', color: '#7e57c2' }
-                              : row.status === 'Cutting' || row.status === 'cutting'
-                                ? { background: 'rgba(230, 81, 0, 0.2)', color: 'var(--error)' }
-                                  : row.status === 'Cut' || row.status === 'cut'
-                                    ? { background: 'rgba(230, 81, 0, 0.2)', color: 'var(--error)' }
-                                : { background: 'var(--muted)', color: 'var(--muted-foreground)' }
+                      row.status === "NOT SCANNED" ||
+                      row.status === "not scanned"
+                        ? {
+                            background: "var(--muted)",
+                            color: "var(--muted-foreground)",
+                          }
+                        : row.status === "Present" || row.status === "present"
+                          ? {
+                              background: "rgba(67, 160, 71, 0.2)",
+                              color: "var(--success)",
+                            }
+                          : row.status === "Absent" || row.status === "absent"
+                            ? {
+                                background: "rgba(216, 67, 21, 0.2)",
+                                color: "var(--destructive)",
+                              }
+                            : row.status === "Late" || row.status === "late"
+                              ? {
+                                  background: "rgba(255, 193, 7, 0.2)",
+                                  color: "var(--accent)",
+                                }
+                              : row.status === "Out" || row.status === "out"
+                                ? {
+                                    background: "rgba(126, 87, 194, 0.2)",
+                                    color: "#7e57c2",
+                                  }
+                                : row.status === "Cutting" ||
+                                    row.status === "cutting"
+                                  ? {
+                                      background: "rgba(230, 81, 0, 0.2)",
+                                      color: "var(--error)",
+                                    }
+                                  : row.status === "Cut" || row.status === "cut"
+                                    ? {
+                                        background: "rgba(230, 81, 0, 0.2)",
+                                        color: "var(--error)",
+                                      }
+                                    : {
+                                        background: "var(--muted)",
+                                        color: "var(--muted-foreground)",
+                                      }
                     }
                   >
-                    {row.status || '-'}
+                    {row.status || "-"}
                   </span>
                 </td>
-                <td className="px-5 py-4 font-medium" style={{ color: 'var(--muted-foreground)' }}>
+                <td
+                  className="px-5 py-4 font-medium"
+                  style={{ color: "var(--muted-foreground)" }}
+                >
                   {row.scanTime}
                 </td>
                 <td className="px-5 py-4">
                   {isActionDisabled?.(row) ? (
-                    <span className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
+                    <span
+                      className="text-sm"
+                      style={{ color: "var(--muted-foreground)" }}
+                    >
                       —
                     </span>
                   ) : (
                     <>
                       <select
-                        value={row.status || ''}
+                        value={row.status || ""}
                         onChange={(e) => {
                           const v = e.target.value;
                           if (v) onStatusChange(row.id, v);
@@ -227,7 +280,10 @@ export default function AttendanceTable({
                         ))}
                       </select>
                       {updatingId === row.id && (
-                        <span className="ml-2 text-xs" style={{ color: 'var(--muted-foreground)' }}>
+                        <span
+                          className="ml-2 text-xs"
+                          style={{ color: "var(--muted-foreground)" }}
+                        >
                           Updating...
                         </span>
                       )}

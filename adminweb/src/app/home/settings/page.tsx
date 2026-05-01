@@ -197,7 +197,10 @@ export default function SettingsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      await settingsService.updateSettings(form);
+      // Exclude logo and watermarkLogo from the update since they're already
+      // saved by the upload endpoint. Only save the text settings here.
+      const { logo, watermarkLogo, ...textSettings } = form;
+      await settingsService.updateSettings(textSettings);
       window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
       toast.success("Settings saved");
     } catch (err) {

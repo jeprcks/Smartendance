@@ -129,12 +129,13 @@ export const settingsService = {
     }
     const data = await res.json();
     // Update config cache with fresh data
-    _cfg = { ...defaultSettings, ...data };
+    const updated = { ...defaultSettings, ...data };
+    _cfg = updated;
     _cfgTime = Date.now();
     // Clear images cache — they may have changed
     _img = null;
     _imgTime = 0;
-    return _cfg;
+    return updated;
   },
 
   /**
