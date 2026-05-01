@@ -1,9 +1,7 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { settingsService } from '@/app/services/settingsService';
-
-const SETTINGS_UPDATED_EVENT = 'settingsUpdated';
+import { useEffect, useState } from "react";
+import { settingsService } from "@/app/services/settingsService";
 
 export default function Watermark() {
   const [watermarkSrc, setWatermarkSrc] = useState<string | null>(null);
@@ -11,16 +9,20 @@ export default function Watermark() {
   useEffect(() => {
     const load = async () => {
       try {
-        const s = await settingsService.getSettings();
-        setWatermarkSrc(s.watermarkLogo || null);
+        // getImages() fetches only logo + watermarkLogo (~4.4 MB)
+        // and is cached + deduplicated, so sharing this call with Navbar
+        // costs nothing extra.
+        const imgs = await settingsService.getImages();
+        setWatermarkSrc(settingsService.resolveImageUrl(imgs.watermarkLogo));
       } catch {
         setWatermarkSrc(null);
       }
     };
+
     load();
     const handler = () => load();
-    window.addEventListener(SETTINGS_UPDATED_EVENT, handler);
-    return () => window.removeEventListener(SETTINGS_UPDATED_EVENT, handler);
+    window.addEventListener("settingsUpdated", handler);
+    return () => window.removeEventListener("settingsUpdated", handler);
   }, []);
 
   if (!watermarkSrc) return null;
@@ -31,7 +33,11 @@ export default function Watermark() {
       style={{ opacity: 0.08 }}
       aria-hidden
     >
-      <img src={watermarkSrc} alt="" className="w-[800px] h-[800px] object-contain dark:brightness-300 dark:contrast-150 dark:drop-shadow-2xl" />
+      <img
+        src={watermarkSrc}
+        alt=""
+        className="w-[800px] h-[800px] object-contain dark:brightness-300 dark:contrast-150 dark:drop-shadow-2xl"
+      />
     </div>
   );
 }

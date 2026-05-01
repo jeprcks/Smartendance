@@ -1,8 +1,8 @@
-require('dotenv').config();
+require("dotenv").config();
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const rateLimit = require('express-rate-limit');
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 
@@ -20,23 +20,30 @@ const allowedOriginsList = [
 
 function isOriginAllowed(origin) {
   if (!origin) return true;
-  const extra = (process.env.ALLOWED_ORIGINS || "").split(",").map(s => s.trim()).filter(Boolean);
+  const extra = (process.env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
   const all = [...allowedOriginsList, ...extra];
-  return all.includes(origin) ||
+  return (
+    all.includes(origin) ||
     /^http:\/\/localhost:\d+$/.test(origin) ||
     /^http:\/\/192\.168\.\d+\.\d+:\d+$/.test(origin) ||
     /^http:\/\/10\.\d+\.\d+\.\d+:\d+$/.test(origin) ||
-    // Allow CGNAT/Tailscale-style local network hosts (e.g. http://100.84.x.x:3000)
-    /^http:\/\/100\.\d+\.\d+\.\d+:\d+$/.test(origin);
+    /^http:\/\/100\.\d+\.\d+\.\d+:\d+$/.test(origin)
+  );
 }
 
-// CORS first: set headers on every response and handle preflight so errors (503, etc.) still have CORS
+// CORS first: set headers on every response so errors (503 etc.) still have CORS headers
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   if (origin && isOriginAllowed(origin)) {
     res.setHeader("Access-Control-Allow-Origin", origin);
   }
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, PATCH, OPTIONS");
+  res.setHeader(
+    "Access-Control-Allow-Methods",
+    "GET, POST, PUT, DELETE, PATCH, OPTIONS",
+  );
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
   res.setHeader("Access-Control-Allow-Credentials", "true");
   if (req.method === "OPTIONS") {
@@ -47,99 +54,136 @@ app.use((req, res, next) => {
 
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100
+  max: 100,
 });
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === "production") {
   app.use((req, res, next) => {
-    if (req.method === 'POST' && req.originalUrl?.includes('telegram/webhook')) return next();
+    if (req.method === "POST" && req.originalUrl?.includes("telegram/webhook"))
+      return next();
     limiter(req, res, next);
   });
 } else {
-  console.log('Rate limiter disabled in non-production (NODE_ENV=%s)', process.env.NODE_ENV);
+  console.log(
+    "Rate limiter disabled in non-production (NODE_ENV=%s)",
+    process.env.NODE_ENV,
+  );
 }
 
 app.use(
   cors({
     origin: (origin, callback) => {
       if (isOriginAllowed(origin)) callback(null, true);
-      else callback(new Error('Not allowed by CORS'));
+      else callback(new Error("Not allowed by CORS"));
     },
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     credentials: true,
-  })
+  }),
 );
 
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ limit: '50mb', extended: true }));
+app.use(express.json({ limit: "50mb" }));
+app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
-    message: 'Something broke!',
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-  });
-});
+// Serve uploaded logo/watermark images as static files
+const path = require("path");
+app.use(express.static(path.join(__dirname, "public")));
 
 // MongoDB: reuse connection (required for Vercel serverless)
 function connectMongo() {
   const uri = process.env.MONGODB_URI;
-  if (!uri || typeof uri !== 'string') {
-    return Promise.reject(new Error('MONGODB_URI is not set. Add it in Vercel → Settings → Environment Variables.'));
+  if (!uri || typeof uri !== "string") {
+    return Promise.reject(new Error("MONGODB_URI is not set."));
   }
   if (mongoose.connection.readyState === 1) return Promise.resolve();
   if (mongoose.connection.readyState === 2) {
-    return new Promise((resolve) => mongoose.connection.once('open', resolve));
+    // Already connecting — wait, but also reject if the attempt fails so we
+    // never hang forever (which would cause the client AbortController to fire).
+    return new Promise((resolve, reject) => {
+      const cleanup = () => {
+        mongoose.connection.off("open", onOpen);
+        mongoose.connection.off("error", onError);
+        mongoose.connection.off("close", onClose);
+      };
+      const onOpen = () => {
+        cleanup();
+        resolve();
+      };
+      const onError = (err) => {
+        cleanup();
+        reject(err);
+      };
+      const onClose = () => {
+        cleanup();
+        reject(new Error("MongoDB connection closed before opening"));
+      };
+      mongoose.connection.once("open", onOpen);
+      mongoose.connection.once("error", onError);
+      mongoose.connection.once("close", onClose);
+    });
   }
-  const dns = require('dns');
-  dns.setServers(['8.8.8.8', '8.8.4.4']);
+  const dns = require("dns");
+  dns.setServers(["8.8.8.8", "8.8.4.4"]);
   return mongoose.connect(uri, {
-    // Regional optimization for HKG1 (Hong Kong)
-    serverSelectionTimeoutMS: 5000,   // Faster for same-region connections
-    connectTimeoutMS: 10000,          // Connection timeout
-    socketTimeoutMS: 45000,           // Keep-alive for long operations
-    maxPoolSize: 10,                  // Connection pool size
-    minPoolSize: 2,                   // Keep min connections alive
-    maxIdleTimeMS: 30000,             // Close idle connections
-    family: 4,                        // IPv4 only (faster for regional)
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 10000,
+    socketTimeoutMS: 45000,
+    maxPoolSize: 10,
+    minPoolSize: 2,
+    maxIdleTimeMS: 30000,
+    family: 4,
     retryWrites: true,
-    w: 'majority',
-    // Serverless optimization
-    bufferCommands: false,            // Don't buffer commands (serverless)
+    w: "majority",
+    // bufferCommands:false is a serverless optimisation (no long-running process
+    // to queue commands). In local dev, keep buffering ON so that queries queue
+    // during a brief reconnect instead of throwing immediately.
+    bufferCommands: !!process.env.VERCEL ? false : true,
     autoCreate: true,
-    autoIndex: true
+    autoIndex: true,
   });
 }
 
-// On Vercel: ensure DB is connected before handling (no long-running process)
-if (process.env.VERCEL) {
-  app.use((req, res, next) => {
-    connectMongo()
-      .then(() => next())
-      .catch((err) => {
-        console.error('MongoDB connect error:', err);
-        res.status(503).json({ message: 'Database unavailable', error: err.message });
-      });
-  });
-} else {
+// Per-request DB middleware — runs on every request for both Vercel and local.
+// If the socket dropped (e.g. Atlas idle timeout) this reconnects before the
+// query runs, instead of throwing immediately due to bufferCommands:false.
+app.use((req, res, next) => {
+  connectMongo()
+    .then(() => next())
+    .catch((err) => {
+      console.error("MongoDB connect error:", err);
+      res
+        .status(503)
+        .json({ message: "Database unavailable", error: err.message });
+    });
+});
+
+if (!process.env.VERCEL) {
+  // Initial connection + admin user bootstrap for local dev
   connectMongo()
     .then(() => {
       console.log("Connected to MongoDB");
       try {
         const { createAdminUser } = require("./controllers/userController");
-        createAdminUser().catch(err => console.error('createAdminUser failed:', err));
+        createAdminUser().catch((err) =>
+          console.error("createAdminUser failed:", err),
+        );
       } catch (err) {
-        console.error('Error requiring userController:', err);
+        console.error("Error requiring userController:", err);
       }
     })
     .catch((err) => console.error("MongoDB connection error:", err));
-  mongoose.connection.on('error', err => console.error('MongoDB connection error:', err));
-  mongoose.connection.on('disconnected', () => console.log('MongoDB disconnected'));
-  mongoose.connection.on('reconnected', () => {
-    console.log('Mongoose reconnected');
+  mongoose.connection.on("error", (err) =>
+    console.error("MongoDB connection error:", err),
+  );
+  mongoose.connection.on("disconnected", () =>
+    console.log("MongoDB disconnected"),
+  );
+  mongoose.connection.on("reconnected", () => {
+    console.log("Mongoose reconnected");
     try {
       const { createAdminUser } = require("./controllers/userController");
-      createAdminUser().catch(err => console.error('createAdminUser on reconnect failed:', err));
+      createAdminUser().catch((err) =>
+        console.error("createAdminUser on reconnect failed:", err),
+      );
     } catch (err) {}
   });
 }
@@ -155,31 +199,13 @@ const reportRoutes = require("./routes/reportRoutes");
 const telegramRoutes = require("./routes/telegramRoutes");
 const settingsRoutes = require("./routes/settingsRoutes");
 
-// Health check (GET /) so you can verify backend is deployed
+// Health check
 app.get("/", (req, res) => {
-  res.json({ ok: true, message: "Smartendance API", api: "/api/users/login, /api/students, ..." });
-});
-
-// Keep-alive endpoint: prevents Vercel cold starts
-// Call this every 5 minutes via cron job to keep functions warm
-app.get("/api/keepalive", async (req, res) => {
-  try {
-    await connectMongo();
-    const isConnected = mongoose.connection.readyState === 1;
-    res.json({ 
-      ok: true, 
-      message: "Server is alive", 
-      dbConnected: isConnected,
-      timestamp: new Date().toISOString()
-    });
-  } catch (err) {
-    console.error("Keepalive check failed:", err);
-    res.status(503).json({ 
-      ok: false, 
-      message: "Server is alive but database unavailable",
-      error: err.message 
-    });
-  }
+  res.json({
+    ok: true,
+    message: "Smartendance API",
+    api: "/api/users/login, /api/students, ...",
+  });
 });
 
 app.use("/api/users", userRoutes);
@@ -191,5 +217,17 @@ app.use("/api/schedules", scheduleRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/telegram", telegramRoutes);
 app.use("/api/settings", settingsRoutes);
+
+// Global error handler — must be defined AFTER all routes
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({
+    message: "Something broke!",
+    error:
+      process.env.NODE_ENV === "development"
+        ? err.message
+        : "Internal server error",
+  });
+});
 
 module.exports = app;

@@ -1,93 +1,195 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { settingsService, Settings } from '@/app/services/settingsService';
-import toast from 'react-hot-toast';
-import { Image, Building2, Clock, Calendar, Droplets } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { settingsService, Settings } from "@/app/services/settingsService";
+import toast from "react-hot-toast";
+import { Image, Building2, Clock, Calendar, Droplets } from "lucide-react";
 
-const SETTINGS_UPDATED_EVENT = 'settingsUpdated';
+export const SETTINGS_UPDATED_EVENT = "settingsUpdated";
+
+/**
+ * Resize & compress an image file entirely on the client before uploading.
+ * - Scales down to maxPx × maxPx if larger (preserves aspect ratio)
+ * - Re-encodes as WebP at the given quality (0–1)
+ * Falls back to the original file if the browser doesn't support canvas/WebP.
+ */
+async function compressImage(
+  file: File,
+  maxPx = 1024,
+  quality = 0.85,
+): Promise<File> {
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const scale = Math.min(
+        1,
+        maxPx / Math.max(img.naturalWidth, img.naturalHeight),
+      );
+      const w = Math.round(img.naturalWidth * scale);
+      const h = Math.round(img.naturalHeight * scale);
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(file); // fallback: upload original
+
+      ctx.drawImage(img, 0, 0, w, h);
+      canvas.toBlob(
+        (blob) => {
+          if (!blob) return resolve(file); // fallback
+          const ext = blob.type === "image/webp" ? ".webp" : ".png";
+          const name = file.name.replace(/\.[^.]+$/, ext);
+          resolve(new File([blob], name, { type: blob.type }));
+        },
+        "image/webp",
+        quality,
+      );
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      resolve(file); // fallback: upload original
+    };
+
+    img.src = objectUrl;
+  });
+}
 
 export default function SettingsPage() {
-  const [settings, setSettings] = useState<Settings | null>(null);
   const [form, setForm] = useState<Partial<Settings>>({});
   const [isLoading, setIsLoading] = useState(true);
+  const [isImagesLoading, setImagesLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [watermarkPreview, setWatermarkPreview] = useState<string | null>(null);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const data = await settingsService.getSettings();
-        setSettings(data);
+    // ── 1. Load config immediately (fast, ~1 KB) ─────────────────────────────
+    settingsService
+      .getSettings()
+      .then((cfg) => {
         setForm({
-          schoolName: data.schoolName,
-          logo: data.logo,
-          watermarkLogo: data.watermarkLogo,
-          address: data.address ?? '',
-          lateThresholdMinutes: data.lateThresholdMinutes ?? 15,
-          morningShiftCutoff: data.morningShiftCutoff ?? '12:00',
-          afternoonShiftCutoff: data.afternoonShiftCutoff ?? '17:00',
-          academicYear: data.academicYear ?? '',
+          schoolName: cfg.schoolName,
+          address: cfg.address ?? "",
+          lateThresholdMinutes: cfg.lateThresholdMinutes ?? 15,
+          morningShiftCutoff: cfg.morningShiftCutoff ?? "07:00",
+          afternoonShiftCutoff: cfg.afternoonShiftCutoff ?? "13:00",
+          academicYear: cfg.academicYear ?? "",
         });
-        if (data.logo) setLogoPreview(data.logo);
-        if (data.watermarkLogo) setWatermarkPreview(data.watermarkLogo);
-      } catch (err) {
-        toast.error('Failed to load settings');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
+      })
+      .catch(() => {
+        /* use form defaults */
+      })
+      .finally(() => setIsLoading(false));
+
+    // ── 2. Load images ──────────────────────────────────────────────────
+    // Images are now URL paths (/logo/logo.png) not base64 — loads instantly.
+    settingsService
+      .getImages()
+      .then((imgs) => {
+        const logoUrl = settingsService.resolveImageUrl(imgs.logo);
+        const wmUrl = settingsService.resolveImageUrl(imgs.watermarkLogo);
+        if (logoUrl) {
+          setLogoPreview(logoUrl);
+          setForm((f) => ({ ...f, logo: logoUrl }));
+        }
+        if (wmUrl) {
+          setWatermarkPreview(wmUrl);
+          setForm((f) => ({ ...f, watermarkLogo: wmUrl }));
+        }
+      })
+      .catch(() => {
+        /* no images — previews stay empty */
+      })
+      .finally(() => setImagesLoading(false));
   }, []);
 
-  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // ── Image upload helpers ────────────────────────────────────────────────────
+  // Files are uploaded directly to the server (saved to public/logo/).
+  // The database stores only a tiny URL path — no base64, no slow saves.
+
+  const handleLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setForm((f) => ({ ...f, logo: base64 }));
-      setLogoPreview(base64);
-    };
-    reader.readAsDataURL(file);
-  };
 
-  const handleRemoveLogo = async () => {
-    setForm((f) => ({ ...f, logo: null }));
-    setLogoPreview(null);
+    // Show preview instantly — no waiting for the server
+    const localUrl = URL.createObjectURL(file);
+    setLogoPreview(localUrl);
+
+    const toastId = toast.loading("Uploading logo…");
     try {
-      const updated = await settingsService.updateSettings({ logo: null });
-      setSettings(updated);
+      const compressed = await compressImage(file);
+      const url = await settingsService.uploadImage(compressed, "logo");
+      URL.revokeObjectURL(localUrl);
+      setLogoPreview(url);
+      setForm((f) => ({ ...f, logo: url }));
+      toast.success("Logo uploaded", { id: toastId });
       window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
-      toast.success('Logo removed');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove logo');
+      URL.revokeObjectURL(localUrl);
+      setLogoPreview(null);
+      toast.error(err instanceof Error ? err.message : "Upload failed", {
+        id: toastId,
+      });
     }
   };
 
-  const handleWatermarkChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleRemoveLogo = async () => {
+    setLogoPreview(null);
+    setForm((f) => ({ ...f, logo: null }));
+    try {
+      await settingsService.removeImage("logo");
+      window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
+      toast.success("Logo removed");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to remove logo");
+    }
+  };
+
+  const handleWatermarkChange = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const base64 = reader.result as string;
-      setForm((f) => ({ ...f, watermarkLogo: base64 }));
-      setWatermarkPreview(base64);
-    };
-    reader.readAsDataURL(file);
+
+    // Show preview instantly — no waiting for the server
+    const localUrl = URL.createObjectURL(file);
+    setWatermarkPreview(localUrl);
+
+    const toastId = toast.loading("Uploading watermark…");
+    try {
+      const compressed = await compressImage(file);
+      const url = await settingsService.uploadImage(compressed, "watermark");
+      URL.revokeObjectURL(localUrl);
+      setWatermarkPreview(url);
+      setForm((f) => ({ ...f, watermarkLogo: url }));
+      toast.success("Watermark uploaded", { id: toastId });
+      window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
+    } catch (err) {
+      URL.revokeObjectURL(localUrl);
+      setWatermarkPreview(null);
+      toast.error(err instanceof Error ? err.message : "Upload failed", {
+        id: toastId,
+      });
+    }
   };
 
   const handleRemoveWatermark = async () => {
-    setForm((f) => ({ ...f, watermarkLogo: null }));
     setWatermarkPreview(null);
+    setForm((f) => ({ ...f, watermarkLogo: null }));
     try {
-      const updated = await settingsService.updateSettings({ watermarkLogo: null });
-      setSettings(updated);
+      await settingsService.removeImage("watermark");
       window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
-      toast.success('Watermark removed');
+      toast.success("Watermark removed");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to remove watermark');
+      toast.error(
+        err instanceof Error ? err.message : "Failed to remove watermark",
+      );
     }
   };
 
@@ -95,12 +197,13 @@ export default function SettingsPage() {
     e.preventDefault();
     setIsSaving(true);
     try {
-      const updated = await settingsService.updateSettings(form);
-      setSettings(updated);
+      await settingsService.updateSettings(form);
       window.dispatchEvent(new CustomEvent(SETTINGS_UPDATED_EVENT));
-      toast.success('Settings saved successfully');
+      toast.success("Settings saved");
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to save settings');
+      toast.error(
+        err instanceof Error ? err.message : "Failed to save settings",
+      );
     } finally {
       setIsSaving(false);
     }
@@ -110,11 +213,16 @@ export default function SettingsPage() {
     return (
       <div className="page-container">
         <div className="content-section">
-          <p className="text-[var(--muted-foreground)]">Loading settings...</p>
+          <p className="text-[var(--muted-foreground)]">Loading settings…</p>
         </div>
       </div>
     );
   }
+
+  const inputCls =
+    "w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]";
+  const btnSecondaryCls =
+    "px-4 py-2 border border-[var(--border)] rounded-[var(--radius)] text-sm font-medium bg-[var(--surface)] cursor-pointer hover:bg-[var(--secondary)] transition-colors w-fit";
 
   return (
     <div className="page-container">
@@ -122,46 +230,77 @@ export default function SettingsPage() {
         <div className="dashboard-header-inner">
           <div className="dashboard-header-content">
             <h1>Settings</h1>
-            <p>Configure school information,attendance rules</p>
+            <p>Configure school information and attendance rules</p>
           </div>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* School Branding */}
+        {/* ── School Branding ──────────────────────────────────────────────── */}
         <div className="content-section">
           <h2 className="text-lg font-semibold text-[var(--primary-dark)] mb-4 flex items-center gap-2">
             <Image size={20} className="text-[var(--primary)]" />
-            School Branding (Navbar)
+            School Branding
           </h2>
+
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+            {/* School name */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">School Name</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                School Name
+              </label>
               <input
                 type="text"
-                value={form.schoolName ?? ''}
-                onChange={(e) => setForm((f) => ({ ...f, schoolName: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                value={form.schoolName ?? ""}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, schoolName: e.target.value }))
+                }
+                className={inputCls}
                 placeholder="e.g. Umapad Elementary School"
               />
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">Shown beside the logo in the navbar</p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                Shown beside the logo in the navbar
+              </p>
             </div>
+
+            {/* Logo */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Logo Image</label>
-              <p className="text-xs text-[var(--muted-foreground)] mb-2 min-h-[1rem]">Shown in the navbar</p>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Logo Image
+              </label>
+              <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                Shown in the navbar
+              </p>
               <div className="flex items-start gap-4">
                 <div className="w-20 h-20 rounded-[var(--radius)] border-2 border-[var(--border)] flex items-center justify-center overflow-hidden bg-[var(--muted)]">
-                  {logoPreview ? (
-                    <img src={logoPreview} alt="Logo" className="w-full h-full object-contain" />
+                  {isImagesLoading ? (
+                    <span className="text-[var(--muted-foreground)] text-xs">
+                      …
+                    </span>
+                  ) : logoPreview ? (
+                    <img
+                      src={logoPreview}
+                      alt="Logo"
+                      className="w-full h-full object-contain"
+                    />
                   ) : (
-                    <span className="text-[var(--muted-foreground)] text-xs">None</span>
+                    <span className="text-[var(--muted-foreground)] text-xs">
+                      None
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="inline-flex items-center gap-2 px-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius)] text-sm font-medium text-[var(--primary-dark)] cursor-pointer hover:bg-[var(--secondary)] transition-colors w-fit">
+                  <label
+                    className={`inline-flex items-center gap-2 text-sm font-medium text-[var(--primary-dark)] ${btnSecondaryCls}`}
+                  >
                     <Image size={16} />
                     Upload Logo
-                    <input type="file" accept="image/*" className="hidden" onChange={handleLogoChange} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoChange}
+                    />
                   </label>
                   {logoPreview && (
                     <button
@@ -175,22 +314,45 @@ export default function SettingsPage() {
                 </div>
               </div>
             </div>
+
+            {/* Watermark */}
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Watermark Logo</label>
-              <p className="text-xs text-[var(--muted-foreground)] mb-2 min-h-[1rem]">Shown faintly in the background on all pages</p>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Watermark Logo
+              </label>
+              <p className="text-xs text-[var(--muted-foreground)] mb-2">
+                Shown faintly in the background on all pages
+              </p>
               <div className="flex items-start gap-4">
                 <div className="w-20 h-20 rounded-[var(--radius)] border-2 border-[var(--border)] flex items-center justify-center overflow-hidden bg-[var(--muted)]">
-                  {watermarkPreview ? (
-                    <img src={watermarkPreview} alt="Watermark" className="w-full h-full object-contain opacity-70" />
+                  {isImagesLoading ? (
+                    <span className="text-[var(--muted-foreground)] text-xs">
+                      …
+                    </span>
+                  ) : watermarkPreview ? (
+                    <img
+                      src={watermarkPreview}
+                      alt="Watermark"
+                      className="w-full h-full object-contain opacity-70"
+                    />
                   ) : (
-                    <span className="text-[var(--muted-foreground)] text-xs">None</span>
+                    <span className="text-[var(--muted-foreground)] text-xs">
+                      None
+                    </span>
                   )}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <label className="px-4 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius)] text-sm font-medium text-[var(--primary-dark)] cursor-pointer hover:bg-[var(--secondary)] transition-colors w-fit">
-                    <Droplets size={16} className="inline mr-2 align-middle" />
+                  <label
+                    className={`inline-flex items-center gap-2 text-sm font-medium text-[var(--primary-dark)] ${btnSecondaryCls}`}
+                  >
+                    <Droplets size={16} />
                     Upload Watermark
-                    <input type="file" accept="image/*" className="hidden" onChange={handleWatermarkChange} />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleWatermarkChange}
+                    />
                   </label>
                   {watermarkPreview && (
                     <button
@@ -198,7 +360,7 @@ export default function SettingsPage() {
                       onClick={handleRemoveWatermark}
                       className="px-4 py-2 border border-[var(--border)] rounded-[var(--radius)] text-sm font-medium text-[var(--destructive)] bg-[var(--surface)] hover:bg-destructive/10 transition-colors w-fit"
                     >
-                      Remove watermark logo
+                      Remove watermark
                     </button>
                   )}
                 </div>
@@ -207,25 +369,29 @@ export default function SettingsPage() {
           </div>
         </div>
 
-        {/* School Info */}
+        {/* ── School Information ───────────────────────────────────────────── */}
         <div className="content-section">
           <h2 className="text-lg font-semibold text-[var(--primary-dark)] mb-4 flex items-center gap-2">
             <Building2 size={20} className="text-[var(--primary)]" />
             School Information
           </h2>
           <div>
-            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Address</label>
+            <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+              Address
+            </label>
             <textarea
-              value={form.address ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+              value={form.address ?? ""}
+              onChange={(e) =>
+                setForm((f) => ({ ...f, address: e.target.value }))
+              }
               rows={2}
-              className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+              className={inputCls}
               placeholder="School address"
             />
           </div>
         </div>
 
-        {/* Attendance Rules */}
+        {/* ── Attendance Rules ─────────────────────────────────────────────── */}
         <div className="content-section">
           <h2 className="text-lg font-semibold text-[var(--primary-dark)] mb-4 flex items-center gap-2">
             <Clock size={20} className="text-[var(--primary)]" />
@@ -233,53 +399,73 @@ export default function SettingsPage() {
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Late Threshold (minutes)</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Late Threshold (minutes)
+              </label>
               <input
                 type="number"
                 min={0}
                 max={120}
                 value={form.lateThresholdMinutes ?? 15}
-                onChange={(e) => setForm((f) => ({ ...f, lateThresholdMinutes: parseInt(e.target.value, 10) || 0 }))}
-                className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    lateThresholdMinutes: parseInt(e.target.value, 10) || 0,
+                  }))
+                }
+                className={inputCls}
               />
-              <p className="mt-1 text-xs text-[var(--muted-foreground)]">Minutes after shift time-in before status becomes Late (e.g. 07:00 + 15 mins)</p>
+              <p className="mt-1 text-xs text-[var(--muted-foreground)]">
+                Minutes after shift time-in before marking Late
+              </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Morning Shift Time-in</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Morning Shift Time-in
+              </label>
               <input
                 type="time"
-                value={form.morningShiftCutoff ?? '12:00'}
-                onChange={(e) => setForm((f) => ({ ...f, morningShiftCutoff: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                value={form.morningShiftCutoff ?? "07:00"}
+                onChange={(e) =>
+                  setForm((f) => ({ ...f, morningShiftCutoff: e.target.value }))
+                }
+                className={inputCls}
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">Afternoon Shift Time-in</label>
+              <label className="block text-sm font-medium text-[var(--foreground)] mb-2">
+                Afternoon Shift Time-in
+              </label>
               <input
                 type="time"
-                value={form.afternoonShiftCutoff ?? '17:00'}
-                onChange={(e) => setForm((f) => ({ ...f, afternoonShiftCutoff: e.target.value }))}
-                className="w-full px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
+                value={form.afternoonShiftCutoff ?? "13:00"}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    afternoonShiftCutoff: e.target.value,
+                  }))
+                }
+                className={inputCls}
               />
             </div>
           </div>
         </div>
 
-        {/* Academic Year */}
+        {/* ── Academic Year ────────────────────────────────────────────────── */}
         <div className="content-section">
           <h2 className="text-lg font-semibold text-[var(--primary-dark)] mb-4 flex items-center gap-2">
             <Calendar size={20} className="text-[var(--primary)]" />
             Academic Year
           </h2>
-          <div>
-            <input
-              type="text"
-              value={form.academicYear ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, academicYear: e.target.value }))}
-              className="w-full max-w-xs px-4 py-2.5 border border-[var(--border)] rounded-[var(--radius)] bg-[var(--surface)] text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              placeholder="e.g. 2024-2025"
-            />
-          </div>
+          <input
+            type="text"
+            value={form.academicYear ?? ""}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, academicYear: e.target.value }))
+            }
+            className={`${inputCls} max-w-xs`}
+            placeholder="e.g. 2024-2025"
+          />
         </div>
 
         <div className="flex justify-end">
@@ -288,12 +474,10 @@ export default function SettingsPage() {
             disabled={isSaving}
             className="btn-primary px-6 py-2.5 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {isSaving ? 'Saving...' : 'Save Settings'}
+            {isSaving ? "Saving…" : "Save Settings"}
           </button>
         </div>
       </form>
     </div>
   );
 }
-
-export { SETTINGS_UPDATED_EVENT };
