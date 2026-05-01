@@ -135,17 +135,11 @@ export const studentService = {
     }
   },
 
-  async getAllStudents(options?: { status?: 'Active' | 'Inactive'; limit?: number; page?: number }): Promise<Student[]> {
+  async getAllStudents(options?: { status?: 'Active' | 'Inactive' }): Promise<Student[]> {
     try {
       const params = new URLSearchParams();
       if (options?.status) params.set('status', options.status);
-      // Add pagination: default 200 per page for better performance
-      const limit = options?.limit ?? 200;
-      const page = options?.page ?? 1;
-      params.set('limit', String(limit));
-      params.set('page', String(page));
-      
-      const url = `${API_BASE_URL}/api/students?${params}`;
+      const url = params.toString() ? `${API_BASE_URL}/api/students?${params}` : `${API_BASE_URL}/api/students`;
       const response = await fetch(url, {
         headers: {
           'Content-Type': 'application/json',

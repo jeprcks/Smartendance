@@ -3,7 +3,7 @@ class Environment {
   static const String apiUrl = 'https://smartendance-lilac.vercel.app';
 
   // Local development should be enabled while testing scanner/backend changes.
-  static const bool isDevelopment = false;
+  static const bool isDevelopment = true;
 
   static String get baseUrl {
     if (isDevelopment) {
