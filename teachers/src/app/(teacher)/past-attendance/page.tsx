@@ -6,6 +6,7 @@ import {
   getTeacherSchedule,
   getAttendanceRecords,
   updateAttendanceRecord,
+  getClassStudents,
 } from "../../../lib/api";
 import PageHeader from "@/components/PageHeader";
 import PrintExcelModal from "./components/printexcelmodal";
@@ -237,35 +238,115 @@ export default function PastAttendancePage() {
     }
 
     try {
-      const [schedulesRes, recordsRes] = await Promise.all([
-        getTeacherSchedule({
-          token,
-          teacherId: data.teacherId,
-          teacherName: data.teacherName,
-        }),
-        fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/history?` +
-            new URLSearchParams({
-              limit: "1000", // Increase limit for archive view
-              ...(startDate && { startDate }),
-              ...(endDate && { endDate }),
-            }),
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              "Content-Type": "application/json",
-            },
-          },
-        )
-          .then((res) => {
-            if (!res.ok) throw new Error("Failed to fetch records");
-            return res.json();
+      // First, get teacher's schedules to find their enrolled students
+      const schedulesRes = await getTeacherSchedule({
+        token,
+        teacherId: data.teacherId,
+        teacherName: data.teacherName,
+      });
+
+      // Extract unique student IDs from teacher's schedules
+      const teacherStudentIds = new Set<string>();
+      const teacherSubjects = new Set<string>();
+      const teacherGrades = new Set<string>();
+      const teacherSections = new Set<string>();
+      const allEnrolledStudents = new Map<string, any>();
+
+      if (schedulesRes && Array.isArray(schedulesRes)) {
+        // Fetch students for each schedule and track which schedule they belong to
+        const scheduleStudentMap = new Map<string, any>(); // studentId -> schedule info
+
+        const studentFetchPromises = schedulesRes.map((schedule: any) => {
+          if (schedule.subject) teacherSubjects.add(schedule.subject);
+          if (schedule.gradeLevel) teacherGrades.add(schedule.gradeLevel);
+          if (schedule.section) teacherSections.add(schedule.section);
+
+          return getClassStudents({
+            gradeLevel: String(schedule.gradeLevel ?? ""),
+            section: String(schedule.section ?? ""),
+            teacherName: data.teacherName || "",
+            token,
+            subject: String(schedule.subject ?? "") || undefined,
+            shift: String(schedule.shift ?? "") || undefined,
           })
-          .then((data) => ({
-            records: data.records || [],
-            pagination: data.pagination || {},
-          })),
-      ]);
+            .then((students) => {
+              // Tag each student with their schedule info
+              return students.map((student: any) => ({
+                ...student,
+                scheduleSubject: schedule.subject,
+                scheduleGrade: schedule.gradeLevel,
+                scheduleSection: schedule.section,
+              }));
+            })
+            .catch(() => []); // Return empty array on error
+        });
+
+        // Wait for all student fetches to complete
+        const studentsArrays = await Promise.all(studentFetchPromises);
+
+        // Collect all unique student IDs and student details with schedule info
+
+        studentsArrays.forEach((students) => {
+          students.forEach((student: any) => {
+            if (student.studentId) {
+              const studentId = String(student.studentId);
+              teacherStudentIds.add(studentId);
+
+              // Store student details with schedule info for later use
+              const key = `${studentId}-${student.scheduleGrade}-${student.scheduleSection}-${student.scheduleSubject}`;
+              if (!allEnrolledStudents.has(key)) {
+                allEnrolledStudents.set(key, {
+                  studentId: student.studentId,
+                  studentName: student.fullName || student.studentName,
+                  gradeLevel: student.gradeLevel || student.scheduleGrade,
+                  section: student.section || student.scheduleSection,
+                  subject: student.scheduleSubject,
+                });
+              }
+            }
+          });
+        });
+
+        console.log(
+          `Fetched students from ${schedulesRes.length} schedules. ` +
+            `Total unique students: ${teacherStudentIds.size}`,
+        );
+      }
+
+      // If teacher has no enrolled students, show empty state
+      if (teacherStudentIds.size === 0) {
+        setAllStudents([]);
+        setFilteredStudents([]);
+        setSubjects([]);
+        setGrades([]);
+        setSections([]);
+        setLoading(false);
+        return;
+      }
+
+      // Now fetch attendance records for only this teacher's students
+      const recordsRes = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/history?` +
+          new URLSearchParams({
+            limit: "10000", // Higher limit to get all records for teacher's students
+            ...(startDate && { startDate }),
+            ...(endDate && { endDate }),
+          }),
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        },
+      )
+        .then((res) => {
+          if (!res.ok) throw new Error("Failed to fetch records");
+          return res.json();
+        })
+        .then((data) => ({
+          records: data.records || [],
+          pagination: data.pagination || {},
+        }));
 
       // Group records by student and date
       const studentMap = new Map<string, StudentAttendance>();
@@ -275,13 +356,41 @@ export default function PastAttendancePage() {
 
       const records = recordsRes.records || [];
 
-      records.forEach((record: any) => {
+      // Filter records to only include teacher's enrolled students
+      // AND exclude "General" subject records
+      const teacherRecords = records.filter((record: any) => {
+        const recordStudentId = String(record.studentId || "");
+        const recordSubject = String(record.subject || "").toLowerCase();
+
+        // Only show records for enrolled students
+        if (!teacherStudentIds.has(recordStudentId)) return false;
+
+        // Filter out "General" subject - only show specific subjects
+        if (recordSubject === "general") return false;
+
+        return true;
+      });
+
+      console.log(
+        `Teacher has ${teacherStudentIds.size} enrolled students. ` +
+          `Found ${teacherRecords.length} attendance records out of ${records.length} total records.`,
+      );
+
+      teacherRecords.forEach((record: any) => {
         const studentId = String(record.studentId || "");
         const studentName = String(record.studentName || "");
         const gradeLevel = String(record.gradeLevel || "");
         const section = String(record.section || "");
         const subject = String(record.subject || "");
-        const status = String(record.status || "Absent");
+
+        // If this is a QR scan record (has scanTime or checkInTime), show as "Present"
+        // regardless of the original status (Late, Cutting, etc.)
+        let status = String(record.status || "Absent");
+        if (record.scanTime || record.checkInTime) {
+          // This is a scanned attendance, show as Present
+          status = "Present";
+        }
+
         const dateStr = toLocalDateString(
           record.scanTime || record.checkInTime || record.createdAt,
         );
@@ -289,7 +398,10 @@ export default function PastAttendancePage() {
         if (!studentId || !studentName) return;
         if (!dateStr) return;
 
-        subjectsSet.add(subject);
+        // Only add non-General subjects to the filter
+        if (subject.toLowerCase() !== "general") {
+          subjectsSet.add(subject);
+        }
         gradesSet.add(gradeLevel);
         sectionsSet.add(section);
 
@@ -315,15 +427,45 @@ export default function PastAttendancePage() {
         );
       });
 
+      // Add all enrolled students to the list, even if they have no attendance records
+      allEnrolledStudents.forEach((enrolledStudent, key) => {
+        // Check if this student-subject combination already exists in studentMap
+        if (!studentMap.has(key)) {
+          const subject = enrolledStudent.subject;
+
+          // Only add if it's not a General subject
+          if (subject && subject.toLowerCase() !== "general") {
+            studentMap.set(key, {
+              studentId: enrolledStudent.studentId,
+              studentName: enrolledStudent.studentName,
+              gradeLevel: enrolledStudent.gradeLevel,
+              section: enrolledStudent.section,
+              subject: subject,
+              attendance: {}, // Empty attendance - will show as unmarked
+              recordIds: {},
+            });
+
+            // Add subject to the set
+            subjectsSet.add(subject);
+            gradesSet.add(enrolledStudent.gradeLevel);
+            sectionsSet.add(enrolledStudent.section);
+          }
+        }
+      });
+
       const studentsList = Array.from(studentMap.values()).sort((a, b) =>
         a.studentId.localeCompare(b.studentId),
+      );
+
+      console.log(
+        `Displaying attendance for ${studentsList.length} students (${teacherStudentIds.size} total enrolled).`,
       );
 
       setAllStudents(studentsList);
       setFilteredStudents(studentsList);
       setSubjects(Array.from(subjectsSet).sort());
-      setGrades(Array.from(gradesSet).sort());
-      setSections(Array.from(sectionsSet).sort());
+      setGrades(Array.from(teacherGrades).sort());
+      setSections(Array.from(teacherSections).sort());
 
       if (studentsList.length > 0) {
         const firstStudent = studentsList[0];
