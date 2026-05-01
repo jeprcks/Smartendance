@@ -325,28 +325,38 @@ export default function PastAttendancePage() {
       }
 
       // Now fetch attendance records for only this teacher's students
-      const recordsRes = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/history?` +
-          new URLSearchParams({
-            limit: "10000", // Higher limit to get all records for teacher's students
-            ...(startDate && { startDate }),
-            ...(endDate && { endDate }),
-          }),
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
+      const historyUrl = new URL(`${apiUrl}/api/history`);
+      historyUrl.searchParams.set("limit", "10000");
+      if (startDate) historyUrl.searchParams.set("startDate", startDate);
+      if (endDate) historyUrl.searchParams.set("endDate", endDate);
+
+      console.log("Fetching attendance records from:", historyUrl.toString());
+      
+      const recordsRes = await fetch(historyUrl.toString(), {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
         },
-      )
+      })
         .then((res) => {
-          if (!res.ok) throw new Error("Failed to fetch records");
+          if (!res.ok) {
+            console.error("API Error:", res.status, res.statusText);
+            throw new Error(`Failed to fetch records: ${res.status} ${res.statusText}`);
+          }
           return res.json();
         })
-        .then((data) => ({
-          records: data.records || [],
-          pagination: data.pagination || {},
-        }));
+        .then((data) => {
+          console.log("API Response received:", { recordCount: data.records?.length, data });
+          return {
+            records: data.records || [],
+            pagination: data.pagination || {},
+          };
+        })
+        .catch((err) => {
+          console.error("Error fetching attendance records:", err);
+          throw err;
+        });
 
       // Group records by student and date
       const studentMap = new Map<string, StudentAttendance>();
@@ -357,15 +367,19 @@ export default function PastAttendancePage() {
       const records = recordsRes.records || [];
 
       // Filter records to only include teacher's enrolled students
-      // AND exclude "General" subject records
+      // AND exclude "General" subject records (except In/Out attendance records)
       const teacherRecords = records.filter((record: any) => {
         const recordStudentId = String(record.studentId || "");
         const recordSubject = String(record.subject || "").toLowerCase();
+        const recordType = String(record.attendanceType || "");
 
         // Only show records for enrolled students
         if (!teacherStudentIds.has(recordStudentId)) return false;
 
-        // Filter out "General" subject - only show specific subjects
+        // Allow In/Out attendance records (they use "General" as subject)
+        if (recordType === "In" || recordType === "Out") return true;
+
+        // For other records, filter out "General" subject - only show specific subjects
         if (recordSubject === "general") return false;
 
         return true;
@@ -375,6 +389,10 @@ export default function PastAttendancePage() {
         `Teacher has ${teacherStudentIds.size} enrolled students. ` +
           `Found ${teacherRecords.length} attendance records out of ${records.length} total records.`,
       );
+      
+      // Count In/Out records
+      const inOutRecords = teacherRecords.filter((r: any) => r.attendanceType === "In" || r.attendanceType === "Out");
+      console.log(`In/Out records: ${inOutRecords.length}, Subject-specific records: ${teacherRecords.length - inOutRecords.length}`);
 
       teacherRecords.forEach((record: any) => {
         const studentId = String(record.studentId || "");
@@ -383,27 +401,40 @@ export default function PastAttendancePage() {
         const section = String(record.section || "");
         const subject = String(record.subject || "");
 
-        // If this is a QR scan record (has scanTime or checkInTime), show as "Present"
-        // regardless of the original status (Late, Cutting, etc.)
+        // Determine status based on In/Out system
         let status = String(record.status || "Absent");
-        if (record.scanTime || record.checkInTime) {
-          // This is a scanned attendance, show as Present
+        
+        // If this is an In/Out attendance record
+        if (record.attendanceType) {
+          if (record.attendanceType === "In" && record.checkInTime) {
+            // Check-In record - show as Present
+            status = "Present";
+          } else if (record.attendanceType === "Out" && record.checkOutTime) {
+            // Check-Out record - show as Out
+            status = "Out";
+          }
+        } else if (record.scanTime || record.checkInTime) {
+          // Legacy QR scan record
           status = "Present";
         }
 
+        // Use checkInTime for display, fallback to checkOutTime or scanTime
         const dateStr = toLocalDateString(
-          record.scanTime || record.checkInTime || record.createdAt,
+          record.checkInTime || record.checkOutTime || record.scanTime || record.createdAt,
         );
+        
+        console.log(`Processing record - studentId: ${studentId}, type: ${record.attendanceType}, status: ${status}, date: ${dateStr}, checkInTime: ${record.checkInTime}, checkOutTime: ${record.checkOutTime}`);
 
         if (!studentId || !studentName) return;
         if (!dateStr) return;
 
-        // Only add non-General subjects to the filter
+        gradesSet.add(gradeLevel);
+        sectionsSet.add(section);
+
+        // Only add non-General subjects to the filter (In/Out uses General, so skip it)
         if (subject.toLowerCase() !== "general") {
           subjectsSet.add(subject);
         }
-        gradesSet.add(gradeLevel);
-        sectionsSet.add(section);
 
         const key = `${studentId}-${gradeLevel}-${section}-${subject}`;
 
