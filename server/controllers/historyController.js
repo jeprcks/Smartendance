@@ -226,12 +226,32 @@ const createAttendanceRecord = async (req, res) => {
     }
 
     const { start, end } = getStartAndEndOfDay(now);
+    
+    // Check for open check-in ONLY TODAY
+    // Previous day's unclosed check-in is kept as a record (misbehavior tracking)
     const openCheckIn = await History.findOne({
       studentId,
       attendanceType: "In",
-      scanTime: { $gte: start, $lte: end },
+      scanTime: { $gte: start, $lte: end }, // Only TODAY
       $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
     }).sort({ scanTime: -1 });
+
+    // Check if student has unclosed check-in from previous days (for reporting)
+    if (attendanceType === "In") {
+      const previousDayUnclosedCheckIn = await History.findOne({
+        studentId,
+        attendanceType: "In",
+        scanTime: { $lt: start }, // Any check-in BEFORE today
+        $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
+      }).sort({ scanTime: -1 });
+
+      if (previousDayUnclosedCheckIn) {
+        console.log(
+          `⚠️ MISBEHAVIOR: Student ${studentId} forgot to checkout on ${previousDayUnclosedCheckIn.scanTime}. Record kept for tracking.`,
+        );
+        // Just log it - don't auto-close. Let it stay as misbehavior record.
+      }
+    }
 
     if (attendanceType === "In" && openCheckIn) {
       return res.status(400).json({
