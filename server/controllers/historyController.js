@@ -197,10 +197,12 @@ const createAttendanceRecord = async (req, res) => {
         .json({ success: false, error: "studentId is required" });
     }
     if (!["In", "Out"].includes(attendanceType)) {
-      return res.status(400).json({
-        success: false,
-        error: "Invalid attendanceType. Use 'In' or 'Out'.",
-      });
+      return res
+        .status(400)
+        .json({
+          success: false,
+          error: "Invalid attendanceType. Use 'In' or 'Out'.",
+        });
     }
 
     const now = new Date();
@@ -321,10 +323,12 @@ const createAttendanceRecord = async (req, res) => {
         error: "Duplicate scan detected. Please try again.",
       });
     }
-    return res.status(400).json({
-      success: false,
-      error: error.message || "Failed to create record",
-    });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        error: error.message || "Failed to create record",
+      });
   } finally {
     if (requestKey) {
       pendingAttendanceRequests.delete(requestKey);
@@ -441,11 +445,13 @@ const updateAttendanceRecord = async (req, res) => {
       return res
         .status(404)
         .json({ success: false, error: "Attendance record not found" });
-    return res.status(200).json({
-      success: true,
-      message: "Attendance record updated",
-      record: updatedRecord,
-    });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Attendance record updated",
+        record: updatedRecord,
+      });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -586,50 +592,6 @@ const exportAttendanceData = async (req, res) => {
   }
 };
 
-/**
- * Manual trigger for midnight reset (for testing purposes)
- * This endpoint allows admins to manually run the midnight reset job
- */
-const manualMidnightReset = async (req, res) => {
-  try {
-    const { resetUncloseCheckIns } = require("../jobs/midnightResetJob");
-
-    console.log("\n🔧 MANUAL MIDNIGHT RESET TRIGGERED");
-    console.log("Triggered by: Admin");
-
-    // Run the reset function
-    await resetUncloseCheckIns();
-
-    // Get the count of unclosed check-ins that were reset
-    const now = new Date();
-    const { start: todayStart } = getStartAndEndOfDay(now);
-
-    const unclosedCount = await History.countDocuments({
-      attendanceType: "In",
-      scanTime: { $lt: todayStart },
-      $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
-    });
-
-    return res.status(200).json({
-      success: true,
-      message: "Midnight reset completed successfully",
-      unclosedCheckInsReset:
-        unclosedCount === 0
-          ? "All previous check-ins were already closed"
-          : `Reset completed`,
-      timestamp: new Date().toLocaleString("en-PH", {
-        timeZone: "Asia/Manila",
-      }),
-    });
-  } catch (error) {
-    console.error("❌ Error in manual midnight reset:", error);
-    return res.status(500).json({
-      success: false,
-      error: error.message || "Failed to run midnight reset",
-    });
-  }
-};
-
 module.exports = {
   createAttendanceRecord,
   getAllAttendanceRecords,
@@ -641,5 +603,4 @@ module.exports = {
   getHistoryPageData,
   getDailyAttendanceSummary,
   exportAttendanceData,
-  manualMidnightReset,
 };
