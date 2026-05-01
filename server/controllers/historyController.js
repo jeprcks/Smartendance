@@ -120,6 +120,41 @@ function parseTimeToMinutes(timeValue, fallbackMinutes) {
   return hours * 60 + minutes;
 }
 
+/**
+ * Parse date string to UTC boundaries for database queries
+ * Converts date string (e.g., "2026-05-02") from Philippine time to UTC
+ * @param {string} dateStr - Date in format "YYYY-MM-DD"
+ * @param {string} boundaryType - "start" for midnight, "end" for 23:59:59
+ * @returns {Date} UTC date for database query
+ */
+function parseDateStringToUTC(dateStr, boundaryType = "start") {
+  if (!dateStr) return null;
+  
+  // Parse the date string: "2026-05-02" -> [2026, 5, 2]
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return null;
+  
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-indexed
+  const day = parseInt(parts[2], 10);
+  
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  
+  // Create a date representing midnight in Philippine time
+  // Using the same logic as getStartAndEndOfDay()
+  if (boundaryType === "start") {
+    // Start of day in PH time: 00:00:00
+    const phDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+    // Convert back to UTC by subtracting the offset
+    return new Date(phDate.getTime() - PH_TIME_OFFSET_MS);
+  } else {
+    // End of day in PH time: 23:59:59.999
+    const phDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+    // Convert back to UTC by subtracting the offset
+    return new Date(phDate.getTime() - PH_TIME_OFFSET_MS);
+  }
+}
+
 async function resolveGeneralInStatus(studentId, shift, scanTime) {
   const { start, end } = getStartAndEndOfDay(scanTime);
 
@@ -599,8 +634,23 @@ const getAllAttendanceRecords = async (req, res) => {
 
     if (startDate || endDate) {
       filter.scanTime = {};
-      if (startDate) filter.scanTime.$gte = new Date(startDate);
-      if (endDate) filter.scanTime.$lte = new Date(endDate);
+      
+      // ✅ FIX: Parse dates with Philippine timezone awareness
+      // Convert "2026-05-02" to proper UTC boundaries using PH timezone
+      if (startDate) {
+        const parsedStart = parseDateStringToUTC(startDate, "start");
+        if (parsedStart) {
+          filter.scanTime.$gte = parsedStart;
+          console.log(`Date filter - Start: ${startDate} -> UTC ${parsedStart.toISOString()}`);
+        }
+      }
+      if (endDate) {
+        const parsedEnd = parseDateStringToUTC(endDate, "end");
+        if (parsedEnd) {
+          filter.scanTime.$lte = parsedEnd;
+          console.log(`Date filter - End: ${endDate} -> UTC ${parsedEnd.toISOString()}`);
+        }
+      }
     }
 
     if (search) {

@@ -1,9 +1,42 @@
 const History = require('../models/historySchema');
+const PH_TIME_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Manila (UTC+8, no DST)
 
 // Helper to parse boolean-like query params
 function parseBool(val) {
   if (val === undefined) return undefined;
   return String(val).toLowerCase() === 'true';
+}
+
+/**
+ * Parse date string to UTC boundaries for database queries
+ * Converts date string (e.g., "2026-05-02") from Philippine time to UTC
+ * @param {string} dateStr - Date in format "YYYY-MM-DD"
+ * @param {string} boundaryType - "start" for midnight, "end" for 23:59:59
+ * @returns {Date} UTC date for database query
+ */
+function parseDateStringToUTC(dateStr, boundaryType = "start") {
+  if (!dateStr) return null;
+  
+  // Parse the date string: "2026-05-02" -> [2026, 5, 2]
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return null;
+  
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-indexed
+  const day = parseInt(parts[2], 10);
+  
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  
+  // Create a date representing midnight in Philippine time
+  if (boundaryType === "start") {
+    // Start of day in PH time: 00:00:00
+    const phDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+    return new Date(phDate.getTime() - PH_TIME_OFFSET_MS);
+  } else {
+    // End of day in PH time: 23:59:59.999
+    const phDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+    return new Date(phDate.getTime() - PH_TIME_OFFSET_MS);
+  }
 }
 
 exports.getRecords = async (req, res) => {
@@ -28,11 +61,19 @@ exports.getRecords = async (req, res) => {
 
     if (startDate || endDate) {
       filter.scanTime = {};
-      if (startDate) filter.scanTime.$gte = new Date(startDate);
+      
+      // ✅ FIX: Parse dates with Philippine timezone awareness
+      if (startDate) {
+        const parsedStart = parseDateStringToUTC(startDate, "start");
+        if (parsedStart) {
+          filter.scanTime.$gte = parsedStart;
+        }
+      }
       if (endDate) {
-        const d = new Date(endDate);
-        d.setHours(23,59,59,999);
-        filter.scanTime.$lte = d;
+        const parsedEnd = parseDateStringToUTC(endDate, "end");
+        if (parsedEnd) {
+          filter.scanTime.$lte = parsedEnd;
+        }
       }
     }
 
@@ -80,11 +121,19 @@ exports.getOverview = async (req, res) => {
     const match = {};
     if (startDate || endDate) {
       match.scanTime = {};
-      if (startDate) match.scanTime.$gte = new Date(startDate);
+      
+      // ✅ FIX: Parse dates with Philippine timezone awareness
+      if (startDate) {
+        const parsedStart = parseDateStringToUTC(startDate, "start");
+        if (parsedStart) {
+          match.scanTime.$gte = parsedStart;
+        }
+      }
       if (endDate) {
-        const d = new Date(endDate);
-        d.setHours(23,59,59,999);
-        match.scanTime.$lte = d;
+        const parsedEnd = parseDateStringToUTC(endDate, "end");
+        if (parsedEnd) {
+          match.scanTime.$lte = parsedEnd;
+        }
       }
     }
     if (gradeLevel) match.gradeLevel = gradeLevel;
