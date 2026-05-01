@@ -217,15 +217,50 @@ async function shouldPerformDailyReset() {
  */
 async function performDailyReset() {
   try {
-    console.log("🔄 Performing daily reset - resetting all students to Absent...");
+    console.log("🔄 Performing daily reset - closing previous day check-ins and resetting to Unscanned...");
 
     const now = new Date();
     const { start, end } = getStartAndEndOfDay(now);
 
-    // Get all active students
+    // ✅ STEP 1: Close all unclosed check-ins from PREVIOUS DAYS
+    const unclosedCheckIns = await History.find({
+      attendanceType: "In",
+      scanTime: { $lt: start }, // Before today
+      $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
+    });
+
+    let closedCount = 0;
+    for (const record of unclosedCheckIns) {
+      // Calculate approximate end-of-day for that day (shift end + 2 hours buffer)
+      const recordDate = new Date(record.scanTime);
+      const { end: dayEnd } = getStartAndEndOfDay(recordDate);
+      const autoCheckOutTime = new Date(dayEnd.getTime() - 2 * 60 * 60 * 1000); // 2 hours before day end
+
+      const duration = Math.max(
+        0,
+        Math.round(
+          (autoCheckOutTime.getTime() - new Date(record.checkInTime).getTime()) / 60000,
+        ),
+      );
+
+      await History.updateOne(
+        { _id: record._id },
+        {
+          $set: {
+            checkOutTime: autoCheckOutTime,
+            durationMinutes: duration,
+            notes: `${record.notes || "Auto-checkout"} - Auto-closed during daily reset`,
+          },
+        },
+      );
+      closedCount++;
+      console.log(`  ✓ Auto-closed check-in for student ${record.studentId} from ${record.scanTime}`);
+    }
+
+    // ✅ STEP 2: Create "Unscanned" records for all active students for TODAY
     const allStudents = await Student.find({ isActive: true }).lean();
 
-    let resetCount = 0;
+    let unscannedCount = 0;
     for (const student of allStudents) {
       // Check if student already has any record today
       const existingToday = await History.findOne({
@@ -233,9 +268,9 @@ async function performDailyReset() {
         scanTime: { $gte: start, $lte: end },
       });
 
-      // Only create Absent record if no record exists for today
+      // Only create Unscanned record if no record exists for today
       if (!existingToday) {
-        const absenceRecord = new History({
+        const unscannedRecord = new History({
           studentId: student.studentId,
           studentName: student.fullName,
           subject: "General",
@@ -249,16 +284,16 @@ async function performDailyReset() {
           notes: "Auto-generated daily reset - student has not scanned",
         });
 
-        await absenceRecord.save();
-        resetCount++;
+        await unscannedRecord.save();
+        unscannedCount++;
       }
     }
 
     // Update lastDailyReset timestamp
     await Settings.updateOne({}, { $set: { lastDailyReset: now } }, { upsert: true });
 
-    console.log(`✅ Daily reset completed: ${resetCount} students marked Unscanned`);
-    return { success: true, resetCount };
+    console.log(`✅ Daily reset completed: ${closedCount} previous check-ins closed, ${unscannedCount} students marked Unscanned`);
+    return { success: true, closedCount, unscannedCount };
   } catch (error) {
     console.error("❌ Error during daily reset:", error);
     return { success: false, error: error.message };
