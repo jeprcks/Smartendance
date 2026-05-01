@@ -367,7 +367,7 @@ export default function PastAttendancePage() {
       const records = recordsRes.records || [];
 
       // Filter records to only include teacher's enrolled students
-      // AND exclude "General" subject records (except In/Out attendance records)
+      // Keep In/Out records but exclude "General" subject records
       const teacherRecords = records.filter((record: any) => {
         const recordStudentId = String(record.studentId || "");
         const recordSubject = String(record.subject || "").toLowerCase();
@@ -376,10 +376,10 @@ export default function PastAttendancePage() {
         // Only show records for enrolled students
         if (!teacherStudentIds.has(recordStudentId)) return false;
 
-        // Allow In/Out attendance records (they use "General" as subject)
+        // Keep In/Out attendance records (QR scans)
         if (recordType === "In" || recordType === "Out") return true;
 
-        // For other records, filter out "General" subject - only show specific subjects
+        // Exclude "General" subject records - only show specific subjects
         if (recordSubject === "general") return false;
 
         return true;
@@ -387,12 +387,8 @@ export default function PastAttendancePage() {
 
       console.log(
         `Teacher has ${teacherStudentIds.size} enrolled students. ` +
-          `Found ${teacherRecords.length} attendance records out of ${records.length} total records.`,
+          `Found ${teacherRecords.length} subject-specific attendance records out of ${records.length} total records.`,
       );
-      
-      // Count In/Out records
-      const inOutRecords = teacherRecords.filter((r: any) => r.attendanceType === "In" || r.attendanceType === "Out");
-      console.log(`In/Out records: ${inOutRecords.length}, Subject-specific records: ${teacherRecords.length - inOutRecords.length}`);
 
       teacherRecords.forEach((record: any) => {
         const studentId = String(record.studentId || "");
@@ -401,29 +397,19 @@ export default function PastAttendancePage() {
         const section = String(record.section || "");
         const subject = String(record.subject || "");
 
-        // Determine status based on In/Out system
+        // Determine status based on record type
         let status = String(record.status || "Absent");
-        
-        // If this is an In/Out attendance record
-        if (record.attendanceType) {
-          if (record.attendanceType === "In" && record.checkInTime) {
-            // Check-In record - show as Present
-            status = "Present";
-          } else if (record.attendanceType === "Out" && record.checkOutTime) {
-            // Check-Out record - show as Out
-            status = "Out";
-          }
-        } else if (record.scanTime || record.checkInTime) {
-          // Legacy QR scan record
-          status = "Present";
+        const recordType = String(record.attendanceType || "");
+
+        // If this is an In/Out attendance record, determine status from it
+        if (recordType === "In" || recordType === "Out") {
+          status = recordType === "In" ? "Present" : "Out";
         }
 
-        // Use checkInTime for display, fallback to checkOutTime or scanTime
+        // Use checkInTime/checkOutTime for In/Out, otherwise scanTime or createdAt
         const dateStr = toLocalDateString(
           record.checkInTime || record.checkOutTime || record.scanTime || record.createdAt,
         );
-        
-        console.log(`Processing record - studentId: ${studentId}, type: ${record.attendanceType}, status: ${status}, date: ${dateStr}, checkInTime: ${record.checkInTime}, checkOutTime: ${record.checkOutTime}`);
 
         if (!studentId || !studentName) return;
         if (!dateStr) return;
@@ -431,7 +417,7 @@ export default function PastAttendancePage() {
         gradesSet.add(gradeLevel);
         sectionsSet.add(section);
 
-        // Only add non-General subjects to the filter (In/Out uses General, so skip it)
+        // Add all specific subjects to the filter (skip General)
         if (subject.toLowerCase() !== "general") {
           subjectsSet.add(subject);
         }
@@ -453,12 +439,10 @@ export default function PastAttendancePage() {
         const student = studentMap.get(key)!;
         student.attendance[dateStr] = status;
         student.recordIds[dateStr] = String(record._id || "");
-        console.log(
-          `Stored record - studentId: ${studentId}, date: ${dateStr}, recordId: ${student.recordIds[dateStr]}, createdAt: ${record.createdAt}`,
-        );
       });
 
       // Add all enrolled students to the list, even if they have no attendance records
+      // Only add students with specific subjects (exclude General)
       allEnrolledStudents.forEach((enrolledStudent, key) => {
         // Check if this student-subject combination already exists in studentMap
         if (!studentMap.has(key)) {
@@ -484,13 +468,14 @@ export default function PastAttendancePage() {
         }
       });
 
-      // ✅ FIX: Propagate In/Out (General subject) records to all enrolled subjects
-      // When a student scans, they should show as Present for ALL their subjects that day
+      // Propagate In/Out (QR scan) records to all enrolled subjects
+      // When a student scans QR, show as Present for ALL their subjects that day
       const generalRecordsByStudent = new Map<string, Map<string, any>>();
       
-      // First, collect all General subject records by student and date
+      // Collect all In/Out records by student and date
       teacherRecords.forEach((record: any) => {
-        if (String(record.subject || "").toLowerCase() === "general") {
+        const recordType = String(record.attendanceType || "");
+        if (recordType === "In" || recordType === "Out") {
           const studentId = String(record.studentId || "");
           const dateStr = toLocalDateString(
             record.checkInTime || record.checkOutTime || record.scanTime || record.createdAt,
@@ -500,32 +485,24 @@ export default function PastAttendancePage() {
             generalRecordsByStudent.set(studentId, new Map());
           }
           
-          const studentGeneralRecords = generalRecordsByStudent.get(studentId)!;
-          studentGeneralRecords.set(dateStr, record);
+          const studentRecords = generalRecordsByStudent.get(studentId)!;
+          // Keep the first scan of the day, or In if there's both In and Out
+          if (!studentRecords.has(dateStr) || record.attendanceType === "In") {
+            studentRecords.set(dateStr, record);
+          }
         }
       });
 
-      // Then, propagate General records to all enrolled subjects for the same student
+      // Propagate QR scan records to all enrolled subjects for that student
       Array.from(studentMap.values()).forEach((student) => {
-        const generalRecords = generalRecordsByStudent.get(student.studentId);
-        if (generalRecords) {
-          generalRecords.forEach((record, dateStr) => {
-            // Only override if this subject doesn't already have a specific record for this date
+        const scanRecords = generalRecordsByStudent.get(student.studentId);
+        if (scanRecords) {
+          scanRecords.forEach((record, dateStr) => {
+            // Only set if this subject doesn't already have a specific record for this date
             if (!student.attendance[dateStr]) {
-              let status = "Present"; // Default for scans
-              
-              if (record.attendanceType === "In" && record.checkInTime) {
-                status = "Present";
-              } else if (record.attendanceType === "Out" && record.checkOutTime) {
-                status = "Out";
-              }
-              
+              const status = record.attendanceType === "In" ? "Present" : "Out";
               student.attendance[dateStr] = status;
               student.recordIds[dateStr] = String(record._id || "");
-              
-              console.log(
-                `Propagated In/Out record: ${student.studentId} on ${dateStr} -> ${status}`,
-              );
             }
           });
         }
@@ -544,12 +521,7 @@ export default function PastAttendancePage() {
       setSubjects(Array.from(subjectsSet).sort());
       setGrades(Array.from(teacherGrades).sort());
       setSections(Array.from(teacherSections).sort());
-
-      if (studentsList.length > 0) {
-        const firstStudent = studentsList[0];
-        setSelectedGrade(firstStudent.gradeLevel);
-        setSelectedSection(firstStudent.section);
-      }
+      // Don't auto-set grade/section filters - let user see all students from all schedules initially
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Failed to load past attendance",
@@ -992,7 +964,7 @@ export default function PastAttendancePage() {
       </div>
 
       {/* Attendance Table */}
-      {filteredStudents.length === 0 ? (
+      {filteredStudents.filter((s) => s.subject.toLowerCase() !== "general").length === 0 ? (
         <div
           className="text-center py-12"
           style={{ color: "var(--muted-foreground)" }}
@@ -1055,7 +1027,9 @@ export default function PastAttendancePage() {
                 </tr>
               </thead>
               <tbody>
-                {filteredStudents.map((student, idx) => (
+                {filteredStudents
+                  .filter((student) => student.subject.toLowerCase() !== "general")
+                  .map((student, idx) => (
                   <tr
                     key={`${student.studentId}-${idx}`}
                     style={{
