@@ -2,8 +2,28 @@ const Student = require("../models/studentsSchema");
 const History = require("../models/historySchema");
 const QRCode = require("qrcode");
 
+const PH_TIME_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Manila (UTC+8, no DST)
+
 // Store pending requests to prevent duplicates
 const pendingRequests = new Map();
+
+/**
+ * Get start and end of day in PH timezone for database queries
+ */
+function getStartAndEndOfDay(baseDate = new Date()) {
+  const phDate = new Date(baseDate.getTime() + PH_TIME_OFFSET_MS);
+  const year = phDate.getUTCFullYear();
+  const month = phDate.getUTCMonth();
+  const day = phDate.getUTCDate();
+
+  const start = new Date(
+    Date.UTC(year, month, day, 0, 0, 0, 0) - PH_TIME_OFFSET_MS,
+  );
+  const end = new Date(
+    Date.UTC(year, month, day, 23, 59, 59, 999) - PH_TIME_OFFSET_MS,
+  );
+  return { start, end };
+}
 
 // Create new student
 const createStudent = async (req, res) => {
@@ -736,26 +756,54 @@ const validateCheckIn = async (req, res) => {
       return res.status(404).json({ error: "Student not found" });
     }
 
-    // Check if student has an open check-in today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // ✅ Close any unclosed check-ins from PREVIOUS DAYS first
+    const now = new Date();
+    const { start: todayStart } = getStartAndEndOfDay(now);
 
-    // Find open check-in: Has 'In' attendanceType but no corresponding 'Out'
-    // Use explicit query: attendanceType='In' AND (checkOutTime does not exist OR checkOutTime is null)
+    const unclosedPreviousCheckIns = await History.find({
+      studentId: studentId,
+      attendanceType: "In",
+      scanTime: { $lt: todayStart }, // Before today
+      $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
+    });
+
+    for (const record of unclosedPreviousCheckIns) {
+      const recordDate = new Date(record.scanTime);
+      const { end: dayEnd } = getStartAndEndOfDay(recordDate);
+      const autoCheckOutTime = new Date(dayEnd.getTime() - 2 * 60 * 60 * 1000);
+
+      const duration = Math.max(
+        0,
+        Math.round(
+          (autoCheckOutTime.getTime() - new Date(record.checkInTime).getTime()) / 60000,
+        ),
+      );
+
+      await History.updateOne(
+        { _id: record._id },
+        {
+          $set: {
+            checkOutTime: autoCheckOutTime,
+            durationMinutes: duration,
+            notes: `Auto-closed during validation - ${record.notes || ""}`,
+          },
+        },
+      );
+      console.log(`✓ Auto-closed previous check-in for student ${studentId}`);
+    }
+
+    // Now check if student has an open check-in TODAY (with correct PH timezone)
+    const { start, end } = getStartAndEndOfDay(now);
+
     const openCheckIn = await History.findOne({
       studentId: studentId,
       attendanceType: "In",
-      scanTime: {
-        $gte: today,
-        $lt: tomorrow,
-      },
+      scanTime: { $gte: start, $lte: end }, // TODAY only (PH timezone)
       $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
     });
 
     console.log(`🔍 Check-in validation for ${studentId}:`);
-    console.log(`  - Date range: ${today} to ${tomorrow}`);
+    console.log(`  - Today's date range (PH TZ): ${start} to ${end}`);
     console.log(
       `  - Open check-in found: ${openCheckIn ? "YES (BLOCKED)" : "NO (ALLOWED)"}`,
     );
@@ -808,20 +856,15 @@ const validateCheckOut = async (req, res) => {
       return res.status(404).json({ error: "Student not found" });
     }
 
-    // Check for checkout conditions today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
+    // Check for checkout conditions today (using PH timezone)
+    const now = new Date();
+    const { start, end } = getStartAndEndOfDay(now);
 
-    // Find open check-in (has 'In' but no checkout yet)
+    // Find open check-in (has 'In' but no checkout yet) TODAY
     const openCheckIn = await History.findOne({
       studentId: studentId,
       attendanceType: "In",
-      scanTime: {
-        $gte: today,
-        $lt: tomorrow,
-      },
+      scanTime: { $gte: start, $lte: end }, // TODAY only (PH timezone)
       $or: [{ checkOutTime: { $exists: false } }, { checkOutTime: null }],
     });
 
@@ -830,10 +873,7 @@ const validateCheckOut = async (req, res) => {
     const alreadyCheckedOut = await History.findOne({
       studentId: studentId,
       attendanceType: "Out",
-      scanTime: {
-        $gte: today,
-        $lt: tomorrow,
-      },
+      scanTime: { $gte: start, $lte: end }, // TODAY only (PH timezone)
     });
 
     const hasNoCheckIn = !openCheckIn;
@@ -842,6 +882,7 @@ const validateCheckOut = async (req, res) => {
     const hasOpenCheckOut = hasNoCheckIn && alreadyCheckedOut !== null;
 
     console.log(`🔍 Check-out validation for ${studentId}:`);
+    console.log(`  - Today's date range (PH TZ): ${start} to ${end}`);
     console.log(`  - Has open check-in: ${!hasNoCheckIn}`);
     console.log(
       `  - Previous 'Out' record exists: ${alreadyCheckedOut !== null}`,
