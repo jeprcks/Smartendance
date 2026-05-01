@@ -3,9 +3,11 @@ const fs = require("fs");
 const multer = require("multer");
 const Settings = require("../models/settingsSchema");
 
-// ─── Multer: save logo/watermark to server/public/logo/ ──────────────────────
+// ─── Multer: save logo/watermark to server/public/logo/ (local) or memory (Vercel) ──────────
 const logoDir = path.join(__dirname, "..", "public", "logo");
-if (!fs.existsSync(logoDir)) fs.mkdirSync(logoDir, { recursive: true });
+if (!process.env.VERCEL && !fs.existsSync(logoDir)) {
+  fs.mkdirSync(logoDir, { recursive: true });
+}
 
 /** Supported extensions we may need to clean up when replacing an image. */
 const IMAGE_EXTS = ["png", "jpg", "jpeg", "webp", "gif"];
@@ -18,15 +20,21 @@ function removeImageFile(base /* 'logo' | 'watermark' */) {
   }
 }
 
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => cb(null, logoDir),
-  filename: (req, file, cb) => {
-    // Use the actual MIME type so WebP files aren't stored as .png
-    const base = req.params.type === "watermark" ? "watermark" : "logo";
-    const ext = (file.mimetype.split("/")[1] || "png").replace("jpeg", "jpg");
-    cb(null, `${base}.${ext}`);
-  },
-});
+// Use memory storage on Vercel (serverless), disk storage locally
+const storage = process.env.VERCEL
+  ? multer.memoryStorage()
+  : multer.diskStorage({
+      destination: (_req, _file, cb) => cb(null, logoDir),
+      filename: (req, file, cb) => {
+        // Use the actual MIME type so WebP files aren't stored as .png
+        const base = req.params.type === "watermark" ? "watermark" : "logo";
+        const ext = (file.mimetype.split("/")[1] || "png").replace(
+          "jpeg",
+          "jpg",
+        );
+        cb(null, `${base}.${ext}`);
+      },
+    });
 
 const upload = multer({
   storage,
@@ -162,26 +170,38 @@ const uploadImage = async (req, res) => {
     const type = req.params.type; // 'logo' or 'watermark'
     const base = type === "watermark" ? "watermark" : "logo";
 
-    // Multer has already written the new file; delete any OLD file that used
-    // a different extension (e.g. replace logo.png with logo.webp).
-    for (const ext of IMAGE_EXTS) {
-      const p = path.join(logoDir, `${base}.${ext}`);
-      if (p !== path.join(logoDir, req.file.filename) && fs.existsSync(p)) {
-        fs.unlinkSync(p);
-      }
-    }
+    // On Vercel, filesystem storage is ephemeral, so convert to base64 and store in MongoDB
+    // On local dev, use filesystem for better performance
+    let imageData;
 
-    const urlPath = `/logo/${req.file.filename}`; // served as static
+    if (process.env.VERCEL) {
+      // Convert to base64 for MongoDB storage
+      // req.file.buffer is available because we're using memoryStorage
+      const base64 = req.file.buffer.toString("base64");
+      const mimeType = req.file.mimetype;
+      imageData = `data:${mimeType};base64,${base64}`;
+    } else {
+      // Local dev: use filesystem
+      // Multer has already written the new file; delete any OLD file that used
+      // a different extension (e.g. replace logo.png with logo.webp).
+      for (const ext of IMAGE_EXTS) {
+        const p = path.join(logoDir, `${base}.${ext}`);
+        if (p !== path.join(logoDir, req.file.filename) && fs.existsSync(p)) {
+          fs.unlinkSync(p);
+        }
+      }
+      imageData = `/logo/${req.file.filename}`; // served as static
+    }
 
     let settings = await Settings.findOne();
     if (!settings) settings = new Settings({});
 
-    if (type === "watermark") settings.watermarkLogo = urlPath;
-    else settings.logo = urlPath;
+    if (type === "watermark") settings.watermarkLogo = imageData;
+    else settings.logo = imageData;
 
     await settings.save(); // clears cache via post('save') hook
 
-    res.status(200).json({ url: urlPath });
+    res.status(200).json({ url: imageData });
   } catch (error) {
     console.error("Error uploading image:", error);
     res.status(500).json({ error: error.message || "Upload failed" });
@@ -194,8 +214,10 @@ const removeImage = async (req, res) => {
     const type = req.params.type;
     const base = type === "watermark" ? "watermark" : "logo";
 
-    // Delete any stored file regardless of extension
-    removeImageFile(base);
+    // Delete any stored file regardless of extension (only on local, not Vercel)
+    if (!process.env.VERCEL) {
+      removeImageFile(base);
+    }
 
     // Clear field in database
     let settings = await Settings.findOne();
