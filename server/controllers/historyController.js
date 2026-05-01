@@ -1,8 +1,99 @@
 const History = require("../models/historySchema");
 const Student = require("../models/studentsSchema");
 const Settings = require("../models/settingsSchema");
+const telegramService = require("../services/telegramService");
 const pendingAttendanceRequests = new Set();
 const PH_TIME_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Manila (UTC+8, no DST)
+
+/**
+ * Send Telegram notification to parent when student scans in/out
+ * @param {Object} student - Student document from database
+ * @param {Object} attendanceRecord - Attendance record created
+ * @param {String} attendanceType - 'In' or 'Out'
+ */
+async function sendScanNotificationToParent(
+  student,
+  attendanceRecord,
+  attendanceType,
+) {
+  try {
+    // Get parent Chat ID from student record (check multiple fields for backward compatibility)
+    const chatId =
+      student.parentInfo?.telegramChatId ||
+      student.parentTelegramChatId ||
+      student.telegramChatId;
+
+    if (!chatId) {
+      console.log(
+        `No Telegram Chat ID found for student ${student.studentId} - skipping scan notification`,
+      );
+      return;
+    }
+
+    // Format the notification message
+    const phTime = new Date(
+      attendanceRecord.scanTime.getTime() + PH_TIME_OFFSET_MS,
+    );
+    const dateStr = phTime.toLocaleDateString("en-US", {
+      weekday: "short",
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+    const timeStr = phTime.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+
+    let message = "";
+
+    if (attendanceType === "In") {
+      // Check-In Notification
+      const statusEmoji = attendanceRecord.status === "Late" ? "⏰" : "✅";
+      message =
+        `🟢 *Student Check-In*\n\n` +
+        `👤 ${student.fullName}\n` +
+        `🆔 Student ID: \`${student.studentId}\`\n\n` +
+        `📅 Date: ${dateStr}\n` +
+        `🕐 Time: ${timeStr}\n` +
+        `${statusEmoji} Status: ${attendanceRecord.status}\n\n` +
+        `🎓 ${student.gradeLevel} - Section ${student.section}\n` +
+        `🌅 ${student.shift} Shift\n\n` +
+        `✅ Your child has checked in to school.`;
+    } else {
+      // Check-Out Notification
+      let durationStr = "";
+      if (attendanceRecord.durationMinutes) {
+        const hours = Math.floor(attendanceRecord.durationMinutes / 60);
+        const minutes = attendanceRecord.durationMinutes % 60;
+        durationStr = `⏱️ Time at School: ${hours}h ${minutes}m\n\n`;
+      }
+
+      message =
+        `🔴 *Student Check-Out*\n\n` +
+        `👤 ${student.fullName}\n` +
+        `🆔 Student ID: \`${student.studentId}\`\n\n` +
+        `📅 Date: ${dateStr}\n` +
+        `🕐 Time: ${timeStr}\n\n` +
+        durationStr +
+        `🎓 ${student.gradeLevel} - Section ${student.section}\n` +
+        `🌅 ${student.shift} Shift\n\n` +
+        `✅ Your child has checked out from school.`;
+    }
+
+    // Send notification asynchronously (non-blocking)
+    await telegramService.sendMessage(chatId, message, {
+      parse_mode: "Markdown",
+    });
+    console.log(
+      `✅ Sent ${attendanceType} notification to parent (Chat ID: ${chatId})`,
+    );
+  } catch (error) {
+    // Log error but don't throw - notification failure shouldn't break the scanner
+    console.error(`Telegram scan notification error:`, error.message);
+  }
+}
 
 function getStartAndEndOfDay(baseDate = new Date()) {
   // Build day boundaries based on Philippine time, then convert back to UTC dates for DB queries.
@@ -11,8 +102,12 @@ function getStartAndEndOfDay(baseDate = new Date()) {
   const month = phDate.getUTCMonth();
   const day = phDate.getUTCDate();
 
-  const start = new Date(Date.UTC(year, month, day, 0, 0, 0, 0) - PH_TIME_OFFSET_MS);
-  const end = new Date(Date.UTC(year, month, day, 23, 59, 59, 999) - PH_TIME_OFFSET_MS);
+  const start = new Date(
+    Date.UTC(year, month, day, 0, 0, 0, 0) - PH_TIME_OFFSET_MS,
+  );
+  const end = new Date(
+    Date.UTC(year, month, day, 23, 59, 59, 999) - PH_TIME_OFFSET_MS,
+  );
   return { start, end };
 }
 
@@ -37,7 +132,10 @@ async function resolveGeneralInStatus(studentId, shift, scanTime) {
     scanTime: { $gte: start, $lte: end },
   }).sort({ scanTime: 1 });
 
-  if (firstGeneralIn && ["Present", "Late"].includes(String(firstGeneralIn.status))) {
+  if (
+    firstGeneralIn &&
+    ["Present", "Late"].includes(String(firstGeneralIn.status))
+  ) {
     return firstGeneralIn.status;
   }
 
@@ -53,17 +151,27 @@ async function resolveGeneralInStatus(studentId, shift, scanTime) {
     settings = null;
   }
 
-  const thresholdMinutes = Number.isFinite(Number(settings?.lateThresholdMinutes))
+  const thresholdMinutes = Number.isFinite(
+    Number(settings?.lateThresholdMinutes),
+  )
     ? Number(settings.lateThresholdMinutes)
     : fallbackThreshold;
 
-  const morningShiftTimeIn = parseTimeToMinutes(settings?.morningShiftCutoff, fallbackMorningStart);
-  const afternoonShiftTimeIn = parseTimeToMinutes(settings?.afternoonShiftCutoff, fallbackAfternoonStart);
+  const morningShiftTimeIn = parseTimeToMinutes(
+    settings?.morningShiftCutoff,
+    fallbackMorningStart,
+  );
+  const afternoonShiftTimeIn = parseTimeToMinutes(
+    settings?.afternoonShiftCutoff,
+    fallbackAfternoonStart,
+  );
 
   // Compare scanner time against rules using Philippine local time.
   const phScanTime = new Date(scanTime.getTime() + PH_TIME_OFFSET_MS);
-  const scanMinutes = phScanTime.getUTCHours() * 60 + phScanTime.getUTCMinutes();
-  const baseTimeIn = shift === "Afternoon" ? afternoonShiftTimeIn : morningShiftTimeIn;
+  const scanMinutes =
+    phScanTime.getUTCHours() * 60 + phScanTime.getUTCMinutes();
+  const baseTimeIn =
+    shift === "Afternoon" ? afternoonShiftTimeIn : morningShiftTimeIn;
   const lateCutoff = baseTimeIn + Math.max(0, thresholdMinutes);
 
   return scanMinutes > lateCutoff ? "Late" : "Present";
@@ -84,12 +192,17 @@ const createAttendanceRecord = async (req, res) => {
     } = req.body;
 
     if (!studentId) {
-      return res.status(400).json({ success: false, error: "studentId is required" });
+      return res
+        .status(400)
+        .json({ success: false, error: "studentId is required" });
     }
     if (!["In", "Out"].includes(attendanceType)) {
       return res
         .status(400)
-        .json({ success: false, error: "Invalid attendanceType. Use 'In' or 'Out'." });
+        .json({
+          success: false,
+          error: "Invalid attendanceType. Use 'In' or 'Out'.",
+        });
     }
 
     const now = new Date();
@@ -107,7 +220,9 @@ const createAttendanceRecord = async (req, res) => {
 
     const student = await Student.findOne({ studentId });
     if (!student) {
-      return res.status(404).json({ success: false, error: "Student not found" });
+      return res
+        .status(404)
+        .json({ success: false, error: "Student not found" });
     }
 
     const { start, end } = getStartAndEndOfDay(now);
@@ -122,7 +237,8 @@ const createAttendanceRecord = async (req, res) => {
       return res.status(400).json({
         success: false,
         code: "ALREADY_CHECKED_IN",
-        error: "You already checked in. Please checkout first before checking in again.",
+        error:
+          "You already checked in. Please checkout first before checking in again.",
       });
     }
 
@@ -134,7 +250,8 @@ const createAttendanceRecord = async (req, res) => {
       });
     }
 
-    const normalizedSubject = typeof subject === "string" ? subject.trim() : "General";
+    const normalizedSubject =
+      typeof subject === "string" ? subject.trim() : "General";
     const isGeneralSubject = normalizedSubject.toLowerCase() === "general";
     let inStatus = "Present";
     if (attendanceType === "In" && isGeneralSubject) {
@@ -163,7 +280,9 @@ const createAttendanceRecord = async (req, res) => {
       record.linkedRecordId = String(openCheckIn._id);
       record.durationMinutes = Math.max(
         0,
-        Math.round((now.getTime() - new Date(openCheckIn.checkInTime).getTime()) / 60000),
+        Math.round(
+          (now.getTime() - new Date(openCheckIn.checkInTime).getTime()) / 60000,
+        ),
       );
     }
 
@@ -182,9 +301,17 @@ const createAttendanceRecord = async (req, res) => {
       );
     }
 
+    // Send Telegram notification to parent (non-blocking)
+    sendScanNotificationToParent(student, record, attendanceType).catch((err) =>
+      console.error("Error sending scan notification:", err),
+    );
+
     return res.status(201).json({
       success: true,
-      message: attendanceType === "In" ? "Check-in successful" : "Check-out successful",
+      message:
+        attendanceType === "In"
+          ? "Check-in successful"
+          : "Check-out successful",
       record,
     });
   } catch (error) {
@@ -196,7 +323,12 @@ const createAttendanceRecord = async (req, res) => {
         error: "Duplicate scan detected. Please try again.",
       });
     }
-    return res.status(400).json({ success: false, error: error.message || "Failed to create record" });
+    return res
+      .status(400)
+      .json({
+        success: false,
+        error: error.message || "Failed to create record",
+      });
   } finally {
     if (requestKey) {
       pendingAttendanceRequests.delete(requestKey);
@@ -229,7 +361,8 @@ const getAllAttendanceRecords = async (req, res) => {
     if (gradeLevel) filter.gradeLevel = gradeLevel;
     if (section) filter.section = section;
     if (shift) filter.shift = shift;
-    if (attendanceType && attendanceType !== "All") filter.attendanceType = attendanceType;
+    if (attendanceType && attendanceType !== "All")
+      filter.attendanceType = attendanceType;
 
     if (startDate || endDate) {
       filter.scanTime = {};
@@ -248,12 +381,18 @@ const getAllAttendanceRecords = async (req, res) => {
     const skip = (Number(page) - 1) * Number(limit);
     // Use fast estimation instead of full count (much faster on large collections)
     const totalRecords = await History.estimatedDocumentCount();
-    const records = await History.find(filter).sort({ scanTime: -1 }).skip(skip).limit(Number(limit));
+    const records = await History.find(filter)
+      .sort({ scanTime: -1 })
+      .skip(skip)
+      .limit(Number(limit));
 
     // Keep response shape compatible with adminweb.
     const stats = {
-      present: records.filter((r) => String(r.status).toLowerCase() === "present").length,
-      late: records.filter((r) => String(r.status).toLowerCase() === "late").length,
+      present: records.filter(
+        (r) => String(r.status).toLowerCase() === "present",
+      ).length,
+      late: records.filter((r) => String(r.status).toLowerCase() === "late")
+        .length,
       absent: 0,
       cutting: 0,
       total: totalRecords,
@@ -281,7 +420,10 @@ const getAllAttendanceRecords = async (req, res) => {
 const getAttendanceRecord = async (req, res) => {
   try {
     const record = await History.findById(req.params.id);
-    if (!record) return res.status(404).json({ success: false, error: "Attendance record not found" });
+    if (!record)
+      return res
+        .status(404)
+        .json({ success: false, error: "Attendance record not found" });
     return res.status(200).json({ success: true, record });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
@@ -291,12 +433,25 @@ const getAttendanceRecord = async (req, res) => {
 // Update attendance record
 const updateAttendanceRecord = async (req, res) => {
   try {
-    const updatedRecord = await History.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
-    });
-    if (!updatedRecord) return res.status(404).json({ success: false, error: "Attendance record not found" });
-    return res.status(200).json({ success: true, message: "Attendance record updated", record: updatedRecord });
+    const updatedRecord = await History.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      {
+        new: true,
+        runValidators: true,
+      },
+    );
+    if (!updatedRecord)
+      return res
+        .status(404)
+        .json({ success: false, error: "Attendance record not found" });
+    return res
+      .status(200)
+      .json({
+        success: true,
+        message: "Attendance record updated",
+        record: updatedRecord,
+      });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -306,8 +461,13 @@ const updateAttendanceRecord = async (req, res) => {
 const deleteAttendanceRecord = async (req, res) => {
   try {
     const record = await History.findByIdAndDelete(req.params.id);
-    if (!record) return res.status(404).json({ success: false, error: "Attendance record not found" });
-    return res.status(200).json({ success: true, message: "Attendance record deleted" });
+    if (!record)
+      return res
+        .status(404)
+        .json({ success: false, error: "Attendance record not found" });
+    return res
+      .status(200)
+      .json({ success: true, message: "Attendance record deleted" });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -341,14 +501,24 @@ const getStudentAttendanceHistory = async (req, res) => {
     const { studentId } = req.params;
     const { limit = 50 } = req.query;
     const student = await Student.findOne({ studentId });
-    if (!student) return res.status(404).json({ success: false, error: "Student not found" });
-    const records = await History.find({ studentId }).sort({ scanTime: -1 }).limit(Number(limit));
+    if (!student)
+      return res
+        .status(404)
+        .json({ success: false, error: "Student not found" });
+    const records = await History.find({ studentId })
+      .sort({ scanTime: -1 })
+      .limit(Number(limit));
     const stats = {
-      present: records.filter((r) => String(r.status).toLowerCase() === "present").length,
-      late: records.filter((r) => String(r.status).toLowerCase() === "late").length,
+      present: records.filter(
+        (r) => String(r.status).toLowerCase() === "present",
+      ).length,
+      late: records.filter((r) => String(r.status).toLowerCase() === "late")
+        .length,
       absent: 0,
       cutting: 0,
-      total: records.filter((r) => String(r.attendanceType).toLowerCase() === "in").length,
+      total: records.filter(
+        (r) => String(r.attendanceType).toLowerCase() === "in",
+      ).length,
     };
     return res.status(200).json({
       success: true,
@@ -370,7 +540,8 @@ const getStudentAttendanceHistory = async (req, res) => {
 };
 
 // Get attendance records for history page (with student details)
-const getHistoryPageData = async (req, res) => getAllAttendanceRecords(req, res);
+const getHistoryPageData = async (req, res) =>
+  getAllAttendanceRecords(req, res);
 
 // Get daily attendance summary for all students (with check-in and check-out)
 const getDailyAttendanceSummary = async (req, res) => {
@@ -401,7 +572,9 @@ const getDailyAttendanceSummary = async (req, res) => {
       }),
     );
 
-    return res.status(200).json({ success: true, summary, total: summary.length });
+    return res
+      .status(200)
+      .json({ success: true, summary, total: summary.length });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
   }
@@ -411,7 +584,9 @@ const getDailyAttendanceSummary = async (req, res) => {
 const exportAttendanceData = async (req, res) => {
   try {
     const records = await History.find({}).sort({ scanTime: -1 }).lean();
-    return res.status(200).json({ success: true, records, totalRecords: records.length });
+    return res
+      .status(200)
+      .json({ success: true, records, totalRecords: records.length });
   } catch (error) {
     return res.status(400).json({ success: false, error: error.message });
   }

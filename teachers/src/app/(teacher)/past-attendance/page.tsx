@@ -1,29 +1,37 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { getToken, getTeacherData } from '@/lib/auth';
+import { useEffect, useState } from "react";
+import { getToken, getTeacherData } from "@/lib/auth";
 import {
   getTeacherSchedule,
   getAttendanceRecords,
   updateAttendanceRecord,
-} from '../../../lib/api';
-import PageHeader from '@/components/PageHeader';
-import PrintExcelModal from './components/printexcelmodal';
+} from "../../../lib/api";
+import PageHeader from "@/components/PageHeader";
+import PrintExcelModal from "./components/printexcelmodal";
 
-const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const DAYS = [
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+  "Sunday",
+];
 
 function getDayName(weekday: number): string {
   return DAYS[weekday - 1];
 }
 
 function getDateString(date: Date): string {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
 
 function toLocalDateString(value: unknown): string {
-  if (!value) return '';
+  if (!value) return "";
   const d = new Date(String(value));
-  if (Number.isNaN(d.getTime())) return '';
+  if (Number.isNaN(d.getTime())) return "";
   return getDateString(d);
 }
 
@@ -42,7 +50,9 @@ function getLast7Days(): { date: Date; dateStr: string; dayName: string }[] {
   return days;
 }
 
-function getDateRange(days: number): { date: Date; dateStr: string; dayName: string }[] {
+function getDateRange(
+  days: number,
+): { date: Date; dateStr: string; dayName: string }[] {
   const dateArray = [];
   const today = new Date();
   for (let i = days - 1; i >= 0; i--) {
@@ -57,11 +67,19 @@ function getDateRange(days: number): { date: Date; dateStr: string; dayName: str
   return dateArray;
 }
 
-function getCustomDateRange(startDate: string, endDate: string): { date: Date; dateStr: string; dayName: string }[] {
+function getCustomDateRange(
+  startDate: string,
+  endDate: string,
+): { date: Date; dateStr: string; dayName: string }[] {
   if (!startDate || !endDate) return [];
   const start = new Date(`${startDate}T00:00:00`);
   const end = new Date(`${endDate}T00:00:00`);
-  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || start > end) return [];
+  if (
+    Number.isNaN(start.getTime()) ||
+    Number.isNaN(end.getTime()) ||
+    start > end
+  )
+    return [];
 
   const dateArray = [];
   const cursor = new Date(start);
@@ -97,26 +115,66 @@ interface EditModalState {
 }
 
 const CalendarIconForHeader = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+  <svg
+    className="w-6 h-6"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
+    />
   </svg>
 );
 
 const SearchIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+    />
   </svg>
 );
 
 const FilterIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"
+    />
   </svg>
 );
 
 const DownloadIcon = () => (
-  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+  <svg
+    className="w-5 h-5"
+    fill="none"
+    stroke="currentColor"
+    viewBox="0 0 24 24"
+  >
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      strokeWidth={2}
+      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
+    />
   </svg>
 );
 
@@ -124,26 +182,28 @@ export default function PastAttendancePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allStudents, setAllStudents] = useState<StudentAttendance[]>([]);
-  const [filteredStudents, setFilteredStudents] = useState<StudentAttendance[]>([]);
-  const [selectedSubject, setSelectedSubject] = useState<string>('');
-  const [selectedGrade, setSelectedGrade] = useState<string>('');
-  const [selectedSection, setSelectedSection] = useState<string>('');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('All');
+  const [filteredStudents, setFilteredStudents] = useState<StudentAttendance[]>(
+    [],
+  );
+  const [selectedSubject, setSelectedSubject] = useState<string>("");
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
+  const [selectedSection, setSelectedSection] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("All");
   const [dateRangeFilter, setDateRangeFilter] = useState<number>(7);
   const [isCustomDateRange, setIsCustomDateRange] = useState(false);
-  const [customStartDate, setCustomStartDate] = useState('');
-  const [customEndDate, setCustomEndDate] = useState('');
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
   const [subjects, setSubjects] = useState<string[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
   const [sections, setSections] = useState<string[]>([]);
   const [editModal, setEditModal] = useState<EditModalState>({
     isOpen: false,
-    studentId: '',
-    studentName: '',
-    date: '',
-    currentStatus: '',
-    recordId: '',
+    studentId: "",
+    studentName: "",
+    date: "",
+    currentStatus: "",
+    recordId: "",
   });
   const [updateLoading, setUpdateLoading] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -153,13 +213,29 @@ export default function PastAttendancePage() {
     const token = getToken();
     const data = getTeacherData();
     if (!token || !data.teacherId || !data.teacherName) {
-      setError('Not authenticated');
+      setError("Not authenticated");
       setLoading(false);
       return;
     }
 
     setError(null);
     setLoading(true);
+
+    // Calculate date range for API query
+    let startDate: string | undefined;
+    let endDate: string | undefined;
+
+    if (isCustomDateRange && customStartDate && customEndDate) {
+      startDate = customStartDate;
+      endDate = customEndDate;
+    } else if (dateRangeFilter > 0) {
+      const end = new Date();
+      const start = new Date();
+      start.setDate(start.getDate() - (dateRangeFilter - 1));
+      startDate = getDateString(start);
+      endDate = getDateString(end);
+    }
+
     try {
       const [schedulesRes, recordsRes] = await Promise.all([
         getTeacherSchedule({
@@ -167,7 +243,28 @@ export default function PastAttendancePage() {
           teacherId: data.teacherId,
           teacherName: data.teacherName,
         }),
-        getAttendanceRecords({ token }),
+        fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000"}/api/history?` +
+            new URLSearchParams({
+              limit: "1000", // Increase limit for archive view
+              ...(startDate && { startDate }),
+              ...(endDate && { endDate }),
+            }),
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+              "Content-Type": "application/json",
+            },
+          },
+        )
+          .then((res) => {
+            if (!res.ok) throw new Error("Failed to fetch records");
+            return res.json();
+          })
+          .then((data) => ({
+            records: data.records || [],
+            pagination: data.pagination || {},
+          })),
       ]);
 
       // Group records by student and date
@@ -179,13 +276,15 @@ export default function PastAttendancePage() {
       const records = recordsRes.records || [];
 
       records.forEach((record: any) => {
-        const studentId = String(record.studentId || '');
-        const studentName = String(record.studentName || '');
-        const gradeLevel = String(record.gradeLevel || '');
-        const section = String(record.section || '');
-        const subject = String(record.subject || '');
-        const status = String(record.status || 'Absent');
-        const dateStr = toLocalDateString(record.scanTime || record.checkInTime || record.createdAt);
+        const studentId = String(record.studentId || "");
+        const studentName = String(record.studentName || "");
+        const gradeLevel = String(record.gradeLevel || "");
+        const section = String(record.section || "");
+        const subject = String(record.subject || "");
+        const status = String(record.status || "Absent");
+        const dateStr = toLocalDateString(
+          record.scanTime || record.checkInTime || record.createdAt,
+        );
 
         if (!studentId || !studentName) return;
         if (!dateStr) return;
@@ -210,12 +309,14 @@ export default function PastAttendancePage() {
 
         const student = studentMap.get(key)!;
         student.attendance[dateStr] = status;
-        student.recordIds[dateStr] = String(record._id || '');
-        console.log(`Stored record - studentId: ${studentId}, date: ${dateStr}, recordId: ${student.recordIds[dateStr]}, createdAt: ${record.createdAt}`);
+        student.recordIds[dateStr] = String(record._id || "");
+        console.log(
+          `Stored record - studentId: ${studentId}, date: ${dateStr}, recordId: ${student.recordIds[dateStr]}, createdAt: ${record.createdAt}`,
+        );
       });
 
       const studentsList = Array.from(studentMap.values()).sort((a, b) =>
-        a.studentId.localeCompare(b.studentId)
+        a.studentId.localeCompare(b.studentId),
       );
 
       setAllStudents(studentsList);
@@ -230,7 +331,9 @@ export default function PastAttendancePage() {
         setSelectedSection(firstStudent.section);
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load past attendance');
+      setError(
+        e instanceof Error ? e.message : "Failed to load past attendance",
+      );
     } finally {
       setLoading(false);
     }
@@ -258,13 +361,15 @@ export default function PastAttendancePage() {
       filtered = filtered.filter(
         (s) =>
           s.studentName.toLowerCase().includes(query) ||
-          s.studentId.toLowerCase().includes(query)
+          s.studentId.toLowerCase().includes(query),
       );
     }
 
-    if (statusFilter !== 'All') {
+    if (statusFilter !== "All") {
       filtered = filtered.filter((s) => {
-        return activeDates.some((day) => s.attendance[day.dateStr] === statusFilter);
+        return activeDates.some(
+          (day) => s.attendance[day.dateStr] === statusFilter,
+        );
       });
     }
 
@@ -281,22 +386,44 @@ export default function PastAttendancePage() {
     customEndDate,
   ]);
 
-  const handleEditClick = (studentId: string, studentName: string, date: string, currentStatus: string, subject: string, gradeLevel: string, section: string) => {
+  const handleEditClick = (
+    studentId: string,
+    studentName: string,
+    date: string,
+    currentStatus: string,
+    subject: string,
+    gradeLevel: string,
+    section: string,
+  ) => {
     // Find the exact student record by matching all identifying fields
     let student = filteredStudents.find(
-      (s) => s.studentId === studentId && s.subject === subject && s.gradeLevel === gradeLevel && s.section === section
+      (s) =>
+        s.studentId === studentId &&
+        s.subject === subject &&
+        s.gradeLevel === gradeLevel &&
+        s.section === section,
     );
     if (!student) {
       student = allStudents.find(
-        (s) => s.studentId === studentId && s.subject === subject && s.gradeLevel === gradeLevel && s.section === section
+        (s) =>
+          s.studentId === studentId &&
+          s.subject === subject &&
+          s.gradeLevel === gradeLevel &&
+          s.section === section,
       );
     }
-    
-    const recordId = student?.recordIds[date] || '';
-    console.log('Edit click - Searching for:', { studentId, subject, gradeLevel, section, date });
-    console.log('Found student:', student);
-    console.log('Student recordIds map:', student?.recordIds);
-    console.log('Looking up recordId for date:', date, '-> result:', recordId);
+
+    const recordId = student?.recordIds[date] || "";
+    console.log("Edit click - Searching for:", {
+      studentId,
+      subject,
+      gradeLevel,
+      section,
+      date,
+    });
+    console.log("Found student:", student);
+    console.log("Student recordIds map:", student?.recordIds);
+    console.log("Looking up recordId for date:", date, "-> result:", recordId);
 
     setEditModal({
       isOpen: true,
@@ -312,14 +439,19 @@ export default function PastAttendancePage() {
     setUpdateLoading(true);
     try {
       const token = getToken();
-      
+
       if (!token) {
-        throw new Error('Not authenticated - please login again');
+        throw new Error("Not authenticated - please login again");
       }
-      
+
       if (!recordId) {
-        console.error('Missing recordId in handleStatusChange', { editModal, recordId });
-        throw new Error('Record ID not found. The attendance record could not be located.');
+        console.error("Missing recordId in handleStatusChange", {
+          editModal,
+          recordId,
+        });
+        throw new Error(
+          "Record ID not found. The attendance record could not be located.",
+        );
       }
 
       // Call the API to update the record
@@ -331,28 +463,31 @@ export default function PastAttendancePage() {
 
       // Update local state only on success
       const studentIndex = filteredStudents.findIndex(
-        (s) => s.studentId === editModal.studentId
+        (s) => s.studentId === editModal.studentId,
       );
       if (studentIndex !== -1) {
         const updatedStudents = [...filteredStudents];
         updatedStudents[studentIndex].attendance[editModal.date] = newStatus;
         setFilteredStudents(updatedStudents);
       }
-      
+
       // Also update allStudents to keep them in sync
       const allStudentIndex = allStudents.findIndex(
-        (s) => s.studentId === editModal.studentId
+        (s) => s.studentId === editModal.studentId,
       );
       if (allStudentIndex !== -1) {
         const updatedAllStudents = [...allStudents];
-        updatedAllStudents[allStudentIndex].attendance[editModal.date] = newStatus;
+        updatedAllStudents[allStudentIndex].attendance[editModal.date] =
+          newStatus;
         setAllStudents(updatedAllStudents);
       }
 
       setEditModal({ ...editModal, isOpen: false });
     } catch (e) {
-      console.error('Failed to update status:', e);
-      alert(`Failed to update attendance: ${e instanceof Error ? e.message : 'Unknown error'}`);
+      console.error("Failed to update status:", e);
+      alert(
+        `Failed to update attendance: ${e instanceof Error ? e.message : "Unknown error"}`,
+      );
     } finally {
       setUpdateLoading(false);
     }
@@ -360,33 +495,33 @@ export default function PastAttendancePage() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'Present':
-        return { bg: '#a7f3d0', text: '#059669' };
-      case 'Absent':
-        return { bg: '#fca5a5', text: '#991b1b' };
-      case 'Late':
-        return { bg: '#fcd34d', text: '#d97706' };
-      case 'Cutting':
-        return { bg: '#ddd6fe', text: '#6d28d9' };
-      case 'Unscanned':
-        return { bg: '#e5e7eb', text: '#6b7280' };
+      case "Present":
+        return { bg: "#a7f3d0", text: "#059669" };
+      case "Absent":
+        return { bg: "#fca5a5", text: "#991b1b" };
+      case "Late":
+        return { bg: "#fcd34d", text: "#d97706" };
+      case "Cutting":
+        return { bg: "#ddd6fe", text: "#6d28d9" };
+      case "Unscanned":
+        return { bg: "#e5e7eb", text: "#6b7280" };
       default:
-        return { bg: '#f3f4f6', text: '#6b7280' };
+        return { bg: "#f3f4f6", text: "#6b7280" };
     }
   };
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'Present':
-        return '✓ Present';
-      case 'Absent':
-        return '✗ Absent';
-      case 'Late':
-        return '⏰ Late';
-      case 'Cutting':
-        return '⚠ Cutting';
-      case 'Unscanned':
-        return '⊘ Unscanned';
+      case "Present":
+        return "✓ Present";
+      case "Absent":
+        return "✗ Absent";
+      case "Late":
+        return "⏰ Late";
+      case "Cutting":
+        return "⚠ Cutting";
+      case "Unscanned":
+        return "⊘ Unscanned";
       default:
         return status;
     }
@@ -401,9 +536,12 @@ export default function PastAttendancePage() {
       <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
         <div
           className="animate-spin w-12 h-12 border-[3px] border-t-transparent rounded-full"
-          style={{ borderColor: 'var(--primary)' }}
+          style={{ borderColor: "var(--primary)" }}
         />
-        <p className="text-sm font-semibold" style={{ color: 'var(--muted-foreground)' }}>
+        <p
+          className="text-sm font-semibold"
+          style={{ color: "var(--muted-foreground)" }}
+        >
           Loading past attendance...
         </p>
       </div>
@@ -415,7 +553,14 @@ export default function PastAttendancePage() {
       <PageHeader title="Archive" icon={<CalendarIconForHeader />} />
 
       {error && (
-        <div className="p-4 rounded-lg border-2" style={{ borderColor: 'var(--error)', backgroundColor: 'transparent', color: 'var(--error)' }}>
+        <div
+          className="p-4 rounded-lg border-2"
+          style={{
+            borderColor: "var(--error)",
+            backgroundColor: "transparent",
+            color: "var(--error)",
+          }}
+        >
           <p className="font-semibold">Error</p>
           <p className="text-sm">{error}</p>
         </div>
@@ -424,11 +569,17 @@ export default function PastAttendancePage() {
       {/* Search + Actions */}
       <div
         className="rounded-lg border-2 p-4"
-        style={{ borderColor: 'var(--primary)', backgroundColor: 'transparent' }}
+        style={{
+          borderColor: "var(--primary)",
+          backgroundColor: "transparent",
+        }}
       >
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1 min-w-[220px] relative">
-            <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: 'var(--muted-foreground)' }}>
+            <div
+              className="absolute left-3 top-1/2 -translate-y-1/2"
+              style={{ color: "var(--muted-foreground)" }}
+            >
               <SearchIcon />
             </div>
             <input
@@ -438,9 +589,9 @@ export default function PastAttendancePage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-4 py-2.5 rounded-lg border"
               style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
+                borderColor: "var(--border)",
+                backgroundColor: "var(--background)",
+                color: "var(--foreground)",
               }}
             />
           </div>
@@ -449,9 +600,11 @@ export default function PastAttendancePage() {
             onClick={() => setShowFilters((prev) => !prev)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border font-medium transition-all hover:shadow-md"
             style={{
-              borderColor: 'var(--border)',
-              backgroundColor: showFilters ? 'var(--secondary)' : 'var(--background)',
-              color: 'var(--foreground)',
+              borderColor: "var(--border)",
+              backgroundColor: showFilters
+                ? "var(--secondary)"
+                : "var(--background)",
+              color: "var(--foreground)",
             }}
           >
             <FilterIcon />
@@ -462,8 +615,8 @@ export default function PastAttendancePage() {
             onClick={() => setIsPrintModalOpen(true)}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg font-medium transition-all hover:shadow-md"
             style={{
-              backgroundColor: 'var(--primary)',
-              color: '#ffffff',
+              backgroundColor: "var(--primary)",
+              color: "#ffffff",
             }}
           >
             <DownloadIcon />
@@ -472,175 +625,195 @@ export default function PastAttendancePage() {
         </div>
 
         {showFilters && (
-        <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Grade Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Grade
-            </label>
-            <select
-              value={selectedGrade}
-              onChange={(e) => setSelectedGrade(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
-              }}
-            >
-              <option value="">All Grades</option>
-              {grades.map((grade) => (
-                <option key={grade} value={grade}>
-                  Grade {grade}
-                </option>
-              ))}
-            </select>
-          </div>
+          <div className="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Grade Filter */}
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--foreground)" }}
+              >
+                Grade
+              </label>
+              <select
+                value={selectedGrade}
+                onChange={(e) => setSelectedGrade(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{
+                  borderColor: "var(--border)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <option value="">All Grades</option>
+                {grades.map((grade) => (
+                  <option key={grade} value={grade}>
+                    Grade {grade}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Section Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Section
-            </label>
-            <select
-              value={selectedSection}
-              onChange={(e) => setSelectedSection(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
-              }}
-            >
-              <option value="">All Sections</option>
-              {sections.map((section) => (
-                <option key={section} value={section}>
-                  {section}
-                </option>
-              ))}
-            </select>
-          </div>
+            {/* Section Filter */}
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--foreground)" }}
+              >
+                Section
+              </label>
+              <select
+                value={selectedSection}
+                onChange={(e) => setSelectedSection(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{
+                  borderColor: "var(--border)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <option value="">All Sections</option>
+                {sections.map((section) => (
+                  <option key={section} value={section}>
+                    {section}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-          {/* Date Range Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Date Range
-            </label>
-            <select
-              value={isCustomDateRange ? 'custom' : String(dateRangeFilter)}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value === 'custom') {
-                  setIsCustomDateRange(true);
-                  const today = getDateString(new Date());
-                  if (!customStartDate) setCustomStartDate(today);
-                  if (!customEndDate) setCustomEndDate(today);
-                  return;
-                }
-                setIsCustomDateRange(false);
-                setDateRangeFilter(Number(value));
-              }}
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
-              }}
-            >
-              <option value={7}>Last 7 Days</option>
-              <option value={30}>Last 30 Days</option>
-              <option value={999}>All History</option>
-              <option value="custom">Custom Range</option>
-            </select>
-            {isCustomDateRange && (
-              <div className="mt-3 grid grid-cols-1 gap-2">
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{
-                    borderColor: 'var(--border)',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--foreground)',
-                  }}
-                />
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border"
-                  style={{
-                    borderColor: 'var(--border)',
-                    backgroundColor: 'var(--background)',
-                    color: 'var(--foreground)',
-                  }}
-                />
-              </div>
-            )}
-          </div>
+            {/* Date Range Filter */}
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--foreground)" }}
+              >
+                Date Range
+              </label>
+              <select
+                value={isCustomDateRange ? "custom" : String(dateRangeFilter)}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value === "custom") {
+                    setIsCustomDateRange(true);
+                    const today = getDateString(new Date());
+                    if (!customStartDate) setCustomStartDate(today);
+                    if (!customEndDate) setCustomEndDate(today);
+                    return;
+                  }
+                  setIsCustomDateRange(false);
+                  setDateRangeFilter(Number(value));
+                }}
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{
+                  borderColor: "var(--border)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <option value={7}>Last 7 Days</option>
+                <option value={30}>Last 30 Days</option>
+                <option value={999}>All History</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              {isCustomDateRange && (
+                <div className="mt-3 grid grid-cols-1 gap-2">
+                  <input
+                    type="date"
+                    value={customStartDate}
+                    onChange={(e) => setCustomStartDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border"
+                    style={{
+                      borderColor: "var(--border)",
+                      backgroundColor: "var(--background)",
+                      color: "var(--foreground)",
+                    }}
+                  />
+                  <input
+                    type="date"
+                    value={customEndDate}
+                    onChange={(e) => setCustomEndDate(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg border"
+                    style={{
+                      borderColor: "var(--border)",
+                      backgroundColor: "var(--background)",
+                      color: "var(--foreground)",
+                    }}
+                  />
+                </div>
+              )}
+            </div>
 
-          {/* Status Filter */}
-          <div>
-            <label className="block text-sm font-medium mb-2" style={{ color: 'var(--foreground)' }}>
-              Status
-            </label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-3 py-2 rounded-lg border"
-              style={{
-                borderColor: 'var(--border)',
-                backgroundColor: 'var(--background)',
-                color: 'var(--foreground)',
-              }}
-            >
-              <option value="All">All</option>
-              <option value="Present">Present</option>
-              <option value="Absent">Absent</option>
-              <option value="Late">Late</option>
-              <option value="Cutting">Cutting</option>
-            </select>
+            {/* Status Filter */}
+            <div>
+              <label
+                className="block text-sm font-medium mb-2"
+                style={{ color: "var(--foreground)" }}
+              >
+                Status
+              </label>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border"
+                style={{
+                  borderColor: "var(--border)",
+                  backgroundColor: "var(--background)",
+                  color: "var(--foreground)",
+                }}
+              >
+                <option value="All">All</option>
+                <option value="Present">Present</option>
+                <option value="Absent">Absent</option>
+                <option value="Late">Late</option>
+                <option value="Cutting">Cutting</option>
+              </select>
+            </div>
           </div>
-        </div>
         )}
       </div>
 
       {/* Attendance Table */}
       {filteredStudents.length === 0 ? (
-        <div className="text-center py-12" style={{ color: 'var(--muted-foreground)' }}>
+        <div
+          className="text-center py-12"
+          style={{ color: "var(--muted-foreground)" }}
+        >
           <p className="text-base">No students found matching your criteria</p>
         </div>
       ) : (
         <div
           className="rounded-xl border-2 overflow-hidden card-theme"
-          style={{ borderColor: 'var(--primary)' }}
+          style={{ borderColor: "var(--primary)" }}
         >
           <div
             className="overflow-auto max-h-[70vh]"
             style={{
-              overscrollBehavior: 'contain',
-              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling: "touch",
             }}
           >
             <table className="w-full text-sm">
               <thead>
-                <tr style={{ backgroundColor: 'transparent', borderBottom: '2px solid var(--border)' }}>
+                <tr
+                  style={{
+                    backgroundColor: "transparent",
+                    borderBottom: "2px solid var(--border)",
+                  }}
+                >
                   <th
                     className="px-4 py-3 text-left font-semibold text-base"
-                    style={{ color: 'var(--foreground)' }}
+                    style={{ color: "var(--foreground)" }}
                   >
                     ID
                   </th>
                   <th
                     className="px-4 py-3 text-left font-semibold text-base"
-                    style={{ color: 'var(--foreground)' }}
+                    style={{ color: "var(--foreground)" }}
                   >
                     Student Name
                   </th>
                   <th
                     className="px-4 py-3 text-left font-semibold text-base"
-                    style={{ color: 'var(--foreground)' }}
+                    style={{ color: "var(--foreground)" }}
                   >
                     Subject
                   </th>
@@ -648,11 +821,14 @@ export default function PastAttendancePage() {
                     <th
                       key={day.dateStr}
                       className="px-2 py-3 text-center font-semibold text-xs"
-                      style={{ color: 'var(--foreground)', minWidth: '110px' }}
+                      style={{ color: "var(--foreground)", minWidth: "110px" }}
                     >
                       <div>{day.dayName.slice(0, 3)}</div>
-                      <div className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-                        {day.dateStr.split('-')[2]}
+                      <div
+                        className="text-xs"
+                        style={{ color: "var(--muted-foreground)" }}
+                      >
+                        {day.dateStr.split("-")[2]}
                       </div>
                     </th>
                   ))}
@@ -663,29 +839,40 @@ export default function PastAttendancePage() {
                   <tr
                     key={`${student.studentId}-${idx}`}
                     style={{
-                      backgroundColor: 'transparent',
-                      borderBottom: '1px solid var(--border)',
+                      backgroundColor: "transparent",
+                      borderBottom: "1px solid var(--border)",
                     }}
                   >
-                    <td className="px-4 py-3 font-medium text-base" style={{ color: 'var(--foreground)' }}>
+                    <td
+                      className="px-4 py-3 font-medium text-base"
+                      style={{ color: "var(--foreground)" }}
+                    >
                       {student.studentId}
                     </td>
-                    <td className="px-4 py-3 text-base" style={{ color: 'var(--foreground)' }}>
+                    <td
+                      className="px-4 py-3 text-base"
+                      style={{ color: "var(--foreground)" }}
+                    >
                       {student.studentName}
                     </td>
-                    <td className="px-4 py-3 text-base font-medium" style={{ color: 'var(--primary)' }}>
+                    <td
+                      className="px-4 py-3 text-base font-medium"
+                      style={{ color: "var(--primary)" }}
+                    >
                       {student.subject}
                     </td>
                     {displayedDates.map((day) => {
                       const hasRecord = !!student.recordIds[day.dateStr];
-                      const status = hasRecord ? (student.attendance[day.dateStr] || 'Absent') : 'Unscanned';
+                      const status = hasRecord
+                        ? student.attendance[day.dateStr] || "Absent"
+                        : "Unscanned";
                       const colors = getStatusColor(status);
                       return (
                         <td
                           key={`${student.studentId}-${day.dateStr}`}
                           className="px-2 py-3 text-center"
                         >
-                        <button
+                          <button
                             onClick={() => {
                               if (hasRecord) {
                                 handleEditClick(
@@ -695,13 +882,15 @@ export default function PastAttendancePage() {
                                   status,
                                   student.subject,
                                   student.gradeLevel,
-                                  student.section
+                                  student.section,
                                 );
                               }
                             }}
                             disabled={!hasRecord}
                             className={`inline-block px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-                              hasRecord ? 'hover:shadow-md cursor-pointer' : 'cursor-not-allowed opacity-60'
+                              hasRecord
+                                ? "hover:shadow-md cursor-pointer"
+                                : "cursor-not-allowed opacity-60"
                             }`}
                             style={{
                               backgroundColor: colors.bg,
@@ -730,14 +919,18 @@ export default function PastAttendancePage() {
           isCustomDateRange
             ? customStartDate && customEndDate
               ? `Custom: ${customStartDate} to ${customEndDate}`
-              : 'Custom Range'
+              : "Custom Range"
             : dateRangeFilter === 7
-              ? 'Last 7 Days'
+              ? "Last 7 Days"
               : dateRangeFilter === 30
-                ? 'Last 30 Days'
-                : 'All History'
+                ? "Last 30 Days"
+                : "All History"
         }
-        dateRangeFilter={isCustomDateRange ? Math.max(displayedDates.length, 1) : dateRangeFilter}
+        dateRangeFilter={
+          isCustomDateRange
+            ? Math.max(displayedDates.length, 1)
+            : dateRangeFilter
+        }
       />
 
       {/* Edit Modal */}
@@ -749,30 +942,40 @@ export default function PastAttendancePage() {
           <div
             className="rounded-xl w-full max-w-md shadow-2xl p-6"
             onClick={(e) => e.stopPropagation()}
-            style={{ backgroundColor: 'var(--background)' }}
+            style={{ backgroundColor: "var(--background)" }}
           >
-            <h2 className="text-xl font-bold mb-2" style={{ color: 'var(--foreground)' }}>
+            <h2
+              className="text-xl font-bold mb-2"
+              style={{ color: "var(--foreground)" }}
+            >
               Change Attendance Status
             </h2>
-            <p className="text-sm mb-4" style={{ color: 'var(--muted-foreground)' }}>
+            <p
+              className="text-sm mb-4"
+              style={{ color: "var(--muted-foreground)" }}
+            >
               {editModal.studentName} on {editModal.date}
             </p>
 
             <div className="space-y-2 mb-6">
-              {['Present', 'Absent', 'Late', 'Cutting'].map((status) => {
+              {["Present", "Absent", "Late", "Cutting"].map((status) => {
                 const colors = getStatusColor(status);
                 const isSelected = status === editModal.currentStatus;
                 return (
                   <button
                     key={status}
-                    onClick={() => handleStatusChange(status, editModal.recordId)}
+                    onClick={() =>
+                      handleStatusChange(status, editModal.recordId)
+                    }
                     disabled={updateLoading}
                     className="w-full px-4 py-2 rounded-lg text-base font-medium transition-all"
                     style={{
                       backgroundColor: colors.bg,
                       color: colors.text,
-                      border: isSelected ? '2px solid' : '2px solid transparent',
-                      borderColor: isSelected ? colors.text : 'transparent',
+                      border: isSelected
+                        ? "2px solid"
+                        : "2px solid transparent",
+                      borderColor: isSelected ? colors.text : "transparent",
                       opacity: updateLoading ? 0.5 : 1,
                     }}
                   >
@@ -786,8 +989,8 @@ export default function PastAttendancePage() {
               onClick={() => setEditModal({ ...editModal, isOpen: false })}
               className="w-full px-4 py-2 rounded-lg font-medium transition-colors"
               style={{
-                backgroundColor: 'var(--secondary)',
-                color: 'var(--foreground)',
+                backgroundColor: "var(--secondary)",
+                color: "var(--foreground)",
               }}
             >
               Cancel
