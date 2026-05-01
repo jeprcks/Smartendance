@@ -2,6 +2,59 @@ const Schedule = require('../models/scheduleSchema');
 const telegramService = require('../services/telegramService');
 
 const ALLOWED_DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+const PH_TIME_OFFSET_MS = 8 * 60 * 60 * 1000; // Asia/Manila (UTC+8, no DST)
+
+/**
+ * Parse date string to UTC boundaries for database queries
+ * Converts date string (e.g., "2026-05-02") from Philippine time to UTC
+ * @param {string} dateStr - Date in format "YYYY-MM-DD"
+ * @param {string} boundaryType - "start" for midnight, "end" for 23:59:59
+ * @returns {Date} UTC date for database query
+ */
+function parseDateStringToUTC(dateStr, boundaryType = "start") {
+  if (!dateStr) return null;
+  
+  // Parse the date string: "2026-05-02" -> [2026, 5, 2]
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return null;
+  
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10) - 1; // JavaScript months are 0-indexed
+  const day = parseInt(parts[2], 10);
+  
+  if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+  
+  // Create a date representing midnight in Philippine time
+  if (boundaryType === "start") {
+    // Start of day in PH time: 00:00:00
+    const phDate = new Date(Date.UTC(year, month, day, 0, 0, 0, 0));
+    // Convert back to UTC by subtracting the offset
+    return new Date(phDate.getTime() - PH_TIME_OFFSET_MS);
+  } else {
+    // End of day in PH time: 23:59:59.999
+    const phDate = new Date(Date.UTC(year, month, day, 23, 59, 59, 999));
+    // Convert back to UTC by subtracting the offset
+    return new Date(phDate.getTime() - PH_TIME_OFFSET_MS);
+  }
+}
+
+/**
+ * Get start and end of day in PH timezone for database queries
+ */
+function getStartAndEndOfDay(baseDate = new Date()) {
+  const phDate = new Date(baseDate.getTime() + PH_TIME_OFFSET_MS);
+  const year = phDate.getUTCFullYear();
+  const month = phDate.getUTCMonth();
+  const day = phDate.getUTCDate();
+
+  const start = new Date(
+    Date.UTC(year, month, day, 0, 0, 0, 0) - PH_TIME_OFFSET_MS,
+  );
+  const end = new Date(
+    Date.UTC(year, month, day, 23, 59, 59, 999) - PH_TIME_OFFSET_MS,
+  );
+  return { start, end };
+}
 
 function normalizeDays({ day, days }) {
   // Prefer explicit days array; fallback to legacy day.
@@ -257,29 +310,34 @@ exports.getScheduleAttendanceRecords = async (req, res) => {
       shift: schedule.shift
     });
 
-    // Build date range
+    // Build date range with proper timezone handling
     let dateFilter = {};
     if (date) {
-      const startDate = new Date(date);
-      startDate.setHours(0, 0, 0, 0);
-      const endDate = new Date(date);
-      endDate.setHours(23, 59, 59, 999);
+      // ✅ FIX: Parse date with Philippine timezone awareness
+      // Convert "2026-05-02" to proper UTC boundaries using PH timezone
+      const startDate = parseDateStringToUTC(date, "start");
+      const endDate = parseDateStringToUTC(date, "end");
+      
+      if (startDate && endDate) {
+        dateFilter = {
+          $gte: startDate,
+          $lte: endDate
+        };
+        console.log(`Date filter - Input: ${date}`);
+        console.log(`Date filter - Start: ${startDate.toISOString()}`);
+        console.log(`Date filter - End: ${endDate.toISOString()}`);
+      }
+    } else {
+      // Fallback: use today's date with proper timezone
+      const today = new Date();
+      const { start: startDate, end: endDate } = getStartAndEndOfDay(today);
       
       dateFilter = {
         $gte: startDate,
         $lte: endDate
       };
-    } else {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      
-      dateFilter = {
-        $gte: today,
-        $lt: tomorrow
-      };
+      console.log(`Using today's date - Start: ${startDate.toISOString()}`);
+      console.log(`Using today's date - End: ${endDate.toISOString()}`);
     }
 
     console.log('Date filter:', dateFilter);
@@ -464,7 +522,9 @@ exports.updateStudentAttendance = async (req, res) => {
 
     // Also update/create History record for admin history page
     try {
-      const dateString = new Date(timestamp || Date.now()).toISOString().split('T')[0];
+      // ✅ FIX: Use timezone-aware date parsing for query
+      const dateFromTimestamp = new Date(timestamp || Date.now());
+      const { start: queryStart, end: queryEnd } = getStartAndEndOfDay(dateFromTimestamp);
       
       // Try to find existing history record for this student for today (In records only)
       let historyRecord = await History.findOne({
@@ -475,8 +535,8 @@ exports.updateStudentAttendance = async (req, res) => {
         subject: schedule.subject,
         attendanceType: 'In',  // Only update In records from teachers
         scanTime: {
-          $gte: new Date(dateString + 'T00:00:00Z'),
-          $lt: new Date(dateString + 'T23:59:59Z')
+          $gte: queryStart,
+          $lt: queryEnd
         }
       });
 
