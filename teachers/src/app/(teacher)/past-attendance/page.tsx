@@ -484,6 +484,53 @@ export default function PastAttendancePage() {
         }
       });
 
+      // ✅ FIX: Propagate In/Out (General subject) records to all enrolled subjects
+      // When a student scans, they should show as Present for ALL their subjects that day
+      const generalRecordsByStudent = new Map<string, Map<string, any>>();
+      
+      // First, collect all General subject records by student and date
+      teacherRecords.forEach((record: any) => {
+        if (String(record.subject || "").toLowerCase() === "general") {
+          const studentId = String(record.studentId || "");
+          const dateStr = toLocalDateString(
+            record.checkInTime || record.checkOutTime || record.scanTime || record.createdAt,
+          );
+          
+          if (!generalRecordsByStudent.has(studentId)) {
+            generalRecordsByStudent.set(studentId, new Map());
+          }
+          
+          const studentGeneralRecords = generalRecordsByStudent.get(studentId)!;
+          studentGeneralRecords.set(dateStr, record);
+        }
+      });
+
+      // Then, propagate General records to all enrolled subjects for the same student
+      Array.from(studentMap.values()).forEach((student) => {
+        const generalRecords = generalRecordsByStudent.get(student.studentId);
+        if (generalRecords) {
+          generalRecords.forEach((record, dateStr) => {
+            // Only override if this subject doesn't already have a specific record for this date
+            if (!student.attendance[dateStr]) {
+              let status = "Present"; // Default for scans
+              
+              if (record.attendanceType === "In" && record.checkInTime) {
+                status = "Present";
+              } else if (record.attendanceType === "Out" && record.checkOutTime) {
+                status = "Out";
+              }
+              
+              student.attendance[dateStr] = status;
+              student.recordIds[dateStr] = String(record._id || "");
+              
+              console.log(
+                `Propagated In/Out record: ${student.studentId} on ${dateStr} -> ${status}`,
+              );
+            }
+          });
+        }
+      });
+
       const studentsList = Array.from(studentMap.values()).sort((a, b) =>
         a.studentId.localeCompare(b.studentId),
       );
