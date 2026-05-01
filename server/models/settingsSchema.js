@@ -11,6 +11,7 @@ const settingsSchema = new mongoose.Schema(
     afternoonShiftCutoff: { type: String, default: "13:00" },
     academicYear: { type: String, default: "" },
     theme: { type: String, default: "light", enum: ["light", "dark"] },
+    lastDailyReset: { type: Date, default: null },
   },
   { timestamps: true },
 );

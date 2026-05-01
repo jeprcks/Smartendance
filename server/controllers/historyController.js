@@ -177,6 +177,94 @@ async function resolveGeneralInStatus(studentId, shift, scanTime) {
   return scanMinutes > lateCutoff ? "Late" : "Present";
 }
 
+/**
+ * Check if daily reset should be performed
+ * Returns true if today is a different day than lastDailyReset
+ */
+async function shouldPerformDailyReset() {
+  try {
+    const settings = await Settings.findOne({}).lean();
+    if (!settings || !settings.lastDailyReset) {
+      return true; // First time, should reset
+    }
+
+    const now = new Date();
+    const phNow = new Date(now.getTime() + PH_TIME_OFFSET_MS);
+    const today = phNow.getUTCDate();
+    const thisMonth = phNow.getUTCMonth();
+    const thisYear = phNow.getUTCFullYear();
+
+    const lastResetPh = new Date(settings.lastDailyReset.getTime() + PH_TIME_OFFSET_MS);
+    const lastResetDay = lastResetPh.getUTCDate();
+    const lastResetMonth = lastResetPh.getUTCMonth();
+    const lastResetYear = lastResetPh.getUTCFullYear();
+
+    // Different day = should reset
+    return (
+      today !== lastResetDay ||
+      thisMonth !== lastResetMonth ||
+      thisYear !== lastResetYear
+    );
+  } catch (error) {
+    console.error("Error checking if reset needed:", error);
+    return false; // Don't reset on error
+  }
+}
+
+/**
+ * Perform daily reset: Create "Absent" records for all students
+ * Called at first API call of the new day
+ */
+async function performDailyReset() {
+  try {
+    console.log("🔄 Performing daily reset - resetting all students to Absent...");
+
+    const now = new Date();
+    const { start, end } = getStartAndEndOfDay(now);
+
+    // Get all active students
+    const allStudents = await Student.find({ isActive: true }).lean();
+
+    let resetCount = 0;
+    for (const student of allStudents) {
+      // Check if student already has any record today
+      const existingToday = await History.findOne({
+        studentId: student.studentId,
+        scanTime: { $gte: start, $lte: end },
+      });
+
+      // Only create Absent record if no record exists for today
+      if (!existingToday) {
+        const absenceRecord = new History({
+          studentId: student.studentId,
+          studentName: student.fullName,
+          subject: "General",
+          attendanceType: "In",
+          status: "Unscanned",
+          checkInTime: now,
+          scanTime: now,
+          gradeLevel: student.gradeLevel,
+          section: student.section,
+          shift: student.shift,
+          notes: "Auto-generated daily reset - student has not scanned",
+        });
+
+        await absenceRecord.save();
+        resetCount++;
+      }
+    }
+
+    // Update lastDailyReset timestamp
+    await Settings.updateOne({}, { $set: { lastDailyReset: now } }, { upsert: true });
+
+    console.log(`✅ Daily reset completed: ${resetCount} students marked Unscanned`);
+    return { success: true, resetCount };
+  } catch (error) {
+    console.error("❌ Error during daily reset:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 const createAttendanceRecord = async (req, res) => {
   let requestKey;
   try {
@@ -203,6 +291,15 @@ const createAttendanceRecord = async (req, res) => {
           success: false,
           error: "Invalid attendanceType. Use 'In' or 'Out'.",
         });
+    }
+
+    // ✅ DAILY RESET: Check if it's a new day and reset all students to Absent
+    const needsReset = await shouldPerformDailyReset();
+    if (needsReset) {
+      const resetResult = await performDailyReset();
+      if (resetResult.success) {
+        console.log(`Daily reset triggered at ${new Date().toISOString()}`);
+      }
     }
 
     const now = new Date();

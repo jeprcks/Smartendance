@@ -14,7 +14,7 @@ const historySchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ["Present", "Late", "Absent", "Cutting", "Out"],
+      enum: ["Present", "Late", "Absent", "Cutting", "Out", "Unscanned"],
     },
     checkInTime: {
       type: Date,
