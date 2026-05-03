@@ -495,9 +495,35 @@ const createAttendanceRecord = async (req, res) => {
 
       if (previousDayUnclosedCheckIn) {
         console.log(
-          `⚠️ MISBEHAVIOR: Student ${studentId} forgot to checkout on ${previousDayUnclosedCheckIn.scanTime}. Record kept for tracking.`,
+          `⚠️ MISBEHAVIOR: Student ${studentId} forgot to checkout on ${previousDayUnclosedCheckIn.scanTime}. Auto-closing...`,
         );
-        // Just log it - don't auto-close. Let it stay as misbehavior record.
+        
+        // ✅ AUTO-CLOSE: Close the previous day's unclosed check-in at 10 PM (or end of day)
+        // This prevents double check-out and ensures clean records
+        const previousDayEnd = new Date(previousDayUnclosedCheckIn.scanTime);
+        previousDayEnd.setHours(22, 0, 0, 0); // Auto-close at 10 PM of that day
+        
+        const autoCloseDuration = Math.max(
+          0,
+          Math.round(
+            (previousDayEnd.getTime() - new Date(previousDayUnclosedCheckIn.checkInTime).getTime()) / 60000,
+          ),
+        );
+
+        await History.updateOne(
+          { _id: previousDayUnclosedCheckIn._id },
+          {
+            $set: {
+              checkOutTime: previousDayEnd,
+              durationMinutes: autoCloseDuration,
+              notes: `${previousDayUnclosedCheckIn.notes || ""} [Auto-closed at 10 PM due to new day check-in]`.trim(),
+            },
+          },
+        );
+
+        console.log(
+          `✅ Auto-closed previous unclosed check-in (ID: ${previousDayUnclosedCheckIn._id}) - Duration: ${autoCloseDuration} minutes`,
+        );
       }
     }
 
@@ -514,8 +540,35 @@ const createAttendanceRecord = async (req, res) => {
       return res.status(400).json({
         success: false,
         code: "NO_OPEN_CHECKIN",
-        error: "No check-in found. Please check in first before checking out.",
+        error: "No check-in found for today. Please check in first before checking out.",
       });
+    }
+
+    // ✅ STRICT VALIDATION: Ensure check-out can ONLY match TODAY's check-in
+    // This prevents accidental check-out from matching previous day's check-in
+    if (attendanceType === "Out" && openCheckIn) {
+      const checkInTime = new Date(openCheckIn.checkInTime);
+      const checkInDayStart = new Date(
+        Date.UTC(
+          checkInTime.getUTCFullYear(),
+          checkInTime.getUTCMonth(),
+          checkInTime.getUTCDate(),
+        ),
+      );
+      const todayDayStart = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      );
+      
+      if (checkInDayStart.getTime() !== todayDayStart.getTime()) {
+        console.error(
+          `❌ SECURITY: Attempted to check-out against past day's check-in. Student: ${studentId}, Check-in date: ${checkInTime.toISOString()}, Now: ${now.toISOString()}`,
+        );
+        return res.status(400).json({
+          success: false,
+          code: "NO_OPEN_CHECKIN_TODAY",
+          error: "No check-in found for today. Previous day's check-in was auto-closed. Please check in again today before checking out.",
+        });
+      }
     }
 
     const normalizedSubject =

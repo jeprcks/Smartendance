@@ -113,9 +113,6 @@ interface EditModalState {
   date: string;
   currentStatus: string;
   recordId: string;
-  subject: string;
-  gradeLevel: string;
-  section: string;
 }
 
 const CalendarIconForHeader = () => (
@@ -201,18 +198,7 @@ export default function PastAttendancePage() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [grades, setGrades] = useState<string[]>([]);
   const [sections, setSections] = useState<string[]>([]);
-  const [editModal, setEditModal] = useState<EditModalState>({
-    isOpen: false,
-    studentId: "",
-    studentName: "",
-    date: "",
-    currentStatus: "",
-    recordId: "",
-    subject: "",
-    gradeLevel: "",
-    section: "",
-  });
-  const [updateLoading, setUpdateLoading] = useState(false);
+  const [updatingCell, setUpdatingCell] = useState<string | null>(null);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
 
@@ -403,13 +389,19 @@ export default function PastAttendancePage() {
         const section = String(record.section || "");
         const subject = String(record.subject || "");
 
-        // Determine status based on record type
-        let status = String(record.status || "Absent");
+        // Determine status based on explicit status field first
+        let status = String(record.status || "");
         const recordType = String(record.attendanceType || "");
 
-        // If this is an In/Out attendance record, determine status from it
-        if (recordType === "In" || recordType === "Out") {
-          status = recordType === "In" ? "Present" : "Out";
+        // Only infer status from attendanceType if no explicit status is set
+        if (!status) {
+          if (recordType === "In") {
+            status = "Present";
+          } else if (recordType === "Out") {
+            status = "Out";
+          } else {
+            status = "Absent";
+          }
         }
 
         // Use checkInTime/checkOutTime for In/Out, otherwise scanTime or createdAt
@@ -506,7 +498,11 @@ export default function PastAttendancePage() {
           scanRecords.forEach((record, dateStr) => {
             // Only set if this subject doesn't already have a specific record for this date
             if (!student.attendance[dateStr]) {
-              const status = record.attendanceType === "In" ? "Present" : "Out";
+              // Use explicit status if available, otherwise infer from attendanceType
+              let status = String(record.status || "");
+              if (!status) {
+                status = record.attendanceType === "In" ? "Present" : "Out";
+              }
               student.attendance[dateStr] = status;
               student.recordIds[dateStr] = String(record._id || "");
             }
@@ -584,60 +580,18 @@ export default function PastAttendancePage() {
     customEndDate,
   ]);
 
-  const handleEditClick = (
+  const handleStatusChange = async (
     studentId: string,
-    studentName: string,
     date: string,
-    currentStatus: string,
+    newStatus: string,
+    recordId: string,
     subject: string,
     gradeLevel: string,
     section: string,
   ) => {
-    // Find the exact student record by matching all identifying fields
-    let student = filteredStudents.find(
-      (s) =>
-        s.studentId === studentId &&
-        s.subject === subject &&
-        s.gradeLevel === gradeLevel &&
-        s.section === section,
-    );
-    if (!student) {
-      student = allStudents.find(
-        (s) =>
-          s.studentId === studentId &&
-          s.subject === subject &&
-          s.gradeLevel === gradeLevel &&
-          s.section === section,
-      );
-    }
+    const cellKey = `${studentId}-${date}`;
+    setUpdatingCell(cellKey);
 
-    const recordId = student?.recordIds[date] || "";
-    console.log("Edit click - Searching for:", {
-      studentId,
-      subject,
-      gradeLevel,
-      section,
-      date,
-    });
-    console.log("Found student:", student);
-    console.log("Student recordIds map:", student?.recordIds);
-    console.log("Looking up recordId for date:", date, "-> result:", recordId);
-
-    setEditModal({
-      isOpen: true,
-      studentId,
-      studentName,
-      date,
-      currentStatus,
-      recordId,
-      subject,
-      gradeLevel,
-      section,
-    });
-  };
-
-  const handleStatusChange = async (newStatus: string, recordId: string) => {
-    setUpdateLoading(true);
     try {
       const token = getToken();
 
@@ -647,7 +601,8 @@ export default function PastAttendancePage() {
 
       if (!recordId) {
         console.error("Missing recordId in handleStatusChange", {
-          editModal,
+          studentId,
+          date,
           recordId,
         });
         throw new Error(
@@ -662,43 +617,40 @@ export default function PastAttendancePage() {
         token,
       });
 
-      // Update local state only on success
+      // Find and update the student in filteredStudents
       const studentIndex = filteredStudents.findIndex(
         (s) =>
-          s.studentId === editModal.studentId &&
-          s.subject === editModal.subject &&
-          s.gradeLevel === editModal.gradeLevel &&
-          s.section === editModal.section,
+          s.studentId === studentId &&
+          s.subject === subject &&
+          s.gradeLevel === gradeLevel &&
+          s.section === section,
       );
       if (studentIndex !== -1) {
         const updatedStudents = [...filteredStudents];
-        updatedStudents[studentIndex].attendance[editModal.date] = newStatus;
+        updatedStudents[studentIndex].attendance[date] = newStatus;
         setFilteredStudents(updatedStudents);
       }
 
       // Also update allStudents to keep them in sync
       const allStudentIndex = allStudents.findIndex(
         (s) =>
-          s.studentId === editModal.studentId &&
-          s.subject === editModal.subject &&
-          s.gradeLevel === editModal.gradeLevel &&
-          s.section === editModal.section,
+          s.studentId === studentId &&
+          s.subject === subject &&
+          s.gradeLevel === gradeLevel &&
+          s.section === section,
       );
       if (allStudentIndex !== -1) {
         const updatedAllStudents = [...allStudents];
-        updatedAllStudents[allStudentIndex].attendance[editModal.date] =
-          newStatus;
+        updatedAllStudents[allStudentIndex].attendance[date] = newStatus;
         setAllStudents(updatedAllStudents);
       }
-
-      setEditModal({ ...editModal, isOpen: false });
     } catch (e) {
       console.error("Failed to update status:", e);
       alert(
         `Failed to update attendance: ${e instanceof Error ? e.message : "Unknown error"}`,
       );
     } finally {
-      setUpdateLoading(false);
+      setUpdatingCell(null);
     }
   };
 
@@ -1078,38 +1030,67 @@ export default function PastAttendancePage() {
                         ? student.attendance[day.dateStr] || "Absent"
                         : "Unscanned";
                       const colors = getStatusColor(status);
+                      const cellKey = `${student.studentId}-${day.dateStr}`;
+                      const isUpdating = updatingCell === cellKey;
+
                       return (
                         <td
                           key={`${student.studentId}-${day.dateStr}`}
                           className="px-2 py-3 text-center"
                         >
-                          <button
-                            onClick={() => {
-                              if (hasRecord) {
-                                handleEditClick(
-                                  student.studentId,
-                                  student.studentName,
-                                  day.dateStr,
-                                  status,
-                                  student.subject,
-                                  student.gradeLevel,
-                                  student.section,
-                                );
-                              }
-                            }}
-                            disabled={!hasRecord}
-                            className={`inline-block px-2 py-1 rounded-lg text-xs font-semibold transition-all ${
-                              hasRecord
-                                ? "hover:shadow-md cursor-pointer"
-                                : "cursor-not-allowed opacity-60"
-                            }`}
-                            style={{
-                              backgroundColor: colors.bg,
-                              color: colors.text,
-                            }}
-                          >
-                            {getStatusLabel(status)}
-                          </button>
+                          {hasRecord ? (
+                            <div className="relative">
+                              <select
+                                value={status}
+                                onChange={(e) => {
+                                  if (e.target.value && e.target.value !== status) {
+                                    handleStatusChange(
+                                      student.studentId,
+                                      day.dateStr,
+                                      e.target.value,
+                                      student.recordIds[day.dateStr],
+                                      student.subject,
+                                      student.gradeLevel,
+                                      student.section,
+                                    );
+                                  }
+                                }}
+                                disabled={isUpdating}
+                                className="px-2 py-1 rounded-lg text-xs font-semibold border transition-all disabled:opacity-50 input-theme appearance-none"
+                                style={{
+                                  backgroundColor: colors.bg,
+                                  color: colors.text,
+                                  borderColor: colors.text,
+                                  cursor: isUpdating ? "not-allowed" : "pointer",
+                                }}
+                              >
+                                <option value="">-- Change --</option>
+                                {["Present", "Absent", "Late", "Cutting"].map((opt) => (
+                                  <option key={opt} value={opt}>
+                                    {opt}
+                                  </option>
+                                ))}
+                              </select>
+                              {isUpdating && (
+                                <span
+                                  className="text-xs font-medium mt-1 block"
+                                  style={{ color: "var(--muted-foreground)" }}
+                                >
+                                  Updating...
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span
+                              className="inline-block px-2 py-1 rounded-lg text-xs font-semibold"
+                              style={{
+                                backgroundColor: colors.bg,
+                                color: colors.text,
+                              }}
+                            >
+                              {getStatusLabel(status)}
+                            </span>
+                          )}
                         </td>
                       );
                     })}
@@ -1143,72 +1124,6 @@ export default function PastAttendancePage() {
             : dateRangeFilter
         }
       />
-
-      {/* Edit Modal */}
-      {editModal.isOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
-          onClick={() => setEditModal({ ...editModal, isOpen: false })}
-        >
-          <div
-            className="rounded-xl w-full max-w-md shadow-2xl p-6"
-            onClick={(e) => e.stopPropagation()}
-            style={{ backgroundColor: "var(--background)" }}
-          >
-            <h2
-              className="text-xl font-bold mb-2"
-              style={{ color: "var(--foreground)" }}
-            >
-              Change Attendance Status
-            </h2>
-            <p
-              className="text-sm mb-4"
-              style={{ color: "var(--muted-foreground)" }}
-            >
-              {editModal.studentName} on {editModal.date}
-            </p>
-
-            <div className="space-y-2 mb-6">
-              {["Present", "Absent", "Late", "Cutting"].map((status) => {
-                const colors = getStatusColor(status);
-                const isSelected = status === editModal.currentStatus;
-                return (
-                  <button
-                    key={status}
-                    onClick={() =>
-                      handleStatusChange(status, editModal.recordId)
-                    }
-                    disabled={updateLoading}
-                    className="w-full px-4 py-2 rounded-lg text-base font-medium transition-all"
-                    style={{
-                      backgroundColor: colors.bg,
-                      color: colors.text,
-                      border: isSelected
-                        ? "2px solid"
-                        : "2px solid transparent",
-                      borderColor: isSelected ? colors.text : "transparent",
-                      opacity: updateLoading ? 0.5 : 1,
-                    }}
-                  >
-                    {getStatusLabel(status)}
-                  </button>
-                );
-              })}
-            </div>
-
-            <button
-              onClick={() => setEditModal({ ...editModal, isOpen: false })}
-              className="w-full px-4 py-2 rounded-lg font-medium transition-colors"
-              style={{
-                backgroundColor: "var(--secondary)",
-                color: "var(--foreground)",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
