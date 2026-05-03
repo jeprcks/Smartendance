@@ -113,6 +113,9 @@ interface EditModalState {
   date: string;
   currentStatus: string;
   recordId: string;
+  subject: string;
+  gradeLevel: string;
+  section: string;
 }
 
 const CalendarIconForHeader = () => (
@@ -205,6 +208,9 @@ export default function PastAttendancePage() {
     date: "",
     currentStatus: "",
     recordId: "",
+    subject: "",
+    gradeLevel: "",
+    section: "",
   });
   const [updateLoading, setUpdateLoading] = useState(false);
   const [isPrintModalOpen, setIsPrintModalOpen] = useState(false);
@@ -624,6 +630,9 @@ export default function PastAttendancePage() {
       date,
       currentStatus,
       recordId,
+      subject,
+      gradeLevel,
+      section,
     });
   };
 
@@ -655,7 +664,11 @@ export default function PastAttendancePage() {
 
       // Update local state only on success
       const studentIndex = filteredStudents.findIndex(
-        (s) => s.studentId === editModal.studentId,
+        (s) =>
+          s.studentId === editModal.studentId &&
+          s.subject === editModal.subject &&
+          s.gradeLevel === editModal.gradeLevel &&
+          s.section === editModal.section,
       );
       if (studentIndex !== -1) {
         const updatedStudents = [...filteredStudents];
@@ -665,7 +678,11 @@ export default function PastAttendancePage() {
 
       // Also update allStudents to keep them in sync
       const allStudentIndex = allStudents.findIndex(
-        (s) => s.studentId === editModal.studentId,
+        (s) =>
+          s.studentId === editModal.studentId &&
+          s.subject === editModal.subject &&
+          s.gradeLevel === editModal.gradeLevel &&
+          s.section === editModal.section,
       );
       if (allStudentIndex !== -1) {
         const updatedAllStudents = [...allStudents];
