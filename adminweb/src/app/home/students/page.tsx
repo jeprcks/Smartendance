@@ -14,7 +14,7 @@ import { API_BASE_URL } from '@/app/config/api';
 import { studentService, Student } from '@/app/services/studentService';
 import { exportStudentsToPDF } from './components/exportStudentsToPDF';
 import toast from 'react-hot-toast';
-import { Users, UserCircle, UserCircle2, UserCheck, UserX } from 'lucide-react';
+import { Users, UserCircle, UserCircle2, UserCheck, UserX, ArrowUp, ArrowDown } from 'lucide-react';
 
 export default function StudentsPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -35,6 +35,8 @@ export default function StudentsPage() {
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [searchFilters, setSearchFilters] = useState<SearchFilters>({ query: '' });
   const [savedFilters, setSavedFilters] = useState<Array<{ name: string; filters: SearchFilters }>>([]);
+  const [sortColumn, setSortColumn] = useState<string>('fullName');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const fetchStudents = async () => {
     try {
@@ -183,6 +185,17 @@ export default function StudentsPage() {
     setSelectedStudents(new Set());
   };
 
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      // Toggle direction if same column is clicked
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      // Set new column and reset to ascending
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
   const handleBulkDelete = async (ids: string[]) => {
     try {
       // Find students by studentId and get their _id
@@ -276,9 +289,35 @@ export default function StudentsPage() {
 
   // Graduated students always appear at the bottom of the table
   const sortedFilteredStudents = [...filteredStudents].sort((a, b) => {
+    // First, handle graduated students (always at bottom)
     const aGraduated = (a.status ?? 'Active') === 'Graduated' ? 1 : 0;
     const bGraduated = (b.status ?? 'Active') === 'Graduated' ? 1 : 0;
-    return aGraduated - bGraduated;
+    if (aGraduated !== bGraduated) {
+      return aGraduated - bGraduated;
+    }
+    
+    // Then apply the column-based sorting for non-graduated students
+    let aValue: any = a[sortColumn as keyof Student];
+    let bValue: any = b[sortColumn as keyof Student];
+    
+    // Handle string comparison
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
+    
+    // Null/undefined handling
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return 1;
+    if (bValue == null) return -1;
+    
+    // Compare values
+    let comparison = 0;
+    if (aValue < bValue) comparison = -1;
+    if (aValue > bValue) comparison = 1;
+    
+    // Apply sort direction
+    return sortDirection === 'asc' ? comparison : -comparison;
   });
 
   const quickFilterOptions = [
@@ -460,7 +499,19 @@ export default function StudentsPage() {
                   </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Profile</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Student ID</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Full Name</th>
+                  <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">
+                    <button 
+                      onClick={() => handleSort('fullName')}
+                      className="inline-flex items-center gap-2 hover:text-[var(--foreground)] transition-colors"
+                    >
+                      Full Name
+                      {sortColumn === 'fullName' && (
+                        sortDirection === 'asc' 
+                          ? <ArrowUp size={14} className="inline" />
+                          : <ArrowDown size={14} className="inline" />
+                      )}
+                    </button>
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Grade Level</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Section</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-[var(--muted-foreground)] uppercase tracking-wider">Gender</th>

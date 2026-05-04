@@ -1,5 +1,19 @@
 "use client";
 
+import { useState } from "react";
+
+const ArrowUp = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+  </svg>
+);
+
+const ArrowDown = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+  </svg>
+);
+
 export interface AttendanceRow {
   id: string;
   studentName: string;
@@ -38,6 +52,35 @@ export default function AttendanceTable({
   onToggleAllRows,
   isRowSelectable,
 }: AttendanceTableProps) {
+  const [sortColumn, setSortColumn] = useState<string>("studentName");
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+    } else {
+      setSortColumn(column);
+      setSortDirection("asc");
+    }
+  };
+
+  const sortedRows = [...rows].sort((a, b) => {
+    let aValue: any = a[sortColumn as keyof AttendanceRow] || "";
+    let bValue: any = b[sortColumn as keyof AttendanceRow] || "";
+
+    if (typeof aValue === "string") aValue = aValue.toLowerCase();
+    if (typeof bValue === "string") bValue = bValue.toLowerCase();
+
+    if (aValue == null && bValue == null) return 0;
+    if (aValue == null) return 1;
+    if (bValue == null) return -1;
+
+    let comparison = 0;
+    if (aValue < bValue) comparison = -1;
+    if (aValue > bValue) comparison = 1;
+
+    return sortDirection === "asc" ? comparison : -comparison;
+  });
   if (rows.length === 0) {
     return (
       <p
@@ -49,7 +92,7 @@ export default function AttendanceTable({
     );
   }
 
-  const selectableRows = rows.filter((row) =>
+  const selectableRows = sortedRows.filter((row) =>
     isRowSelectable ? isRowSelectable(row) : true,
   );
   const selectedCount = selectableRows.filter((row) =>
@@ -75,7 +118,17 @@ export default function AttendanceTable({
                   color: "var(--foreground)",
                 }}
               >
-                Student Name
+                <button
+                  onClick={() => handleSort("studentName")}
+                  className="flex items-center gap-2 hover:opacity-70 transition-opacity"
+                >
+                  <span>Student Name</span>
+                  {sortColumn === "studentName" && (
+                    sortDirection === "asc"
+                      ? <ArrowUp className="w-4 h-4" />
+                      : <ArrowDown className="w-4 h-4" />
+                  )}
+                </button>
               </th>
               <th
                 className="text-left px-5 py-4 font-bold text-xs uppercase tracking-wider"
@@ -146,7 +199,7 @@ export default function AttendanceTable({
             </tr>
           </thead>
           <tbody>
-            {rows.map((row, i) => (
+            {sortedRows.map((row, i) => (
               <tr
                 key={row.id}
                 className="border-t transition-all duration-200 hover:bg-transparent animate-fade-in-up"

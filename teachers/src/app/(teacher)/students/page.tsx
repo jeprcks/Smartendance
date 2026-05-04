@@ -75,6 +75,18 @@ const StudentsIcon = () => (
   </svg>
 );
 
+const ArrowUp = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+  </svg>
+);
+
+const ArrowDown = ({ className = "w-4 h-4" }: { className?: string }) => (
+  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+  </svg>
+);
+
 export default function StudentsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -84,6 +96,8 @@ export default function StudentsPage() {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [modalStudent, setModalStudent] = useState<Record<string, unknown> | null>(null);
   const [studentSearch, setStudentSearch] = useState('');
+  const [sortColumn, setSortColumn] = useState<string>('studentName');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
   const loadSchedules = async () => {
     const token = getToken();
@@ -149,14 +163,39 @@ export default function StudentsPage() {
   const scheduleLabel = (s: Record<string, unknown>) =>
     `${String(s.subject ?? 'N/A')} · ${String(s.gradeLevel ?? '')}-${String(s.section ?? '')} · ${String(s.shift ?? '')}`;
 
-  const filteredStudents = studentSearch.trim()
+  const handleSort = (column: string) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const filteredStudents = (studentSearch.trim()
     ? students.filter((st) => {
         const name = String(st.studentName ?? st.name ?? st.fullName ?? '').toLowerCase();
         const id = String(st.studentId ?? st.id ?? '').toLowerCase();
         const q = studentSearch.trim().toLowerCase();
         return name.includes(q) || id.includes(q);
       })
-    : students;
+    : students).sort((a, b) => {
+      let aValue: any = a[sortColumn] || '';
+      let bValue: any = b[sortColumn] || '';
+      
+      if (typeof aValue === 'string') aValue = aValue.toLowerCase();
+      if (typeof bValue === 'string') bValue = bValue.toLowerCase();
+      
+      if (aValue == null && bValue == null) return 0;
+      if (aValue == null) return 1;
+      if (bValue == null) return -1;
+      
+      let comparison = 0;
+      if (aValue < bValue) comparison = -1;
+      if (aValue > bValue) comparison = 1;
+      
+      return sortDirection === 'asc' ? comparison : -comparison;
+    });
 
   if (loading) {
     return (
@@ -307,10 +346,18 @@ export default function StudentsPage() {
               <thead>
                 <tr style={{ background: 'linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%)' }}>
                   <th className="text-left px-6 py-4 font-bold text-white text-xs uppercase tracking-wider">
-                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleSort('studentName')}
+                      className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+                    >
                       <UserIcon />
                       <span>Name</span>
-                    </div>
+                      {sortColumn === 'studentName' && (
+                        sortDirection === 'asc' 
+                          ? <ArrowUp className="w-4 h-4" />
+                          : <ArrowDown className="w-4 h-4" />
+                      )}
+                    </button>
                   </th>
                   <th className="text-left px-6 py-4 font-bold text-white text-xs uppercase tracking-wider">
                     <div className="flex items-center gap-2">
