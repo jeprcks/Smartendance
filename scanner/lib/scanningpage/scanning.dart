@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:audioplayers/audioplayers.dart';
+import 'dart:async';
 import '../fetch/fetchstudents.dart';
 import '../main.dart';
 import 'components/studentsinformation.dart';
@@ -33,6 +34,7 @@ class _ScanningPageState extends State<ScanningPage> {
   bool _isProcessingScan = false;
   String? _lastScanCode;
   DateTime? _lastScanAt;
+  late Timer _autoCloseTimer;
 
   @override
   void initState() {
@@ -45,6 +47,7 @@ class _ScanningPageState extends State<ScanningPage> {
   void dispose() {
     cameraController.dispose();
     _beepPlayer.dispose();
+    _autoCloseTimer.cancel();
     super.dispose();
   }
 
@@ -117,9 +120,10 @@ class _ScanningPageState extends State<ScanningPage> {
 
       if (alreadyCheckedOut) {
         // Student already checked out, need to check in again first
-        final studentName = checkoutValidation['studentName'] ?? 
-                           validationResult['studentName'] ?? 
-                           'Student';
+        final studentName =
+            checkoutValidation['studentName'] ??
+            validationResult['studentName'] ??
+            'Student';
 
         setState(() {
           isLoading = false;
@@ -158,6 +162,15 @@ class _ScanningPageState extends State<ScanningPage> {
         if (attendanceResult['success'] == true) {
           studentInfo = student;
           errorMessage = null;
+          // Start auto-close timer for 2 seconds
+          _autoCloseTimer = Timer(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() {
+                studentInfo = null;
+                scannedCode = null;
+              });
+            }
+          });
         } else {
           studentInfo = null;
           errorMessage =
@@ -278,7 +291,10 @@ class _ScanningPageState extends State<ScanningPage> {
                     _lastScanAt != null &&
                     now.difference(_lastScanAt!).inMilliseconds < 1800;
 
-                if (code != null && code != scannedCode && !_isProcessingScan && !isRapidDuplicate) {
+                if (code != null &&
+                    code != scannedCode &&
+                    !_isProcessingScan &&
+                    !isRapidDuplicate) {
                   setState(() {
                     scannedCode = code;
                     _isProcessingScan = true;
@@ -330,12 +346,14 @@ class _ScanningPageState extends State<ScanningPage> {
               studentInfo: studentInfo!,
               studentService: _studentService,
               onScanAnother: () {
+                _autoCloseTimer.cancel();
                 setState(() {
                   studentInfo = null;
                   scannedCode = null;
                 });
               },
               onClose: () {
+                _autoCloseTimer.cancel();
                 setState(() {
                   studentInfo = null;
                   scannedCode = null;
@@ -348,6 +366,7 @@ class _ScanningPageState extends State<ScanningPage> {
             ErrorDisplay(
               errorMessage: errorMessage!,
               onRetry: () {
+                _autoCloseTimer.cancel();
                 setState(() {
                   errorMessage = null;
                   scannedCode = null;
