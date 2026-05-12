@@ -66,7 +66,6 @@ interface EditStudentFormData {
   photo?: string;
   shift: 'Morning' | 'Afternoon';
   status?: 'Active' | 'Idle' | 'Inactive';
-  graduationDate?: string;
   address?: string | {
     street?: string;
     city?: string;
@@ -117,7 +116,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
         photo: student.photo,
         shift: student.shift,
         status: (student.status ?? 'Active') as EditStudentFormData['status'],
-        graduationDate: student.graduationDate ? (typeof student.graduationDate === 'string' ? student.graduationDate.split('T')[0] : new Date(student.graduationDate).toISOString().split('T')[0]) : '',
         address: typeof student.address === 'object' ? student.address : { street: student.address || '' },
         parentName: student.parentInfo?.name || student.parentName || '',
         parentEmail: student.parentInfo?.email || '',
@@ -202,9 +200,6 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
           telegramChatId: formData.parentTelegramChatId || ''
         }
       };
-      if (formData.status === 'Graduated') {
-        transformedData.gradeLevel = 'Graduated';
-      }
       // Remove the flat parent fields since we're using the nested object
       delete transformedData.parentName;
       delete transformedData.parentEmail;
@@ -260,20 +255,11 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
       return;
     }
 
-    if (name === 'status' && value === 'Graduated') {
-      setFormData(prev => ({
-        ...prev,
-        status: 'Graduated' as const,
-        gradeLevel: 'Graduated' as EditStudentFormData['gradeLevel']
-      }));
-      return;
-    }
-
     setFormData(prev => ({
       ...prev,
       [name]: name === 'age'
         ? (value === '' ? undefined : parseInt(value))
-        : (name === 'status' ? value as 'Active' | 'Inactive' | 'Graduated' : value)
+        : (name === 'status' ? value as 'Active' | 'Idle' | 'Inactive' : value)
     }));
   };
 
@@ -443,25 +429,19 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="gradeLevel" className="block text-sm font-medium text-[var(--foreground)]">
                         Grade Level
                       </label>
-                      {(formData.status ?? 'Active') === 'Graduated' ? (
-                        <div className="block w-full rounded-lg border border-[var(--border)] bg-[var(--muted)] py-2 px-3 text-[var(--muted-foreground)] sm:text-sm">
-                          Graduated
-                        </div>
-                      ) : (
-                        <select
-                          id="gradeLevel"
-                          name="gradeLevel"
-                          value={formData.gradeLevel === 'Graduated' ? '' : (formData.gradeLevel || '')}
-                          onChange={handleChange}
-                          className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                          required
-                        >
-                          <option value="">Select Grade Level</option>
-                          {gradeLevels.map(level => (
-                            <option key={level} value={level}>{level}</option>
-                          ))}
-                        </select>
-                      )}
+                      <select
+                        id="gradeLevel"
+                        name="gradeLevel"
+                        value={formData.gradeLevel || ''}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        required
+                      >
+                        <option value="">Select Grade Level</option>
+                        {gradeLevels.map(level => (
+                          <option key={level} value={level}>{level}</option>
+                        ))}
+                      </select>
                     </div>
 
                     {/* Section */}
@@ -469,21 +449,15 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="section" className="block text-sm font-medium text-[var(--foreground)]">
                         Section
                       </label>
-                      {(formData.status ?? 'Active') === 'Graduated' ? (
-                        <div className="block w-full rounded-lg border border-[var(--border)] bg-[var(--muted)] py-2 px-3 text-[var(--muted-foreground)] sm:text-sm">
-                          N/A
-                        </div>
-                      ) : (
-                        <input
-                          type="text"
-                          id="section"
-                          name="section"
-                          value={formData.section || ''}
-                          onChange={handleChange}
-                          className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                          required
-                        />
-                      )}
+                      <input
+                        type="text"
+                        id="section"
+                        name="section"
+                        value={formData.section || ''}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        required
+                      />
                     </div>
 
                     {/* Age */}
@@ -524,25 +498,19 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="gender" className="block text-sm font-medium text-[var(--foreground)]">
                         Gender
                       </label>
-                      {(formData.status ?? 'Active') === 'Graduated' ? (
-                        <div className="block w-full rounded-lg border border-[var(--border)] bg-[var(--muted)] py-2 px-3 text-[var(--muted-foreground)] sm:text-sm">
-                          N/A
-                        </div>
-                      ) : (
-                        <select
-                          id="gender"
-                          name="gender"
-                          value={formData.gender || ''}
-                          onChange={handleChange}
-                          className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                          required
-                        >
-                          <option value="">Select Gender</option>
-                          <option value="Male">Male</option>
-                          <option value="Female">Female</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      )}
+                      <select
+                        id="gender"
+                        name="gender"
+                        value={formData.gender || ''}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        required
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
                     </div>
 
                     {/* Shift */}
@@ -550,27 +518,21 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                       <label htmlFor="shift" className="block text-sm font-medium text-[var(--foreground)]">
                         Shift
                       </label>
-                      {(formData.status ?? 'Active') === 'Graduated' ? (
-                        <div className="block w-full rounded-lg border border-[var(--border)] bg-[var(--muted)] py-2 px-3 text-[var(--muted-foreground)] sm:text-sm">
-                          N/A
-                        </div>
-                      ) : (
-                        <select
-                          id="shift"
-                          name="shift"
-                          value={formData.shift || ''}
-                          onChange={handleChange}
-                          className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                          required
-                        >
-                          <option value="">Select Shift</option>
-                          <option value="Morning">Morning</option>
-                          <option value="Afternoon">Afternoon</option>
-                        </select>
-                      )}
+                      <select
+                        id="shift"
+                        name="shift"
+                        value={formData.shift || ''}
+                        onChange={handleChange}
+                        className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
+                        required
+                      >
+                        <option value="">Select Shift</option>
+                        <option value="Morning">Morning</option>
+                        <option value="Afternoon">Afternoon</option>
+                      </select>
                     </div>
 
-                    {/* Status (Active / Inactive / Graduated) */}
+                    {/* Status (Active / Inactive / Idle) */}
                     <div className="space-y-1.5">
                       <label htmlFor="status" className="block text-sm font-medium text-[var(--foreground)]">
                         Enrollment Status
@@ -583,25 +545,11 @@ export default function EditStudentModal({ isOpen, onClose, onUpdate, student }:
                         className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
                       >
                         <option value="Active">Active</option>
+                        <option value="Idle">Idle</option>
                         <option value="Inactive">Inactive</option>
-                        <option value="Graduated">Graduated</option>
                       </select>
                     </div>
-                    {(formData.status ?? 'Active') === 'Graduated' && (
-                      <div className="space-y-1.5">
-                        <label htmlFor="graduationDate" className="block text-sm font-medium text-[var(--foreground)]">
-                          Graduation date
-                        </label>
-                        <input
-                          type="date"
-                          id="graduationDate"
-                          name="graduationDate"
-                          value={formData.graduationDate ?? ''}
-                          onChange={handleChange}
-                          className="block w-full rounded-lg border-[var(--border)] bg-[var(--muted)]/50 py-2 px-3 text-[var(--foreground)] shadow-sm focus:border-green-500 focus:ring-green-500 sm:text-sm"
-                        />
-                      </div>
-                    )}
+
                   </div>
                 </div>
 

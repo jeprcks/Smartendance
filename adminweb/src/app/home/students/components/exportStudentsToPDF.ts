@@ -117,17 +117,6 @@ export function exportStudentsToPDF(students: Student[], filename?: string) {
       pdf.setFontSize(bodyFontSize);
       pdf.setFont('helvetica', 'normal');
       rightY = addWrappedText(`Grade Level: ${student.gradeLevel}`, rightColumn, rightY, columnWidth);
-      if ((student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate)) {
-        const syText = student.graduationSchoolYear
-          ? `SY ${student.graduationSchoolYear}`
-          : (() => {
-              const year = typeof student.graduationDate === 'string'
-                ? parseInt(student.graduationDate.slice(0, 4), 10)
-                : new Date(student.graduationDate!).getFullYear();
-              return `SY ${year - 1}-${year}`;
-            })();
-        rightY = addWrappedText(`School Year Graduated: ${syText}`, rightColumn, rightY, columnWidth);
-      }
       rightY = addWrappedText(`Section: ${student.section}`, rightColumn, rightY, columnWidth);
       rightY = addWrappedText(`Enrollment: ${formatDate(student.createdAt)}`, rightColumn, rightY, columnWidth);
 

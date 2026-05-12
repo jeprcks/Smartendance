@@ -289,7 +289,6 @@ export default function StudentsPage() {
     return matchesSearch && matchesGrade && matchesSection && matchesShift && matchesStatus;
   });
 
-  // Graduated students always appear at the bottom of the table
   const sortedFilteredStudents = [...filteredStudents].sort((a, b) => {
     // Apply column-based sorting
     let aValue: any = a[sortColumn as keyof Student];

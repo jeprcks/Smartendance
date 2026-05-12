@@ -126,13 +126,11 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               <h2 className="text-xl font-bold text-[var(--foreground)] mb-1 text-center">{student.fullName}</h2>
               <p className="text-[var(--muted-foreground)] mb-2 text-center">{student.studentId}</p>
               <span className={`px-4 py-1 rounded-full text-sm font-semibold ${
-                (student.status ?? '') === 'Graduated'
-                  ? 'bg-[var(--muted)] text-[var(--foreground)] ring-1 ring-[var(--border)]'
-                  : student.gender === 'Male'
-                    ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/50'
-                    : 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/50'
+                student.gender === 'Male'
+                  ? 'bg-blue-50 text-blue-700 ring-1 ring-blue-200/50'
+                  : 'bg-pink-50 text-pink-700 ring-1 ring-pink-200/50'
               }`}>
-                {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}
+                {student.gender}
               </span>
             </div>
 
@@ -232,19 +230,19 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
               </div>
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Grade Level</p>
-                <p className="text-base text-[var(--foreground)]">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gradeLevel}</p>
+                <p className="text-base text-[var(--foreground)]">{student.gradeLevel}</p>
               </div>
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Section</p>
-                <p className="text-base text-[var(--foreground)]">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.section}</p>
+                <p className="text-base text-[var(--foreground)]">{student.section}</p>
               </div>
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Gender</p>
-                <p className={`text-base font-medium ${(student.status ?? '') === 'Graduated' ? 'text-[var(--foreground)]' : student.gender === 'Male' ? 'text-blue-700' : 'text-pink-700'}`}>{(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}</p>
+                <p className={`text-base font-medium ${student.gender === 'Male' ? 'text-blue-700' : 'text-pink-700'}`}>{student.gender}</p>
               </div>
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Shift</p>
-                <p className="text-base text-[var(--foreground)]">{(student.status ?? '') === 'Graduated' ? 'N/A' : student.shift}</p>
+                <p className="text-base text-[var(--foreground)]">{student.shift}</p>
               </div>
               <div>
                 <p className="text-sm text-[var(--muted-foreground)]">Enrollment Status</p>
