@@ -7,6 +7,8 @@ import {
   AttendanceRecord,
 } from "@/app/services/historyService";
 import { studentService } from "@/app/services/studentService";
+import { teacherService } from "@/app/services/teacherService";
+import { scheduleService } from "@/app/services/scheduleService";
 import {
   format,
   startOfWeek,
@@ -29,6 +31,7 @@ import {
   BarChart3,
   PieChart,
   LineChart,
+  FileDown,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import jsPDF from "jspdf";
@@ -71,6 +74,17 @@ export interface GradeLevelStats {
   }[];
 }
 
+interface DashboardStats {
+  totalStudents: number;
+  presentToday: number;
+  absentToday: number;
+  lateToday: number;
+  totalClasses: number;
+  totalTeachers: number;
+  attendanceRate: number;
+  onTimeRate: number;
+}
+
 export default function ReportsPage() {
   const [filters, setFilters] = useState<ReportFilters>({
     startDate: format(new Date(), "yyyy-MM-dd"),
@@ -93,11 +107,83 @@ export default function ReportsPage() {
   });
   const [records, setRecords] = useState<AttendanceRecord[]>([]);
 
-  // Helper function to get color based on attendance rate
   const getAttendanceRateColor = (rate: number) => {
     if (rate >= 90) return 'text-green-600';
     if (rate >= 70) return 'text-yellow-600';
     return 'text-red-600';
+  };
+
+  // Excel export function using CSV
+  const generateExcelReport = async () => {
+    try {
+      setIsLoading(true);
+      
+      // Create CSV data
+      let csvContent = 'data:text/csv;charset=utf-8,';
+      
+      // Title and period
+      csvContent += 'Attendance Report\n';
+      const reportStartDate = filters.startDate ? format(parseISO(filters.startDate), 'MMM dd, yyyy') : format(new Date(), 'MMM dd, yyyy');
+      const reportEndDate = filters.endDate ? format(parseISO(filters.endDate), 'MMM dd, yyyy') : format(new Date(), 'MMM dd, yyyy');
+      csvContent += `Period: ${reportStartDate} - ${reportEndDate}\n`;
+      csvContent += `Generated: ${format(new Date(), 'MMM dd, yyyy HH:mm')}\n\n`;
+      
+      // Overall Statistics
+      csvContent += 'OVERALL STATISTICS\n';
+      csvContent += 'Metric,Value\n';
+      csvContent += `Total Students,${overallStats.totalStudents}\n`;
+      csvContent += `Total Records,${overallStats.totalRecords}\n`;
+      csvContent += `Present,${overallStats.present}\n`;
+      csvContent += `Absent,${overallStats.absent}\n`;
+      csvContent += `Late,${overallStats.late}\n`;
+      csvContent += `Cutting,${overallStats.cutting}\n`;
+      csvContent += `Attendance Rate (%),${overallStats.attendanceRate}\n\n`;
+      
+      // Grade Level Statistics
+      if (gradeLevelStats.length > 0) {
+        csvContent += 'GRADE LEVEL BREAKDOWN\n';
+        csvContent += 'Grade,Total Students,Present,Absent,Late,Cutting,Attendance Rate (%)\n';
+        gradeLevelStats
+          .filter((stat) => stat.gradeLevel.toLowerCase() !== "graduated")
+          .forEach((stat) => {
+            csvContent += `${stat.gradeLevel},${stat.totalStudents},${stat.present},${stat.absent},${stat.late},${stat.cutting},${stat.attendanceRate}\n`;
+            
+            // Add sections
+            if (Array.isArray(stat.sections) && stat.sections.length > 0) {
+              stat.sections.forEach((sectionStat) => {
+                csvContent += `  ${sectionStat.section},${sectionStat.totalStudents},${sectionStat.present},${sectionStat.absent},${sectionStat.late},${sectionStat.cutting},${sectionStat.attendanceRate}\n`;
+              });
+            }
+          });
+        csvContent += '\n';
+      }
+      
+      // Daily Patterns
+      if (attendancePatterns.length > 0) {
+        csvContent += 'DAILY ATTENDANCE PATTERN\n';
+        csvContent += 'Date,Present,Absent,Late,Cutting,Total Records,Attendance Rate (%)\n';
+        attendancePatterns.forEach((pattern) => {
+          const dateStr = pattern.date ? format(parseISO(pattern.date), 'MMM dd, yyyy') : '';
+          csvContent += `${dateStr},${pattern.present},${pattern.absent},${pattern.late},${pattern.cutting},${pattern.total},${pattern.attendanceRate}\n`;
+        });
+      }
+      
+      // Download CSV as Excel file
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `attendance_report_${filters.startDate}_to_${filters.endDate}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('Excel report downloaded successfully');
+    } catch (error) {
+      console.error('Error generating Excel:', error);
+      toast.error('Failed to generate Excel report');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const fetchReportData = useCallback(async () => {
@@ -585,12 +671,21 @@ export default function ReportsPage() {
           <div className="dashboard-header-refresh-box">
             <button
               type="button"
+              onClick={generateExcelReport}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 mr-2"
+            >
+              <FileDown size={18} />
+              Export Excel
+            </button>
+            <button
+              type="button"
               onClick={generatePDFReport}
               disabled={isLoading}
               className="inline-flex items-center gap-2"
             >
               <Download size={18} />
-              Generate PDF Report
+              Export PDF
             </button>
           </div>
         </div>

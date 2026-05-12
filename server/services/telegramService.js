@@ -185,8 +185,7 @@ class TelegramService {
           { 'parentInfo.telegramChatId': chatId.toString() },
           { parentTelegramChatId: chatId.toString() },
           { telegramChatId: chatId.toString() }
-        ],
-        status: { $ne: 'Graduated' }
+        ]
       }).select('studentId fullName');
 
       if (!students?.length) {
@@ -262,8 +261,7 @@ class TelegramService {
           { 'parentInfo.telegramChatId': chatId.toString() },
           { parentTelegramChatId: chatId.toString() },
           { telegramChatId: chatId.toString() }
-        ],
-        status: { $ne: 'Graduated' }
+        ]
       }).select('-password -parentInfo.password');
 
       if (!students?.length) {

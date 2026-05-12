@@ -15,6 +15,9 @@ import { Users, CheckCircle, XCircle } from 'lucide-react';
 export default function TeachersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [subjectFilter, setSubjectFilter] = useState('');
+  const [shiftFilter, setShiftFilter] = useState('');
   const [isViewModalOpen, setIsViewModalOpen] = useState(false);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -91,8 +94,8 @@ export default function TeachersPage() {
     }
   }, [searchQuery, statusFilter]);
 
-  // Handle updating teacher status
-  const handleStatusUpdate = async (teacherId: string, newStatus: 'Active' | 'Inactive') => {
+  // Handle updating teacher status (only Active status supported)
+  const handleStatusUpdate = async (teacherId: string, newStatus: 'Active') => {
     try {
       setStatusUpdating(teacherId);
       await teacherService.updateTeacher(teacherId, { status: newStatus });
@@ -184,12 +187,10 @@ export default function TeachersPage() {
   const quickFilterOptions = [
     { label: 'All Teachers', value: 'all', filters: { query: '', status: '' } },
     { label: 'Active', value: 'active', filters: { query: '', status: 'Active' } },
-    { label: 'Inactive', value: 'inactive', filters: { query: '', status: 'Inactive' } },
   ];
 
-  // Separate teachers into active and inactive (before filtering)
-  const allActiveTeachers = teachers.filter(teacher => teacher.status === 'Active');
-  const allInactiveTeachers = teachers.filter(teacher => teacher.status === 'Inactive');
+  // All teachers are considered active (no inactive status)
+  const allActiveTeachers = teachers;
 
   // Filter teachers based on search filters
   const getTeacherSubjects = (t: Teacher) =>
@@ -205,23 +206,17 @@ export default function TeachersPage() {
       subjects.some(s => s.toLowerCase().includes(query))
     );
     const statusFilterValue = searchFilters.status || statusFilter;
+    const roleFilterValue = roleFilter;
+    const subjectFilterValue = subjectFilter;
+    
     const matchesStatus = !statusFilterValue || teacher.status === statusFilterValue;
-    return matchesSearch && matchesStatus;
+    const matchesRole = !roleFilterValue || teacher.role === roleFilterValue;
+    const matchesSubject = !subjectFilterValue || subjects.includes(subjectFilterValue);
+    
+    return matchesSearch && matchesStatus && matchesRole && matchesSubject;
   });
 
-  const filteredInactiveTeachers = allInactiveTeachers.filter(teacher => {
-    const query = (searchFilters.query || searchQuery).toLowerCase();
-    const subjects = getTeacherSubjects(teacher);
-    const matchesSearch = !query || (
-      teacher.name.toLowerCase().includes(query) ||
-      teacher.teacherId.toLowerCase().includes(query) ||
-      teacher.username.toLowerCase().includes(query) ||
-      subjects.some(s => s.toLowerCase().includes(query))
-    );
-    const statusFilterValue = searchFilters.status || statusFilter;
-    const matchesStatus = !statusFilterValue || teacher.status === statusFilterValue;
-    return matchesSearch && matchesStatus;
-  });
+
 
   // Handle adding new teacher
   const handleAddTeacher = async (teacherData: any) => {
@@ -255,7 +250,6 @@ export default function TeachersPage() {
   const teacherStatCards = [
     { title: 'Total Teachers', value: teachers.length, icon: Users },
     { title: 'Active Teachers', value: allActiveTeachers.length, icon: CheckCircle },
-    { title: 'Inactive Teachers', value: allInactiveTeachers.length, icon: XCircle },
   ];
 
   return (
@@ -301,11 +295,7 @@ export default function TeachersPage() {
                 textColor: 'text-[var(--primary)]',
                 iconBg: 'bg-[color-mix(in_srgb,var(--surface)_90%,var(--primary)_10%)]'
               },
-              'Inactive Teachers': {
-                bgGradient: 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 85%, var(--muted-foreground) 15%) 0%, color-mix(in srgb, var(--surface) 90%, var(--muted-foreground) 10%) 100%)',
-                textColor: 'text-[var(--muted-foreground)]',
-                iconBg: 'bg-[color-mix(in_srgb,var(--surface)_90%,var(--muted-foreground)_10%)]'
-              },
+
             };
             return styleMap[title] || styleMap['Total Teachers'];
           };
@@ -373,6 +363,59 @@ export default function TeachersPage() {
       )}
 
       <div className="content-section">
+        {/* Filter Section */}
+        <div className="mb-6 pb-6 border-b border-[var(--border)] bg-[var(--surface)] rounded-xl p-6">
+          <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+            </svg>
+            Filter by:
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-2">Role</label>
+              <select
+                value={roleFilter}
+                onChange={(e) => setRoleFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              >
+                <option value="">All Roles</option>
+                {Array.from(new Set(teachers.map(t => t.role))).sort().map(role => (
+                  <option key={role} value={role}>{role}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-2">Subject</label>
+              <select
+                value={subjectFilter}
+                onChange={(e) => setSubjectFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              >
+                <option value="">All Subjects</option>
+                {Array.from(new Set(
+                  teachers.flatMap(t => Array.isArray(t.subjects) ? t.subjects : ((t as any).subject ? [(t as any).subject] : []))
+                )).sort().map(subject => (
+                  <option key={subject} value={subject}>{subject}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-2">Shift</label>
+              <select
+                value={shiftFilter}
+                onChange={(e) => setShiftFilter(e.target.value)}
+                className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+              >
+                <option value="">All Shifts</option>
+                <option value="Morning">Morning</option>
+                <option value="Afternoon">Afternoon</option>
+                <option value="Evening">Evening</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
         {/* Advanced Search */}
         <AdvancedSearch
           onSearch={handleSearch}
@@ -380,13 +423,12 @@ export default function TeachersPage() {
           savedFilters={savedFilters}
           onLoadFilter={handleLoadFilter}
           placeholder="Search by name, username, subject, or ID..."
-          showQuickFilters={true}
-          quickFilterOptions={quickFilterOptions}
+          showQuickFilters={false}
         />
 
         {/* Bulk Actions */}
         <BulkActions
-          items={[...filteredActiveTeachers, ...filteredInactiveTeachers]}
+          items={filteredActiveTeachers}
           selectedItems={selectedTeachers}
           onSelectAll={handleSelectAll}
           onDeselectAll={handleDeselectAll}
@@ -426,14 +468,13 @@ export default function TeachersPage() {
                   <th>Name</th>
                   <th>Role</th>
                   <th>Subject</th>
-                  <th>Status</th>
                   <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
+                    <td colSpan={8} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
                       <div className="flex items-center justify-center">
                         <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-green-600 mr-3"></div>
                         Loading teachers...
@@ -442,8 +483,8 @@ export default function TeachersPage() {
                   </tr>
                 ) : filteredActiveTeachers.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
-                      No active teachers found
+                    <td colSpan={8} className="px-6 py-8 text-center text-[var(--muted-foreground)]">
+                      No teachers found
                     </td>
                   </tr>
                 ) : (
@@ -497,35 +538,6 @@ export default function TeachersPage() {
                           ))}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            const newStatus = teacher.status === 'Active' ? 'Inactive' : 'Active';
-                            handleStatusUpdate(teacher._id, newStatus);
-                          }}
-                          disabled={statusUpdating === teacher._id}
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${
-                            teacher.status === 'Active' 
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                              : teacher.status === 'Inactive'
-                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
-                          title={`Click to mark teacher as ${teacher.status === 'Active' ? 'Inactive' : 'Active'}`}
-                        >
-                          {statusUpdating === teacher._id ? (
-                            <span className="flex items-center gap-1">
-                              <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Updating...
-                            </span>
-                          ) : (
-                            teacher.status
-                          )}
-                        </button>
-                      </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm">
                         <div className="flex space-x-2">
                           <button 
@@ -557,153 +569,7 @@ export default function TeachersPage() {
           </div>
         </div>
 
-        {/* Inactive Teachers Section */}
-        {filteredInactiveTeachers.length > 0 && (
-          <div className="content-section mt-6">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
-              <span className="w-3 h-3 bg-yellow-500 rounded-full mr-2"></span>
-              Inactive Teachers ({filteredInactiveTeachers.length})
-            </h2>
-            <div className="table-container">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th className="w-12">
-                      <input
-                        type="checkbox"
-                        checked={filteredInactiveTeachers.every(t => selectedTeachers.has(t._id)) && filteredInactiveTeachers.length > 0}
-                        onChange={() => {
-                          const newSelected = new Set(selectedTeachers);
-                          if (filteredInactiveTeachers.every(t => selectedTeachers.has(t._id))) {
-                            filteredInactiveTeachers.forEach(t => newSelected.delete(t._id));
-                          } else {
-                            filteredInactiveTeachers.forEach(t => newSelected.add(t._id));
-                          }
-                          setSelectedTeachers(newSelected);
-                        }}
-                        className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
-                      />
-                    </th>
-                    <th>Profile</th>
-                    <th>Teacher ID</th>
-                    <th>Username</th>
-                    <th>Name</th>
-                    <th>Role</th>
-                    <th>Subject</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredInactiveTeachers.map((teacher) => {
-                    const isSelected = selectedTeachers.has(teacher._id);
-                    return (
-                    <tr key={teacher._id} className={`hover:bg-[var(--muted)] opacity-75 ${isSelected ? 'bg-[var(--secondary)]' : ''}`}>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <input
-                          type="checkbox"
-                          checked={isSelected}
-                          onChange={(e) => {
-                            const newSelected = new Set(selectedTeachers);
-                            if (e.target.checked) {
-                              newSelected.add(teacher._id);
-                            } else {
-                              newSelected.delete(teacher._id);
-                            }
-                            setSelectedTeachers(newSelected);
-                          }}
-                          className="rounded border-[var(--border)] text-[var(--primary)] focus:ring-[var(--ring)]"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center justify-center">
-                          {teacher.profilePicture ? (
-                            <img
-                              src={teacher.profilePicture}
-                              alt={`${teacher.name}'s profile`}
-                              className="h-10 w-10 rounded-full object-cover border-2 border-green-500 grayscale"
-                            />
-                          ) : (
-                            <div className="h-10 w-10 rounded-full bg-gray-200 border-2 border-green-500 flex items-center justify-center">
-                              <span className="text-sm font-bold text-gray-600">
-                                {teacher.name.split(' ').map((name: string) => name[0]).join('')}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.teacherId}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.username}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.name}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{teacher.role}</td>
-                      <td className="px-6 py-4 text-sm">
-                        <div className="flex flex-wrap gap-1">
-                          {getTeacherSubjects(teacher).map((sub) => (
-                            <span key={sub} className="inline-flex px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              {sub}
-                            </span>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            const newStatus = teacher.status === 'Active' ? 'Inactive' : 'Active';
-                            handleStatusUpdate(teacher._id, newStatus);
-                          }}
-                          disabled={statusUpdating === teacher._id}
-                          className={`px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full cursor-pointer transition-all hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed ${
-                            teacher.status === 'Active' 
-                              ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                              : teacher.status === 'Inactive'
-                              ? 'bg-yellow-100 text-yellow-800 hover:bg-yellow-200'
-                              : 'bg-red-100 text-red-800 hover:bg-red-200'
-                          }`}
-                          title={`Click to mark teacher as ${teacher.status === 'Active' ? 'Inactive' : 'Active'}`}
-                        >
-                          {statusUpdating === teacher._id ? (
-                            <span className="flex items-center gap-1">
-                              <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Updating...
-                            </span>
-                          ) : (
-                            teacher.status
-                          )}
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div className="flex space-x-2">
-                          <button 
-                            className="bg-gray-900 text-white px-3 py-1 rounded-md hover:bg-gray-700 transition-colors"
-                            onClick={() => {
-                              setSelectedTeacher(teacher);
-                              setIsViewModalOpen(true);
-                            }}
-                          >
-                            View
-                          </button>
-                          <button 
-                            className="bg-green-600 text-white px-3 py-1 rounded-md hover:bg-green-700 transition-colors"
-                            onClick={() => {
-                              setSelectedTeacher(teacher);
-                              setIsEditModalOpen(true);
-                            }}
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
+
 
       <ViewTeacherModal 
         isOpen={isViewModalOpen}

@@ -193,12 +193,12 @@ const createStudent = async (req, res) => {
   }
 };
 
-// Get all students (optional filter: status=Active|Inactive)
+// Get all students (optional filter: status=Active|Idle)
 const getAllStudents = async (req, res) => {
   try {
     const { status, limit = 100, page = 1 } = req.query;
     const filter = {};
-    if (status && ["Active", "Inactive"].includes(status)) {
+    if (status && ["Active", "Idle"].includes(status)) {
       filter.status = status;
     }
 
@@ -240,7 +240,7 @@ const getStudentsByClass = async (req, res) => {
   try {
     const { gradeLevel, section, status } = req.query;
     const filter = { gradeLevel, section };
-    if (status && ["Active", "Inactive"].includes(status)) {
+    if (status && ["Active", "Idle"].includes(status)) {
       filter.status = status;
     }
     const students = await Student.find(filter).sort({ fullName: 1 });
@@ -933,8 +933,6 @@ const bulkUpdateStudents = async (req, res) => {
       "section",
       "shift",
       "status",
-      "graduationDate",
-      "graduationSchoolYear",
     ];
     const sanitized = {};
     for (const key of allowed) {
@@ -943,8 +941,7 @@ const bulkUpdateStudents = async (req, res) => {
         updates[key] !== null &&
         updates[key] !== ""
       ) {
-        sanitized[key] =
-          key === "graduationDate" ? new Date(updates[key]) : updates[key];
+        sanitized[key] = updates[key];
       }
     }
     if (Object.keys(sanitized).length === 0) {
@@ -952,7 +949,7 @@ const bulkUpdateStudents = async (req, res) => {
         .status(400)
         .json({
           error:
-            "At least one of gradeLevel, section, shift, status, graduationDate, or graduationSchoolYear is required",
+            "At least one of gradeLevel, section, shift, or status is required",
         });
     }
 

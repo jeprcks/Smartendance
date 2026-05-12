@@ -13,15 +13,12 @@ export interface Student {
     | "Grade 3"
     | "Grade 4"
     | "Grade 5"
-    | "Grade 6"
-    | "Graduated";
+    | "Grade 6";
   section: string;
   gender: "Male" | "Female" | "Other";
   shift: "Morning" | "Afternoon";
-  /** Enrollment status: Active = in school, Inactive = stopped mid-year, Graduated = completed Grade 6 */
-  status?: "Active" | "Inactive" | "Graduated";
-  graduationDate?: string;
-  graduationSchoolYear?: string;
+  /** Enrollment status: Active = in school, Idle/Inactive = stopped mid-year */
+  status?: "Active" | "Idle" | "Inactive";
   photo?: string;
   // Address can be either a string or an object
   address?:
@@ -168,7 +165,7 @@ export const studentService = {
   },
 
   async getAllStudents(options?: {
-    status?: "Active" | "Inactive";
+    status?: "Active" | "Idle" | "Inactive";
   }): Promise<Student[]> {
     try {
       const params = new URLSearchParams();

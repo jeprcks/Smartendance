@@ -278,25 +278,20 @@ export default function StudentsPage() {
     
     const gradeFilter = searchFilters.gradeLevel || sortGrade;
     const sectionFilter = searchFilters.section || sortSection;
+    const shiftFilter = searchFilters.shift || '';
     const statusFilter = searchFilters.status;
     
     const matchesGrade = !gradeFilter || student.gradeLevel === gradeFilter;
     const matchesSection = !sectionFilter || student.section === sectionFilter;
-    const matchesStatus = !statusFilter || (student.status ?? 'Active') === statusFilter;
+    const matchesShift = !shiftFilter || student.shift === shiftFilter;
+    const matchesStatus = !statusFilter || (statusFilter === 'Idle' ? ((student.status as string) === 'Idle' || (student.status as string) === 'Inactive') : (student.status ?? 'Active') === statusFilter);
     
-    return matchesSearch && matchesGrade && matchesSection && matchesStatus;
+    return matchesSearch && matchesGrade && matchesSection && matchesShift && matchesStatus;
   });
 
   // Graduated students always appear at the bottom of the table
   const sortedFilteredStudents = [...filteredStudents].sort((a, b) => {
-    // First, handle graduated students (always at bottom)
-    const aGraduated = (a.status ?? 'Active') === 'Graduated' ? 1 : 0;
-    const bGraduated = (b.status ?? 'Active') === 'Graduated' ? 1 : 0;
-    if (aGraduated !== bGraduated) {
-      return aGraduated - bGraduated;
-    }
-    
-    // Then apply the column-based sorting for non-graduated students
+    // Apply column-based sorting
     let aValue: any = a[sortColumn as keyof Student];
     let bValue: any = b[sortColumn as keyof Student];
     
@@ -323,8 +318,7 @@ export default function StudentsPage() {
   const quickFilterOptions = [
     { label: 'All Students', value: 'all', filters: { query: '', gradeLevel: '', section: '', status: '' } },
     { label: 'Active', value: 'active', filters: { query: '', gradeLevel: '', section: '', status: 'Active' } },
-    { label: 'Inactive', value: 'inactive', filters: { query: '', gradeLevel: '', section: '', status: 'Inactive' } },
-    { label: 'Graduated', value: 'graduated', filters: { query: '', gradeLevel: '', section: '', status: 'Graduated' } },
+    { label: 'Idle', value: 'idle', filters: { query: '', gradeLevel: '', section: '', status: 'Idle' } },
     { label: 'Grade 1', value: 'grade1', filters: { query: '', gradeLevel: 'Grade 1', section: '', status: '' } },
     { label: 'Grade 2', value: 'grade2', filters: { query: '', gradeLevel: 'Grade 2', section: '', status: '' } },
     { label: 'Grade 3', value: 'grade3', filters: { query: '', gradeLevel: 'Grade 3', section: '', status: '' } },
@@ -345,14 +339,12 @@ export default function StudentsPage() {
   const totalMale = students.filter(student => student.gender === 'Male').length;
   const totalFemale = students.filter(student => student.gender === 'Female').length;
   const totalActive = students.filter(student => (student.status ?? 'Active') === 'Active').length;
-  const totalInactive = students.filter(student => student.status === 'Inactive').length;
-  const totalGraduated = students.filter(student => student.status === 'Graduated').length;
+  const totalIdle = students.filter(student => ((student.status as string) === 'Idle' || (student.status as string) === 'Inactive')).length;
 
   const studentStatCards = [
     { title: 'Total Students', value: students.length, icon: Users, color: 'bg-green-500', bgColor: 'bg-green-50', textColor: 'text-green-700' },
     { title: 'Active', value: totalActive, icon: UserCheck, color: 'bg-emerald-500', bgColor: 'bg-emerald-50', textColor: 'text-emerald-700' },
-    { title: 'Inactive', value: totalInactive, icon: UserX, color: 'bg-amber-500', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
-    { title: 'Graduated', value: totalGraduated, icon: Users, color: 'bg-indigo-500', bgColor: 'bg-indigo-50', textColor: 'text-indigo-700' },
+    { title: 'Idle', value: totalIdle, icon: UserX, color: 'bg-amber-500', bgColor: 'bg-amber-50', textColor: 'text-amber-700' },
     { title: 'Male', value: totalMale, icon: UserCircle, color: 'bg-blue-500', bgColor: 'bg-blue-50', textColor: 'text-blue-700' },
     { title: 'Female', value: totalFemale, icon: UserCircle2, color: 'bg-pink-500', bgColor: 'bg-pink-50', textColor: 'text-pink-700' },
   ];
@@ -399,8 +391,7 @@ export default function StudentsPage() {
             const styleMap: Record<string, string> = {
               'Total Students': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
               'Active': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--primary) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--primary) 10%) 100%)',
-              'Inactive': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%)',
-              'Graduated': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--muted-foreground) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--muted-foreground) 10%) 100%)',
+              'Idle': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, var(--accent) 5%) 0%, color-mix(in srgb, var(--surface) 90%, var(--accent) 10%) 100%)',
               'Male': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, #3b82f6 5%) 0%, color-mix(in srgb, var(--surface) 90%, #3b82f6 10%) 100%)',
               'Female': 'linear-gradient(135deg, color-mix(in srgb, var(--surface) 95%, #ec4899 5%) 0%, color-mix(in srgb, var(--surface) 90%, #ec4899 10%) 100%)',
             };
@@ -411,8 +402,7 @@ export default function StudentsPage() {
             const colorMap: Record<string, string> = {
               'Total Students': 'text-[var(--primary)]',
               'Active': 'text-[var(--primary)]',
-              'Inactive': 'text-[var(--accent)]',
-              'Graduated': 'text-[var(--muted-foreground)]',
+              'Idle': 'text-[var(--accent)]',
               'Male': 'text-blue-600 dark:text-blue-400',
               'Female': 'text-pink-600 dark:text-pink-400',
             };
@@ -460,6 +450,57 @@ export default function StudentsPage() {
 
       <div className="bg-[var(--surface)] rounded-xl shadow-md border-2 border-transparent hover:border-[var(--primary)] transition-colors duration-200 backdrop-blur-sm">
         <div className="p-6">
+          {/* Filter Section */}
+          <div className="mb-6 pb-6 border-b border-[var(--border)]">
+            <h3 className="text-sm font-semibold text-[var(--foreground)] mb-4 flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V19a1 1 0 01-1.447.894l-4-2A1 1 0 016 17v-5.586L3.293 6.707A1 1 0 013 6V3z" clipRule="evenodd" />
+              </svg>
+              Filter by:
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-2">Grade Level</label>
+                <select
+                  value={sortGrade}
+                  onChange={(e) => setSortGrade(e.target.value)}
+                  className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                >
+                  <option value="">All Grades</option>
+                  {uniqueGrades.map(grade => (
+                    <option key={grade} value={grade}>{grade}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-2">Section</label>
+                <select
+                  value={sortSection}
+                  onChange={(e) => setSortSection(e.target.value)}
+                  className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                >
+                  <option value="">All Sections</option>
+                  {uniqueSections.map(section => (
+                    <option key={section} value={section}>{section}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-[var(--muted-foreground)] mb-2">Shift</label>
+                <select
+                  value={searchFilters.shift || ''}
+                  onChange={(e) => setSearchFilters({ ...searchFilters, shift: e.target.value })}
+                  className="w-full px-3 py-2 bg-[var(--background)] border border-[var(--border)] rounded-lg text-sm text-[var(--foreground)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]"
+                >
+                  <option value="">All Shifts</option>
+                  <option value="Morning">Morning</option>
+                  <option value="Afternoon">Afternoon</option>
+                  <option value="Evening">Evening</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
           {/* Advanced Search */}
           <AdvancedSearch
             onSearch={handleSearch}
@@ -467,8 +508,7 @@ export default function StudentsPage() {
             savedFilters={savedFilters}
             onLoadFilter={handleLoadFilter}
             placeholder="Search by name, ID, grade, section..."
-            showQuickFilters={true}
-            quickFilterOptions={quickFilterOptions}
+            showQuickFilters={false}
           />
 
           {/* Bulk Actions */}
@@ -587,59 +627,33 @@ export default function StudentsPage() {
                       <span className="text-sm font-medium text-[var(--foreground)]">{student.fullName}</span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm ${(student.status ?? '') === 'Graduated' ? 'text-indigo-700 font-medium' : 'text-[var(--foreground)]'}`}>
-                        {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gradeLevel}
+                      <span className="text-sm text-[var(--foreground)]">{student.gradeLevel}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className="text-sm text-[var(--foreground)]">{student.section}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 ${
+                        student.gender === 'Male'
+                          ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
+                          : 'bg-pink-50 text-pink-700 ring-pink-200/50'
+                      } transition-colors duration-200`}>
+                        {student.gender}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`text-sm ${(student.status ?? '') === 'Graduated' ? 'text-indigo-700 font-medium' : 'text-[var(--foreground)]'}`}>
-                        {(student.status ?? '') === 'Graduated' ? 'N/A' : student.section}
+                      <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 bg-green-50 text-green-700 ring-green-200/50 transition-colors duration-200">
+                        {student.shift || 'N/A'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 ${
-                        (student.status ?? '') === 'Graduated'
-                          ? 'bg-indigo-50 text-indigo-700 ring-indigo-200/50'
-                          : student.gender === 'Male'
-                            ? 'bg-blue-50 text-blue-700 ring-blue-200/50'
-                            : 'bg-pink-50 text-pink-700 ring-pink-200/50'
+                        (student.status ?? 'Active') === 'Active'
+                          ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/50'
+                          : 'bg-amber-50 text-amber-700 ring-amber-200/50'
                       } transition-colors duration-200`}>
-                        {(student.status ?? '') === 'Graduated' ? 'N/A' : student.gender}
+                        {((student.status as string) === 'Idle' || (student.status as string) === 'Inactive') ? 'Idle' : (student.status ?? 'Active')}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 ${
-                        (student.status ?? '') === 'Graduated'
-                          ? 'bg-indigo-50 text-indigo-700 ring-indigo-200/50'
-                          : 'bg-green-50 text-green-700 ring-green-200/50'
-                      } transition-colors duration-200`}>
-                        {(student.status ?? '') === 'Graduated' ? 'N/A' : (student.shift || 'N/A')}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex flex-col gap-0.5">
-                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold ring-1 w-fit ${
-                          (student.status ?? 'Active') === 'Active'
-                            ? 'bg-emerald-50 text-emerald-700 ring-emerald-200/50'
-                            : (student.status ?? '') === 'Graduated'
-                              ? 'bg-indigo-50 text-indigo-700 ring-indigo-200/50'
-                              : 'bg-amber-50 text-amber-700 ring-amber-200/50'
-                        } transition-colors duration-200`}>
-                          {student.status ?? 'Active'}
-                        </span>
-                        {(student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate) && (
-                          <span className="text-xs text-[var(--muted-foreground)]">
-                            SY {student.graduationSchoolYear
-                              ? student.graduationSchoolYear
-                              : (() => {
-                                  const year = typeof student.graduationDate === 'string'
-                                    ? parseInt(student.graduationDate.slice(0, 4), 10)
-                                    : new Date(student.graduationDate!).getFullYear();
-                                  return `${year - 1}-${year}`;
-                                })()}
-                          </span>
-                        )}
-                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center space-x-2">

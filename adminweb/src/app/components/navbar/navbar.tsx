@@ -47,7 +47,7 @@ export default function Navbar() {
     { href: "/home/students", label: "Students", icon: "👨‍🎓" },
     { href: "/home/teachers", label: "Teachers", icon: "🧑‍🏫" },
     { href: "/home/messages", label: "Messages", icon: "💬" },
-    { href: "/home/history", label: "History", icon: "⏰" },
+    { href: "/home/history", label: "Logs", icon: "⏰" },
     { href: "/home/schedules", label: "Schedules", icon: "🗓️" },
     { href: "/home/reports", label: "Reports", icon: "📈" },
   ];
