@@ -250,26 +250,13 @@ export default function ViewStudentModal({ isOpen, onClose, student: initialStud
                   <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-semibold ${
                     (student.status ?? 'Active') === 'Active'
                       ? 'bg-emerald-50 text-emerald-700'
-                      : (student.status ?? '') === 'Graduated'
-                        ? 'bg-indigo-50 text-indigo-700'
-                        : 'bg-amber-50 text-amber-700'
+                      : 'bg-amber-50 text-amber-700'
                   }`}>
                     {student.status ?? 'Active'}
                   </span>
                 </p>
               </div>
-              {(student.status ?? '') === 'Graduated' && (student.graduationSchoolYear || student.graduationDate) && (
-                <div>
-                  <p className="text-sm text-[var(--muted-foreground)]">School year graduated</p>
-                  <p className="text-base text-[var(--foreground)]">
-                    {student.graduationSchoolYear
-                      ? `SY ${student.graduationSchoolYear}`
-                      : typeof student.graduationDate === 'string'
-                        ? student.graduationDate.split('T')[0]
-                        : new Date(student.graduationDate!).toLocaleDateString()}
-                  </p>
-                </div>
-              )}
+
             </div>
           </div>
 
