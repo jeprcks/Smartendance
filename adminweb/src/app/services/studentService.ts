@@ -19,6 +19,7 @@ export interface Student {
   shift: "Morning" | "Afternoon";
   /** Enrollment status: Active = in school, Idle/Inactive = stopped mid-year */
   status?: "Active" | "Idle" | "Inactive";
+  graduationDate?: string; // ISO string format, populated when status is "Graduated"
   photo?: string;
   // Address can be either a string or an object
   address?:
