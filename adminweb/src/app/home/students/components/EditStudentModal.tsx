@@ -60,12 +60,12 @@ interface EditStudentFormData {
   phoneNumber: string;
   age: number;
   birthDate: string;
-  gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6' | 'Graduated';
+  gradeLevel: 'Grade 1' | 'Grade 2' | 'Grade 3' | 'Grade 4' | 'Grade 5' | 'Grade 6';
   section: string;
   gender: 'Male' | 'Female' | 'Other';
   photo?: string;
   shift: 'Morning' | 'Afternoon';
-  status?: 'Active' | 'Inactive' | 'Graduated';
+  status?: 'Active' | 'Idle' | 'Inactive';
   graduationDate?: string;
   address?: string | {
     street?: string;
